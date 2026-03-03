@@ -17,8 +17,8 @@ struct AttachedPopoverMenu<Label: View, Content: View>: View {
         maxHeight: CGFloat? = nil,
         onWillPresent: (() -> Void)? = nil,
         @ViewBuilder label: @escaping () -> Label,
-        @ViewBuilder content: @escaping (_ dismiss: @escaping () -> Void) -> Content
-    ) {
+        @ViewBuilder content: @escaping (_ dismiss: @escaping () -> Void) -> Content)
+    {
         self.width = width
         self.maxHeight = maxHeight
         self.onWillPresent = onWillPresent
@@ -27,75 +27,71 @@ struct AttachedPopoverMenu<Label: View, Content: View>: View {
     }
 
     var body: some View {
-        label()
+        self.label()
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
             .onTapGesture {
-                requestOpen()
-                suppressAutoOpen = false
-                isAnchorHovered = true
+                self.requestOpen()
+                self.suppressAutoOpen = false
+                self.isAnchorHovered = true
             }
             .onHover { hovering in
-                if hovering && !suppressAutoOpen {
-                    requestOpen()
+                if hovering, !self.suppressAutoOpen {
+                    self.requestOpen()
                 }
-                isAnchorHovered = hovering
+                self.isAnchorHovered = hovering
                 if !hovering {
-                    suppressAutoOpen = false
+                    self.suppressAutoOpen = false
                 }
             }
             .background(
                 SideAttachedPopoverHost(
-                    anchorHovered: $isAnchorHovered,
-                    suppressAutoOpen: $suppressAutoOpen,
-                    width: width,
-                    maxHeight: maxHeight,
+                    anchorHovered: self.$isAnchorHovered,
+                    suppressAutoOpen: self.$suppressAutoOpen,
+                    width: self.width,
+                    maxHeight: self.maxHeight,
                     onVisibilityChanged: { visible in
-                        shouldBuildPopoverContent = visible
+                        self.shouldBuildPopoverContent = visible
                     },
-                    content: popoverContent
-                )
-            )
+                    content: self.popoverContent))
     }
 
     var popoverContent: AnyView {
-        guard shouldBuildPopoverContent else {
+        guard self.shouldBuildPopoverContent else {
             return AnyView(EmptyView())
         }
 
         return AnyView(
             ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: 0) {
-                    content {
-                        dismissPopover()
+                    self.content {
+                        self.dismissPopover()
                     }
                 }
             }
             .scrollIndicators(.hidden)
-            .frame(width: width, alignment: .leading)
-            .frame(maxHeight: maxHeight)
+            .frame(width: self.width, alignment: .leading)
+            .frame(maxHeight: self.maxHeight)
             .padding(8)
             .background(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(.regularMaterial)
-            )
+                    .fill(.regularMaterial))
             .overlay {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .stroke(Color(nsColor: .separatorColor).opacity(0.46), lineWidth: 0.65)
             }
-            .shadow(color: Color(nsColor: .shadowColor).opacity(0.20), radius: 12, x: 0, y: 6)
-        )
+            .shadow(color: Color(nsColor: .shadowColor).opacity(0.20), radius: 12, x: 0, y: 6))
     }
 
     private func requestOpen() {
-        onWillPresent?()
-        shouldBuildPopoverContent = true
+        self.onWillPresent?()
+        self.shouldBuildPopoverContent = true
     }
 
     private func dismissPopover() {
-        shouldBuildPopoverContent = false
-        suppressAutoOpen = true
-        isAnchorHovered = false
+        self.shouldBuildPopoverContent = false
+        self.suppressAutoOpen = true
+        self.isAnchorHovered = false
     }
 }
 
@@ -108,41 +104,40 @@ struct AttachedPopoverMenuItem: View {
 
     var body: some View {
         Button {
-            action()
+            self.action()
         } label: {
             HStack(spacing: MenuBarLayoutTokens.hDense) {
                 Image(systemName: "checkmark")
                     .font(.system(size: 10, weight: .semibold))
-                    .opacity(selected ? 1 : 0)
+                    .opacity(self.selected ? 1 : 0)
                     .frame(width: 12, alignment: .center)
-                Text(title)
+                Text(self.title)
                     .font(.system(size: 12, weight: .medium))
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Spacer(minLength: 0)
             }
-            .foregroundStyle(itemForeground)
+            .foregroundStyle(self.itemForeground)
             .padding(.horizontal, MenuBarLayoutTokens.hDense)
             .padding(.vertical, MenuBarLayoutTokens.vDense + 1)
             .background(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(itemBackground)
-            )
+                    .fill(self.itemBackground))
             .contentShape(Rectangle())
         }
         .buttonStyle(.borderless)
-        .onHover { isHovered = $0 }
+        .onHover { self.isHovered = $0 }
     }
 
     private var itemForeground: Color {
-        if isHovered {
+        if self.isHovered {
             return Color(nsColor: .selectedMenuItemTextColor)
         }
-        return destructive ? .red : .primary
+        return self.destructive ? .red : .primary
     }
 
     private var itemBackground: Color {
-        isHovered ? Color(nsColor: .selectedContentBackgroundColor) : .clear
+        self.isHovered ? Color(nsColor: .selectedContentBackgroundColor) : .clear
     }
 }
 
@@ -164,10 +159,9 @@ private struct SideAttachedPopoverHost: NSViewRepresentable {
 
     func makeCoordinator() -> Coordinator {
         Coordinator(
-            anchorHovered: $anchorHovered,
-            suppressAutoOpen: $suppressAutoOpen,
-            onVisibilityChanged: onVisibilityChanged
-        )
+            anchorHovered: self.$anchorHovered,
+            suppressAutoOpen: self.$suppressAutoOpen,
+            onVisibilityChanged: self.onVisibilityChanged)
     }
 
     func makeNSView(context: Context) -> NSView {
@@ -175,12 +169,12 @@ private struct SideAttachedPopoverHost: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        context.coordinator.anchorHovered = $anchorHovered
-        context.coordinator.suppressAutoOpen = $suppressAutoOpen
-        context.coordinator.width = width
-        context.coordinator.maxHeight = maxHeight
-        context.coordinator.onVisibilityChanged = onVisibilityChanged
-        context.coordinator.hostingController.rootView = content
+        context.coordinator.anchorHovered = self.$anchorHovered
+        context.coordinator.suppressAutoOpen = self.$suppressAutoOpen
+        context.coordinator.width = self.width
+        context.coordinator.maxHeight = self.maxHeight
+        context.coordinator.onVisibilityChanged = self.onVisibilityChanged
+        context.coordinator.hostingController.rootView = self.content
         context.coordinator.sync(anchorView: nsView)
     }
 
@@ -221,8 +215,8 @@ private struct SideAttachedPopoverHost: NSViewRepresentable {
         init(
             anchorHovered: Binding<Bool>,
             suppressAutoOpen: Binding<Bool>,
-            onVisibilityChanged: ((Bool) -> Void)?
-        ) {
+            onVisibilityChanged: ((Bool) -> Void)?)
+        {
             self.anchorHovered = anchorHovered
             self.suppressAutoOpen = suppressAutoOpen
             self.onVisibilityChanged = onVisibilityChanged
@@ -231,40 +225,39 @@ private struct SideAttachedPopoverHost: NSViewRepresentable {
                 contentRect: NSRect(x: 0, y: 0, width: 240, height: 160),
                 styleMask: [.borderless, .nonactivatingPanel],
                 backing: .buffered,
-                defer: true
-            )
+                defer: true)
 
             super.init()
 
-            panel.isReleasedWhenClosed = false
-            panel.isOpaque = false
-            panel.backgroundColor = .clear
-            panel.hasShadow = true
-            panel.hidesOnDeactivate = true
-            panel.level = .statusBar
-            panel.collectionBehavior = [.transient, .moveToActiveSpace, .ignoresCycle]
-            panel.contentViewController = hostingController
-            panel.acceptsMouseMovedEvents = true
+            self.panel.isReleasedWhenClosed = false
+            self.panel.isOpaque = false
+            self.panel.backgroundColor = .clear
+            self.panel.hasShadow = true
+            self.panel.hidesOnDeactivate = true
+            self.panel.level = .statusBar
+            self.panel.collectionBehavior = [.transient, .moveToActiveSpace, .ignoresCycle]
+            self.panel.contentViewController = self.hostingController
+            self.panel.acceptsMouseMovedEvents = true
 
-            installTrackingAreaIfNeeded()
+            self.installTrackingAreaIfNeeded()
         }
 
         func sync(anchorView: NSView) {
             self.anchorView = anchorView
             self.hostWindow = anchorView.window
-            installTrackingAreaIfNeeded()
+            self.installTrackingAreaIfNeeded()
 
-            let shouldShow = anchorHovered.wrappedValue && !suppressAutoOpen.wrappedValue
+            let shouldShow = self.anchorHovered.wrappedValue && !self.suppressAutoOpen.wrappedValue
             if shouldShow {
-                cancelPendingClose()
-                showOrUpdate()
+                self.cancelPendingClose()
+                self.showOrUpdate()
                 return
             }
 
-            if suppressAutoOpen.wrappedValue {
-                closeNow()
+            if self.suppressAutoOpen.wrappedValue {
+                self.closeNow()
             } else {
-                evaluateAndCloseIfNeeded()
+                self.evaluateAndCloseIfNeeded()
             }
         }
 
@@ -274,7 +267,7 @@ private struct SideAttachedPopoverHost: NSViewRepresentable {
                 let hostWindow
             else { return }
 
-            let fitting = hostingController.view.fittingSize
+            let fitting = self.hostingController.view.fittingSize
             let anchorRectInWindow = anchorView.convert(anchorView.bounds, to: nil)
             let anchorRectOnScreen = hostWindow.convertToScreen(anchorRectInWindow)
             let visibleFrame = hostWindow.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? .zero
@@ -283,11 +276,10 @@ private struct SideAttachedPopoverHost: NSViewRepresentable {
             let contentWidth = max(fitting.width, anchorRectOnScreen.width)
             let panelWidth = min(max(80, contentWidth), visibleFrame.width - 8)
 
-            let contentHeight: CGFloat
-            if let maxHeight {
-                contentHeight = min(fitting.height, maxHeight + 16)
+            let contentHeight: CGFloat = if let maxHeight {
+                min(fitting.height, maxHeight + 16)
             } else {
-                contentHeight = fitting.height
+                fitting.height
             }
             let panelHeight = min(max(40, contentHeight), visibleFrame.height - 12)
 
@@ -295,23 +287,22 @@ private struct SideAttachedPopoverHost: NSViewRepresentable {
             let leftAvailable = max(0, hostWindow.frame.minX - visibleFrame.minX)
             let minimumUsableWidth = min(panelWidth, CGFloat(180))
 
-            let showRight: Bool
-            if rightAvailable >= minimumUsableWidth {
-                showRight = true
+            let showRight: Bool = if rightAvailable >= minimumUsableWidth {
+                true
             } else if leftAvailable >= minimumUsableWidth {
-                showRight = false
+                false
             } else {
-                showRight = rightAvailable >= leftAvailable
+                rightAvailable >= leftAvailable
             }
-            attachmentSide = showRight ? .right : .left
+            self.attachmentSide = showRight ? .right : .left
 
             let sideAvailable = showRight ? rightAvailable : leftAvailable
             let resolvedPanelWidth = max(80, min(panelWidth, sideAvailable))
             let panelSize = NSSize(width: resolvedPanelWidth, height: panelHeight)
 
             let rawOriginX = showRight
-                ? hostWindow.frame.maxX - edgeOverlap
-                : hostWindow.frame.minX - panelSize.width + edgeOverlap
+                ? hostWindow.frame.maxX - self.edgeOverlap
+                : hostWindow.frame.minX - panelSize.width + self.edgeOverlap
             let minX = visibleFrame.minX
             let maxX = visibleFrame.maxX - panelSize.width
             let originX = max(minX, min(rawOriginX, maxX))
@@ -321,51 +312,51 @@ private struct SideAttachedPopoverHost: NSViewRepresentable {
             let maxY = visibleFrame.maxY - panelSize.height - 6
             let originY = max(minY, min(desiredY, maxY))
 
-            panel.setFrame(NSRect(origin: NSPoint(x: originX, y: originY), size: panelSize), display: true)
-            ensureExclusiveVisibility()
+            self.panel.setFrame(NSRect(origin: NSPoint(x: originX, y: originY), size: panelSize), display: true)
+            self.ensureExclusiveVisibility()
 
-            if !panel.isVisible {
-                panel.orderFront(nil)
+            if !self.panel.isVisible {
+                self.panel.orderFront(nil)
             }
-            reportVisibility(true)
-            startLocalMouseMonitorIfNeeded()
+            self.reportVisibility(true)
+            self.startLocalMouseMonitorIfNeeded()
         }
 
         private func evaluateAndCloseIfNeeded() {
-            guard panel.isVisible else {
-                cancelPendingClose()
-                stopLocalMouseMonitor()
+            guard self.panel.isVisible else {
+                self.cancelPendingClose()
+                self.stopLocalMouseMonitor()
                 return
             }
-            if panelHovering {
-                cancelPendingClose()
+            if self.panelHovering {
+                self.cancelPendingClose()
                 return
             }
             let mouse = NSEvent.mouseLocation
-            if isMouseInActiveArea(mouse) {
-                cancelPendingClose()
+            if self.isMouseInActiveArea(mouse) {
+                self.cancelPendingClose()
                 return
             }
-            scheduleClose()
+            self.scheduleClose()
         }
 
         func closeNow() {
-            cancelPendingClose()
-            stopLocalMouseMonitor()
-            if panel.isVisible {
-                panel.orderOut(nil)
+            self.cancelPendingClose()
+            self.stopLocalMouseMonitor()
+            if self.panel.isVisible {
+                self.panel.orderOut(nil)
             }
-            hostingController.rootView = AnyView(EmptyView())
-            panelHovering = false
-            reportVisibility(false)
+            self.hostingController.rootView = AnyView(EmptyView())
+            self.panelHovering = false
+            self.reportVisibility(false)
             if Self.activeCoordinator === self {
                 Self.activeCoordinator = nil
             }
         }
 
         private func reportVisibility(_ visible: Bool) {
-            guard reportedVisible != visible else { return }
-            reportedVisible = visible
+            guard self.reportedVisible != visible else { return }
+            self.reportedVisible = visible
             guard let onVisibilityChanged else { return }
             DispatchQueue.main.async {
                 onVisibilityChanged(visible)
@@ -381,7 +372,7 @@ private struct SideAttachedPopoverHost: NSViewRepresentable {
         }
 
         private func scheduleClose() {
-            guard closeWorkItem == nil else { return }
+            guard self.closeWorkItem == nil else { return }
             let work = DispatchWorkItem { [weak self] in
                 guard let self else { return }
                 self.closeWorkItem = nil
@@ -394,20 +385,20 @@ private struct SideAttachedPopoverHost: NSViewRepresentable {
 
                 self.closeNow()
             }
-            closeWorkItem = work
-            DispatchQueue.main.asyncAfter(deadline: .now() + closeDebounce, execute: work)
+            self.closeWorkItem = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + self.closeDebounce, execute: work)
         }
 
         private func cancelPendingClose() {
-            closeWorkItem?.cancel()
-            closeWorkItem = nil
+            self.closeWorkItem?.cancel()
+            self.closeWorkItem = nil
         }
 
         private func startLocalMouseMonitorIfNeeded() {
-            guard localMouseMonitor == nil else { return }
-            localMouseMonitor = NSEvent.addLocalMonitorForEvents(
-                matching: [.mouseMoved, .leftMouseDragged, .rightMouseDragged]
-            ) { [weak self] event in
+            guard self.localMouseMonitor == nil else { return }
+            self.localMouseMonitor = NSEvent.addLocalMonitorForEvents(
+                matching: [.mouseMoved, .leftMouseDragged, .rightMouseDragged])
+            { [weak self] event in
                 self?.evaluateAndCloseIfNeeded()
                 return event
             }
@@ -425,19 +416,19 @@ private struct SideAttachedPopoverHost: NSViewRepresentable {
         }
 
         private func activityRects() -> (trigger: NSRect, panel: NSRect, bridge: NSRect)? {
-            guard panel.isVisible else { return nil }
+            guard self.panel.isVisible else { return nil }
             guard let anchorView, let hostWindow else { return nil }
 
             let triggerRectInWindow = anchorView.convert(anchorView.bounds, to: nil)
             let triggerRect = hostWindow.convertToScreen(triggerRectInWindow)
-            let panelRect = panel.frame
+            let panelRect = self.panel.frame
 
-            let bridgeMinY = min(triggerRect.minY - bridgeVerticalPadding, panelRect.minY)
-            let bridgeMaxY = max(triggerRect.maxY + bridgeVerticalPadding, panelRect.maxY)
+            let bridgeMinY = min(triggerRect.minY - self.bridgeVerticalPadding, panelRect.minY)
+            let bridgeMaxY = max(triggerRect.maxY + self.bridgeVerticalPadding, panelRect.maxY)
             let bridgeHeight = max(0, bridgeMaxY - bridgeMinY)
 
             let bridgeRect: NSRect
-            switch attachmentSide {
+            switch self.attachmentSide {
             case .right:
                 let bridgeX = triggerRect.maxX
                 let bridgeWidth = max(0, panelRect.minX - triggerRect.maxX)
@@ -452,7 +443,7 @@ private struct SideAttachedPopoverHost: NSViewRepresentable {
         }
 
         private func installTrackingAreaIfNeeded() {
-            let view = hostingController.view
+            let view = self.hostingController.view
             if let panelTrackingArea {
                 view.removeTrackingArea(panelTrackingArea)
             }
@@ -464,20 +455,25 @@ private struct SideAttachedPopoverHost: NSViewRepresentable {
 
         @objc(mouseEntered:)
         func mouseEntered(_ event: NSEvent) {
-            panelHovering = true
-            cancelPendingClose()
+            self.panelHovering = true
+            self.cancelPendingClose()
         }
 
         @objc(mouseExited:)
         func mouseExited(_ event: NSEvent) {
-            panelHovering = false
-            evaluateAndCloseIfNeeded()
+            self.panelHovering = false
+            self.evaluateAndCloseIfNeeded()
         }
     }
 }
 
 @MainActor
 private final class SideAttachedMenuPanel: NSPanel {
-    override var canBecomeKey: Bool { false }
-    override var canBecomeMain: Bool { false }
+    override var canBecomeKey: Bool {
+        false
+    }
+
+    override var canBecomeMain: Bool {
+        false
+    }
 }

@@ -21,7 +21,9 @@ extension AppState {
             let data = try Data(contentsOf: bundledConfigURL)
             try writeConfigData(data, to: targetURL)
         } catch {
-            appendLog(level: "error", message: tr("log.config.import_local.failed", "ClashBar.yaml", error.localizedDescription))
+            appendLog(
+                level: "error",
+                message: tr("log.config.import_local.failed", "ClashBar.yaml", error.localizedDescription))
         }
     }
 
@@ -29,7 +31,7 @@ extension AppState {
         let candidateRelativePaths = [
             "ConfigTemplates/ClashBar.yaml",
             "Resources/ConfigTemplates/ClashBar.yaml",
-            "ClashBar.yaml"
+            "ClashBar.yaml",
         ]
 
         for root in AppResourceBundleLocator.candidateResourceRoots() {
@@ -48,7 +50,7 @@ extension AppState {
         let previousSelectedPath = configManager.selectedConfig?.path
         guard configManager.chooseConfigDirectory() != nil else { return }
 
-        let nextSelectedPath = syncSelectedConfigSelection(configManager.selectedConfig)
+        let nextSelectedPath = self.syncSelectedConfigSelection(configManager.selectedConfig)
         syncConfigDisplayState()
 
         appendLog(level: "info", message: tr("log.config.loaded_count", configManager.availableConfigs.count))
@@ -63,7 +65,7 @@ extension AppState {
         }
 
         configManager.selectConfig(matched)
-        let nextSelectedPath = syncSelectedConfigSelection(matched)
+        let nextSelectedPath = self.syncSelectedConfigSelection(matched)
         syncConfigDisplayState()
         appendLog(level: "info", message: tr("log.config.selected", fileName))
         await restartCoreIfNeededForConfigSwitch(previousPath: previousSelectedPath, nextPath: nextSelectedPath)
@@ -72,9 +74,9 @@ extension AppState {
     func importLocalConfigFile() {
         guard let configDirectory = ensureConfigDirectoryAvailable() else { return }
 
-        prepareModalWindowPresentation()
+        self.prepareModalWindowPresentation()
         let panel = NSOpenPanel()
-        configureModalWindow(panel)
+        self.configureModalWindow(panel)
         panel.title = tr("ui.quick.import_local_config")
         panel.directoryURL = configDirectory
         var allowedTypes: [UTType] = []
@@ -99,7 +101,7 @@ extension AppState {
 
         let targetURL = configDirectory.appendingPathComponent(fileName, isDirectory: false)
         let isOverwrite = FileManager.default.fileExists(atPath: targetURL.path)
-        guard !isOverwrite || confirmOverwriteConfig(named: fileName) else {
+        guard !isOverwrite || self.confirmOverwriteConfig(named: fileName) else {
             appendLog(level: "info", message: tr("log.config.import.cancelled", fileName))
             return
         }
@@ -108,14 +110,16 @@ extension AppState {
             let data = try Data(contentsOf: sourceURL)
             try writeConfigData(data, to: targetURL)
 
-            updateRemoteConfigSource(for: fileName, urlString: nil)
+            self.updateRemoteConfigSource(for: fileName, urlString: nil)
             appendLog(level: "info", message: tr("log.config.import_local.success", fileName))
 
-            if isOverwrite && shouldAutoReloadCurrentConfig(updatedFileNames: [fileName]) {
+            if isOverwrite, self.shouldAutoReloadCurrentConfig(updatedFileNames: [fileName]) {
                 Task { await self.reloadConfig() }
             }
         } catch {
-            appendLog(level: "error", message: tr("log.config.import_local.failed", fileName, error.localizedDescription))
+            appendLog(
+                level: "error",
+                message: tr("log.config.import_local.failed", fileName, error.localizedDescription))
         }
     }
 
@@ -129,7 +133,7 @@ extension AppState {
             return
         }
 
-        let fallbackName = inferredRemoteConfigFileName(from: remoteURL)
+        let fallbackName = self.inferredRemoteConfigFileName(from: remoteURL)
         guard let fileName = normalizedConfigFileName(input.fileName, fallback: fallbackName) else {
             appendLog(level: "error", message: tr("log.config.import.invalid_filename", input.fileName))
             return
@@ -137,7 +141,7 @@ extension AppState {
 
         let targetURL = configDirectory.appendingPathComponent(fileName, isDirectory: false)
         let isOverwrite = FileManager.default.fileExists(atPath: targetURL.path)
-        guard !isOverwrite || confirmOverwriteConfig(named: fileName) else {
+        guard !isOverwrite || self.confirmOverwriteConfig(named: fileName) else {
             appendLog(level: "info", message: tr("log.config.import.cancelled", fileName))
             return
         }
@@ -146,14 +150,16 @@ extension AppState {
             let data = try await downloadRemoteConfigData(from: remoteURL)
             try writeConfigData(data, to: targetURL)
 
-            updateRemoteConfigSource(for: fileName, urlString: remoteURL.absoluteString)
+            self.updateRemoteConfigSource(for: fileName, urlString: remoteURL.absoluteString)
             appendLog(level: "info", message: tr("log.config.import_remote.success", fileName))
 
-            if isOverwrite && shouldAutoReloadCurrentConfig(updatedFileNames: [fileName]) {
-                await reloadConfig()
+            if isOverwrite, self.shouldAutoReloadCurrentConfig(updatedFileNames: [fileName]) {
+                await self.reloadConfig()
             }
         } catch {
-            appendLog(level: "error", message: tr("log.config.import_remote.failed", fileName, error.localizedDescription))
+            appendLog(
+                level: "error",
+                message: tr("log.config.import_remote.failed", fileName, error.localizedDescription))
         }
     }
 
@@ -173,9 +179,15 @@ extension AppState {
         for fileName in sources.keys.sorted() {
             guard let urlString = sources[fileName],
                   let remoteURL = URL(string: urlString),
-                  isSupportedRemoteConfigURL(remoteURL) else {
+                  isSupportedRemoteConfigURL(remoteURL)
+            else {
                 failedCount += 1
-                appendLog(level: "error", message: tr("log.config.remote.update_item_failed", fileName, tr("log.config.remote.invalid_url", sources[fileName] ?? fileName)))
+                appendLog(
+                    level: "error",
+                    message: tr(
+                        "log.config.remote.update_item_failed",
+                        fileName,
+                        tr("log.config.remote.invalid_url", sources[fileName] ?? fileName)))
                 continue
             }
 
@@ -186,15 +198,17 @@ extension AppState {
                 updatedFileNames.insert(fileName)
             } catch {
                 failedCount += 1
-                appendLog(level: "error", message: tr("log.config.remote.update_item_failed", fileName, error.localizedDescription))
+                appendLog(
+                    level: "error",
+                    message: tr("log.config.remote.update_item_failed", fileName, error.localizedDescription))
             }
         }
 
-        refreshConfigStateAfterMutation()
+        self.refreshConfigStateAfterMutation()
         appendLog(level: "info", message: tr("log.config.remote.update_summary", updatedFileNames.count, failedCount))
 
-        if shouldAutoReloadCurrentConfig(updatedFileNames: updatedFileNames) {
-            await reloadConfig()
+        if self.shouldAutoReloadCurrentConfig(updatedFileNames: updatedFileNames) {
+            await self.reloadConfig()
         }
     }
 
@@ -211,8 +225,8 @@ extension AppState {
     }
 
     func reloadConfigFileList() {
-        guard ensureConfigDirectoryAvailable() != nil else { return }
-        refreshConfigStateAfterMutation()
+        guard self.ensureConfigDirectoryAvailable() != nil else { return }
+        self.refreshConfigStateAfterMutation()
         appendLog(level: "info", message: tr("log.config.loaded_count", configManager.availableConfigs.count))
     }
 
@@ -230,7 +244,7 @@ extension AppState {
         do {
             try workingDirectoryManager.bootstrapDirectories()
             configManager.setConfigDirectory(workingDirectoryManager.configDirectoryURL)
-            refreshConfigStateAfterMutation()
+            self.refreshConfigStateAfterMutation()
             return configManager.configDirectory
         } catch {
             appendLog(level: "error", message: tr("log.working_dir_init_failed", error.localizedDescription))
@@ -240,7 +254,7 @@ extension AppState {
 
     func refreshConfigStateAfterMutation() {
         _ = configManager.reloadConfigs()
-        if syncSelectedConfigSelection(configManager.selectedConfig) == nil {
+        if self.syncSelectedConfigSelection(configManager.selectedConfig) == nil {
             selectedConfigName = "-"
             defaults.removeObject(forKey: selectedConfigKey)
         }
@@ -275,8 +289,8 @@ extension AppState {
         alert.informativeText = tr("app.config.import.overwrite.message")
         alert.addButton(withTitle: tr("ui.action.overwrite"))
         alert.addButton(withTitle: tr("ui.action.cancel"))
-        prepareModalWindowPresentation()
-        configureModalWindow(alert.window)
+        self.prepareModalWindowPresentation()
+        self.configureModalWindow(alert.window)
         return alert.runModal() == .alertFirstButtonReturn
     }
 
@@ -316,13 +330,12 @@ extension AppState {
         container.addSubview(fileField)
         alert.accessoryView = container
 
-        prepareModalWindowPresentation()
-        configureModalWindow(alert.window)
+        self.prepareModalWindowPresentation()
+        self.configureModalWindow(alert.window)
         guard alert.runModal() == .alertFirstButtonReturn else { return nil }
         return RemoteConfigImportInput(
             urlString: urlField.stringValue,
-            fileName: fileField.stringValue
-        )
+            fileName: fileField.stringValue)
     }
 
     func prepareModalWindowPresentation() {
@@ -357,6 +370,6 @@ extension AppState {
             remoteConfigSources.removeValue(forKey: fileName)
         }
         persistRemoteConfigSources()
-        refreshConfigStateAfterMutation()
+        self.refreshConfigStateAfterMutation()
     }
 }

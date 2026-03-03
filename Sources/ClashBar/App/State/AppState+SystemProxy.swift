@@ -19,12 +19,11 @@ extension AppState {
             return SystemProxyPorts(httpPort: mixed, httpsPort: mixed, socksPort: mixed)
         }
 
-        let httpPort = normalizedSystemProxyPort(config.port)
+        let httpPort = self.normalizedSystemProxyPort(config.port)
         return SystemProxyPorts(
             httpPort: httpPort,
             httpsPort: httpPort,
-            socksPort: normalizedSystemProxyPort(config.socksPort)
-        )
+            socksPort: self.normalizedSystemProxyPort(config.socksPort))
     }
 
     func currentSystemProxyPortsFromState() -> SystemProxyPorts {
@@ -32,17 +31,16 @@ extension AppState {
             return SystemProxyPorts(httpPort: mixed, httpsPort: mixed, socksPort: mixed)
         }
 
-        let httpPort = normalizedSystemProxyPort(port)
+        let httpPort = self.normalizedSystemProxyPort(port)
         return SystemProxyPorts(
             httpPort: httpPort,
             httpsPort: httpPort,
-            socksPort: normalizedSystemProxyPort(socksPort)
-        )
+            socksPort: self.normalizedSystemProxyPort(socksPort))
     }
 
     func resolveSystemProxyTargetFromRuntimeConfig() async throws -> (host: String, ports: SystemProxyPorts) {
         let config = try await fetchRuntimeConfigSnapshot()
-        let ports = systemProxyPorts(from: config)
+        let ports = self.systemProxyPorts(from: config)
         guard ports.hasEnabledPort else {
             throw SystemProxyServiceError.invalidPort
         }
@@ -68,24 +66,25 @@ extension AppState {
             let target = try await resolveSystemProxyTargetFromRuntimeConfig()
             let isConfigured = try await isSystemProxyConfigured(host: target.host, ports: target.ports)
             if !isConfigured {
-                try await applySystemProxy(enabled: true, host: target.host, ports: target.ports)
+                try await self.applySystemProxy(enabled: true, host: target.host, ports: target.ports)
                 appendLog(
                     level: "info",
-                    message: tr("log.system_proxy.startup_repaired", target.host, target.ports.primaryPort ?? 0)
-                )
+                    message: tr("log.system_proxy.startup_repaired", target.host, target.ports.primaryPort ?? 0))
             }
 
             didCheckSystemProxyConsistencyOnLaunch = true
             await refreshSystemProxyStatus()
         } catch {
-            appendLog(level: "error", message: tr("log.system_proxy.startup_repair_failed", systemProxyErrorMessage(error)))
+            appendLog(
+                level: "error",
+                message: tr("log.system_proxy.startup_repair_failed", self.systemProxyErrorMessage(error)))
         }
     }
 
     func scheduleSystemProxyStartupPostflight(
         refreshStatusBeforeOverlay: Bool,
-        refreshStatusAfterBootstrap: Bool
-    ) {
+        refreshStatusAfterBootstrap: Bool)
+    {
         let shouldRefreshStatus = refreshStatusBeforeOverlay || refreshStatusAfterBootstrap
         let shouldRepairConsistency = !didCheckSystemProxyConsistencyOnLaunch
         guard shouldRefreshStatus || shouldRepairConsistency else { return }

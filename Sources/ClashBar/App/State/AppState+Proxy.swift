@@ -24,7 +24,7 @@ extension AppState {
                 let target = try await resolveSystemProxyTargetFromRuntimeConfig()
                 try await applySystemProxy(enabled: true, host: target.host, ports: target.ports)
             } else {
-                try await applySystemProxy(enabled: false, host: controllerHost(), ports: .disabled)
+                try await applySystemProxy(enabled: false, host: self.controllerHost(), ports: .disabled)
             }
 
             // Keep a core-side sync call so proxy toggle and runtime config stay aligned.
@@ -43,8 +43,11 @@ extension AppState {
         let ports = currentSystemProxyPortsFromState()
         let httpPort = ports.httpPort ?? ports.socksPort ?? effectiveMixedPort()
         let socksPort = ports.socksPort ?? ports.httpPort ?? httpPort
-        let script =
-            "export https_proxy=http://127.0.0.1:\(httpPort) http_proxy=http://127.0.0.1:\(httpPort) all_proxy=socks5://127.0.0.1:\(socksPort)"
+        let script = [
+            "export https_proxy=http://127.0.0.1:\(httpPort)",
+            "http_proxy=http://127.0.0.1:\(httpPort)",
+            "all_proxy=socks5://127.0.0.1:\(socksPort)",
+        ].joined(separator: " ")
         copyTextToPasteboard(script)
         appendLog(level: "info", message: tr("log.proxy_export.copied"))
     }
@@ -66,9 +69,7 @@ extension AppState {
                 .groupDelay(
                     name: group.name,
                     url: defaultHealthcheckURL,
-                    timeout: defaultHealthcheckTimeoutMilliseconds
-                )
-            )
+                    timeout: defaultHealthcheckTimeoutMilliseconds))
             let delays = response.values.filter { $0.value > 0 }
 
             self.groupLatencies[group.name] = delays
@@ -106,5 +107,4 @@ extension AppState {
     func makeControllerUIURL(_ controller: String) -> String {
         "\(normalizedControllerAddress(controller))/ui"
     }
-
 }

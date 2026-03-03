@@ -15,13 +15,12 @@ final class ConfigDirectoryManager {
 
     func chooseConfigDirectory() -> URL? {
         do {
-            try workingDirectoryManager.bootstrapDirectories()
+            try self.workingDirectoryManager.bootstrapDirectories()
             let target = try workingDirectoryManager.normalizeAndValidateWithinRoot(
-                workingDirectoryManager.configDirectoryURL,
-                mustBeDirectory: true
-            )
-            configDirectory = target
-            reloadConfigs()
+                self.workingDirectoryManager.configDirectoryURL,
+                mustBeDirectory: true)
+            self.configDirectory = target
+            self.reloadConfigs()
             return target
         } catch {
             return nil
@@ -30,38 +29,39 @@ final class ConfigDirectoryManager {
 
     func setConfigDirectory(_ url: URL) {
         guard let safeURL = try? workingDirectoryManager.normalizeAndValidateWithinRoot(url, mustBeDirectory: true),
-              safeURL == workingDirectoryManager.configDirectoryURL.standardizedFileURL.resolvingSymlinksInPath() else {
+              safeURL == workingDirectoryManager.configDirectoryURL.standardizedFileURL.resolvingSymlinksInPath()
+        else {
             return
         }
-        configDirectory = safeURL
-        reloadConfigs()
+        self.configDirectory = safeURL
+        self.reloadConfigs()
     }
 
     func selectConfig(_ url: URL) {
         guard let configDirectory else { return }
-        let safeConfig = try? workingDirectoryManager.normalizeAndValidateWithinRoot(url, mustBeDirectory: false)
+        let safeConfig = try? self.workingDirectoryManager.normalizeAndValidateWithinRoot(url, mustBeDirectory: false)
         guard let safeConfig,
               safeConfig.deletingLastPathComponent() == configDirectory,
-              ["yaml", "yml"].contains(safeConfig.pathExtension.lowercased()) else {
+              ["yaml", "yml"].contains(safeConfig.pathExtension.lowercased())
+        else {
             return
         }
-        selectedConfig = safeConfig
+        self.selectedConfig = safeConfig
     }
 
     @discardableResult
     func reloadConfigs() -> [URL] {
         guard let configDirectory else {
-            availableConfigs = []
+            self.availableConfigs = []
             selectedConfig = nil
             return []
         }
 
         let keys: [URLResourceKey] = [.isRegularFileKey]
-        let children = (try? fm.contentsOfDirectory(
+        let children = (try? self.fm.contentsOfDirectory(
             at: configDirectory,
             includingPropertiesForKeys: keys,
-            options: [.skipsHiddenFiles]
-        )) ?? []
+            options: [.skipsHiddenFiles])) ?? []
         var files: [URL] = []
         for fileURL in children {
             let isRegularFile = (try? fileURL.resourceValues(forKeys: Set(keys)).isRegularFile) ?? false
@@ -72,7 +72,7 @@ final class ConfigDirectoryManager {
         }
 
         files.sort { $0.lastPathComponent < $1.lastPathComponent }
-        availableConfigs = files
+        self.availableConfigs = files
 
         if let selectedConfig, files.contains(selectedConfig) {
             return files

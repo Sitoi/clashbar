@@ -14,12 +14,12 @@ struct ProviderDetail: Decodable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case name
-        case vehicleType = "vehicleType"
-        case updatedAt = "updatedAt"
+        case vehicleType
+        case updatedAt
         case ruleCount
         case rulesCount
         case count
-        case subscriptionInfo = "subscriptionInfo"
+        case subscriptionInfo
         case proxies
     }
 
@@ -29,8 +29,8 @@ struct ProviderDetail: Decodable, Equatable {
         updatedAt: String?,
         ruleCount: Int?,
         subscriptionInfo: ProviderSubscriptionInfo?,
-        proxies: [ProviderProxyNode]?
-    ) {
+        proxies: [ProviderProxyNode]?)
+    {
         self.name = name
         self.vehicleType = vehicleType
         self.updatedAt = updatedAt
@@ -41,14 +41,14 @@ struct ProviderDetail: Decodable, Equatable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        name = try container.decodeIfPresent(String.self, forKey: .name)
-        vehicleType = try container.decodeIfPresent(String.self, forKey: .vehicleType)
-        updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt)
-        ruleCount = try container.decodeIfPresent(Int.self, forKey: .ruleCount)
+        self.name = try container.decodeIfPresent(String.self, forKey: .name)
+        self.vehicleType = try container.decodeIfPresent(String.self, forKey: .vehicleType)
+        self.updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt)
+        self.ruleCount = try container.decodeIfPresent(Int.self, forKey: .ruleCount)
             ?? container.decodeIfPresent(Int.self, forKey: .rulesCount)
             ?? container.decodeIfPresent(Int.self, forKey: .count)
-        subscriptionInfo = try container.decodeIfPresent(ProviderSubscriptionInfo.self, forKey: .subscriptionInfo)
-        proxies = try container.decodeIfPresent([ProviderProxyNode].self, forKey: .proxies)
+        self.subscriptionInfo = try container.decodeIfPresent(ProviderSubscriptionInfo.self, forKey: .subscriptionInfo)
+        self.proxies = try container.decodeIfPresent([ProviderProxyNode].self, forKey: .proxies)
     }
 }
 
@@ -71,13 +71,13 @@ struct ProviderSubscriptionInfo: Decodable, Equatable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        upload = try container.decodeIfPresent(Int64.self, forKey: .upload)
+        self.upload = try container.decodeIfPresent(Int64.self, forKey: .upload)
             ?? container.decodeIfPresent(Int64.self, forKey: .uploadUpper)
-        download = try container.decodeIfPresent(Int64.self, forKey: .download)
+        self.download = try container.decodeIfPresent(Int64.self, forKey: .download)
             ?? container.decodeIfPresent(Int64.self, forKey: .downloadUpper)
-        total = try container.decodeIfPresent(Int64.self, forKey: .total)
+        self.total = try container.decodeIfPresent(Int64.self, forKey: .total)
             ?? container.decodeIfPresent(Int64.self, forKey: .totalUpper)
-        expire = try container.decodeIfPresent(Int64.self, forKey: .expire)
+        self.expire = try container.decodeIfPresent(Int64.self, forKey: .expire)
             ?? container.decodeIfPresent(Int64.self, forKey: .expireUpper)
     }
 }
@@ -98,8 +98,8 @@ struct ProviderProxyNode: Decodable, Equatable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        name = try container.decodeIfPresent(String.self, forKey: .name) ?? "-"
-        history = try container.decodeIfPresent([ProviderProxyDelayHistoryEntry].self, forKey: .history)
+        self.name = try container.decodeIfPresent(String.self, forKey: .name) ?? "-"
+        self.history = try container.decodeIfPresent([ProviderProxyDelayHistoryEntry].self, forKey: .history)
     }
 }
 
@@ -114,18 +114,19 @@ struct ProviderProxyDelayHistoryEntry: Decodable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
         if let value = try container.decodeIfPresent(Int.self, forKey: .delay) {
-            delay = value
+            self.delay = value
             return
         }
         if let value = try container.decodeIfPresent(Int64.self, forKey: .delay) {
-            delay = Int(value)
+            self.delay = Int(value)
             return
         }
         if let value = try container.decodeIfPresent(String.self, forKey: .delay),
-           let intValue = Int(value) {
-            delay = intValue
+           let intValue = Int(value)
+        {
+            self.delay = intValue
             return
         }
-        delay = nil
+        self.delay = nil
     }
 }

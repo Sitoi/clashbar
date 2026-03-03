@@ -4,7 +4,7 @@ enum AppResourceBundleLocator {
     private static let moduleBundleName = "ClashBar_ClashBar.bundle"
 
     static func moduleBundle() -> Bundle? {
-        for url in candidateModuleBundleURLs() {
+        for url in self.candidateModuleBundleURLs() {
             if let bundle = Bundle(url: url) {
                 return bundle
             }
@@ -29,29 +29,28 @@ enum AppResourceBundleLocator {
         if let mainRoot = Bundle.main.resourceURL {
             roots.append(mainRoot)
         }
-        return deduplicated(roots)
+        return self.deduplicated(roots)
     }
 
     private static func candidateModuleBundleURLs() -> [URL] {
         var urls: [URL] = []
 
         let appBundleURL = Bundle.main.bundleURL
-        urls.append(appBundleURL.appendingPathComponent(moduleBundleName, isDirectory: true))
+        urls.append(appBundleURL.appendingPathComponent(self.moduleBundleName, isDirectory: true))
 
         if let appResourcesURL = Bundle.main.resourceURL {
-            urls.append(appResourcesURL.appendingPathComponent(moduleBundleName, isDirectory: true))
+            urls.append(appResourcesURL.appendingPathComponent(self.moduleBundleName, isDirectory: true))
             urls.append(
                 appResourcesURL
                     .appendingPathComponent("Resources", isDirectory: true)
-                    .appendingPathComponent(moduleBundleName, isDirectory: true)
-            )
+                    .appendingPathComponent(self.moduleBundleName, isDirectory: true))
         }
 
         let executableURL = URL(fileURLWithPath: CommandLine.arguments[0], isDirectory: false)
         let executableDirectoryURL = executableURL.deletingLastPathComponent()
-        urls.append(executableDirectoryURL.appendingPathComponent(moduleBundleName, isDirectory: true))
+        urls.append(executableDirectoryURL.appendingPathComponent(self.moduleBundleName, isDirectory: true))
 
-        return deduplicated(urls)
+        return self.deduplicated(urls)
     }
 
     private static func deduplicated(_ urls: [URL]) -> [URL] {

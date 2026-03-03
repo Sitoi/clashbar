@@ -3,6 +3,14 @@ import Foundation
 
 @MainActor
 extension AppState {
+    private struct CoreBootstrapOptions {
+        let overlaySyncingKey: String
+        let providerTrigger: ProviderRefreshTrigger
+        let refreshProxyGroupsAfterBootstrap: Bool
+        let refreshSystemProxyBeforeOverlay: Bool
+        let refreshSystemProxyAfterBootstrap: Bool
+    }
+
     func startCore(trigger: StartTrigger = .manual) async {
         guard !isCoreActionProcessing else { return }
         coreActionState = .starting
@@ -23,22 +31,21 @@ extension AppState {
 
             settingsOverlay = try await prepareTunOverlayForCoreStartup(
                 configPath: configPath,
-                overlay: settingsOverlay
-            )
+                overlay: settingsOverlay)
 
             let launchController = applyExternalControllerFromSelectedConfigFile(configPath: configPath)
             statusText = "Starting"
             _ = try processManager.start(configPath: configPath, controller: launchController)
 
-            await completeCoreBootstrap(
+            await self.completeCoreBootstrap(
                 configPath: configPath,
-                settingsOverlay,
-                overlaySyncingKey: "start-overlay",
-                providerTrigger: .start,
-                refreshProxyGroupsAfterBootstrap: false,
-                refreshSystemProxyBeforeOverlay: true,
-                refreshSystemProxyAfterBootstrap: false
-            )
+                settingsOverlay: settingsOverlay,
+                options: CoreBootstrapOptions(
+                    overlaySyncingKey: "start-overlay",
+                    providerTrigger: .start,
+                    refreshProxyGroupsAfterBootstrap: false,
+                    refreshSystemProxyBeforeOverlay: true,
+                    refreshSystemProxyAfterBootstrap: false))
         } catch {
             preserveLocalSettingsOnNextSync = false
             let message = tr("log.start.failed", error.localizedDescription)
@@ -81,15 +88,15 @@ extension AppState {
 
             let launchController = applyExternalControllerFromSelectedConfigFile(configPath: configPath)
             _ = try processManager.restart(configPath: configPath, controller: launchController)
-            await completeCoreBootstrap(
+            await self.completeCoreBootstrap(
                 configPath: configPath,
-                settingsOverlay,
-                overlaySyncingKey: "restart-overlay",
-                providerTrigger: trigger,
-                refreshProxyGroupsAfterBootstrap: true,
-                refreshSystemProxyBeforeOverlay: false,
-                refreshSystemProxyAfterBootstrap: true
-            )
+                settingsOverlay: settingsOverlay,
+                options: CoreBootstrapOptions(
+                    overlaySyncingKey: "restart-overlay",
+                    providerTrigger: trigger,
+                    refreshProxyGroupsAfterBootstrap: true,
+                    refreshSystemProxyBeforeOverlay: false,
+                    refreshSystemProxyAfterBootstrap: true))
         } catch {
             preserveLocalSettingsOnNextSync = false
             appendLog(level: "error", message: tr("log.restart.failed", error.localizedDescription))
@@ -99,9 +106,9 @@ extension AppState {
     func performPrimaryCoreAction() async {
         guard !isCoreActionProcessing else { return }
         if isRuntimeRunning {
-            await restartCore()
+            await self.restartCore()
         } else {
-            await startCore(trigger: .manual)
+            await self.startCore(trigger: .manual)
         }
     }
 
@@ -115,11 +122,11 @@ extension AppState {
         guard appearanceMode != mode else { return }
         appearanceMode = mode
         defaults.set(mode.rawValue, forKey: appearanceModeKey)
-        applyAppAppearance()
+        self.applyAppAppearance()
     }
 
     func quitApp() async {
-        shutdownForTermination()
+        self.shutdownForTermination()
         NSApplication.shared.terminate(nil)
     }
 
@@ -159,7 +166,7 @@ extension AppState {
         groupLatencyLoading = []
         appendLog(level: "info", message: tr("log.config.changed_restart"))
         cancelProviderRefresh(reason: "config switch requested")
-        await restartCore(trigger: .configSwitch)
+        await self.restartCore(trigger: .configSwitch)
         await applyPendingConfigSwitchSettingsOverlayIfNeeded()
     }
 
@@ -174,18 +181,14 @@ extension AppState {
     func attemptAutoStartIfNeeded() async {
         if didAttemptAutoStart { return }
         didAttemptAutoStart = true
-        await startCore(trigger: .auto)
+        await self.startCore(trigger: .auto)
     }
 
-    func completeCoreBootstrap(
+    private func completeCoreBootstrap(
         configPath: String,
-        _ settingsOverlay: EditableSettingsSnapshot,
-        overlaySyncingKey: String,
-        providerTrigger: ProviderRefreshTrigger,
-        refreshProxyGroupsAfterBootstrap: Bool,
-        refreshSystemProxyBeforeOverlay: Bool,
-        refreshSystemProxyAfterBootstrap: Bool
-    ) async {
+        settingsOverlay: EditableSettingsSnapshot,
+        options: CoreBootstrapOptions) async
+    {
         statusText = "Running"
         apiStatus = .healthy
         resetTrafficPresentation()
@@ -195,24 +198,21 @@ extension AppState {
 
         await applyEditableSettingsOverlay(
             settingsOverlay,
-            syncingKey: overlaySyncingKey,
-            successMessage: ""
-        )
+            syncingKey: options.overlaySyncingKey,
+            successMessage: "")
         await validateTunPermissionsOnStartup()
-        enqueueProviderRefresh(trigger: providerTrigger)
+        enqueueProviderRefresh(trigger: options.providerTrigger)
 
-        if refreshProxyGroupsAfterBootstrap {
-            await refreshProxyGroupsAfterRestart()
+        if options.refreshProxyGroupsAfterBootstrap {
+            await self.refreshProxyGroupsAfterRestart()
         }
 
         // Keep startup responsive even when helper registration or system proxy reads are slow.
         scheduleSystemProxyStartupPostflight(
-            refreshStatusBeforeOverlay: refreshSystemProxyBeforeOverlay,
-            refreshStatusAfterBootstrap: refreshSystemProxyAfterBootstrap
-        )
+            refreshStatusBeforeOverlay: options.refreshSystemProxyBeforeOverlay,
+            refreshStatusAfterBootstrap: options.refreshSystemProxyAfterBootstrap)
 
         defaults.set(configPath, forKey: lastSuccessfulConfigPathKey)
         startupErrorMessage = nil
     }
-
 }

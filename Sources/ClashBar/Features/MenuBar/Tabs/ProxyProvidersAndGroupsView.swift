@@ -6,18 +6,17 @@ extension MenuBarRoot {
         let providers = appState.sortedProxyProviderNames
 
         return VStack(alignment: .leading, spacing: MenuBarLayoutTokens.sectionGap) {
-            nodesSectionHeader(
+            self.nodesSectionHeader(
                 tr("ui.section.proxy_providers"),
                 symbol: "shippingbox.fill",
-                count: "\(providers.count)"
-            )
+                count: "\(providers.count)")
 
             if providers.isEmpty {
                 emptyCard(tr("ui.empty.proxy_providers"))
             } else {
                 LazyVStack(spacing: 0) {
                     ForEach(Array(providers.enumerated()), id: \.element) { index, name in
-                        proxyProviderRow(name: name, detail: appState.proxyProvidersDetail[name])
+                        self.proxyProviderRow(name: name, detail: appState.proxyProvidersDetail[name])
 
                         if index < providers.count - 1 {
                             Rectangle()
@@ -44,133 +43,143 @@ extension MenuBarRoot {
         let rowHorizontalPadding: CGFloat = 4
         let hovered = hoveredProxyProviderName == name
 
-        return AttachedPopoverMenu(width: 292, onWillPresent: {
-            Task { await appState.ensureProviderNodesLoaded(provider: name) }
-        }) {
-            VStack(alignment: .leading, spacing: MenuBarLayoutTokens.vDense + 1) {
-                HStack(spacing: MenuBarLayoutTokens.hDense) {
-                    RoundedRectangle(cornerRadius: 4, style: .continuous)
-                        .fill(nativeTeal.opacity(0.14))
-                        .frame(width: 16, height: 16)
-                        .overlay {
-                            Image(systemName: "shippingbox.fill")
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundStyle(nativeTeal.opacity(0.92))
+        return AttachedPopoverMenu(
+            width: 292,
+            onWillPresent: {
+                Task { await appState.ensureProviderNodesLoaded(provider: name) }
+            },
+            label: {
+                VStack(alignment: .leading, spacing: MenuBarLayoutTokens.vDense + 1) {
+                    HStack(spacing: MenuBarLayoutTokens.hDense) {
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(nativeTeal.opacity(0.14))
+                            .frame(width: 16, height: 16)
+                            .overlay {
+                                Image(systemName: "shippingbox.fill")
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundStyle(nativeTeal.opacity(0.92))
+                            }
+
+                        Text(name)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(nativePrimaryLabel)
+                            .lineLimit(1)
+
+                        if detail?.subscriptionInfo != nil {
+                            Text(expireText)
+                                .font(.system(size: 10, weight: .regular))
+                                .foregroundStyle(nativeSecondaryLabel)
+                                .padding(.horizontal, MenuBarLayoutTokens.hMicro + 2)
+                                .padding(.vertical, MenuBarLayoutTokens.vDense)
+                                .background(nativeBadgeCapsule())
                         }
+
+                        Spacer(minLength: 0)
+
+                        Text(updatedText)
+                            .font(.system(size: 10, weight: .regular))
+                            .foregroundStyle(nativeTertiaryLabel)
+
+                        self.providerActionButton(
+                            "gauge",
+                            isLoading: appState.providerBatchTesting.contains(name))
+                        {
+                            await appState.testAllProxyProviderNodes(provider: name)
+                        }
+
+                        self.providerActionButton(
+                            "arrow.clockwise",
+                            isLoading: appState.providerUpdating.contains(name))
+                        {
+                            await appState.updateProxyProvider(name: name)
+                        }
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(nativeTertiaryLabel)
+                            .frame(width: 8, alignment: .trailing)
+                    }
+
+                    if let remaining, let total, let remainingRatio {
+                        let quotaText =
+                            "\(ValueFormatter.bytesCompactNoSpace(remaining)) / " +
+                            "\(ValueFormatter.bytesCompactNoSpace(total))"
+                        HStack(spacing: MenuBarLayoutTokens.hDense) {
+                            Text(quotaText)
+                                .font(.system(size: 10, weight: .regular, design: .monospaced))
+                                .foregroundStyle(nativeSecondaryLabel)
+                                .lineLimit(1)
+                                .frame(width: quotaTextColumnWidth, alignment: .leading)
+
+                            GeometryReader { geo in
+                                ZStack(alignment: .leading) {
+                                    Capsule().fill(nativeControlFill.opacity(0.92))
+                                    Capsule()
+                                        .fill(nativeAccent.opacity(0.9))
+                                        .frame(width: geo.size.width * remainingRatio)
+                                }
+                            }
+                            .frame(height: 5)
+                        }
+                    }
+                }
+                .padding(.horizontal, rowHorizontalPadding)
+                .padding(.vertical, MenuBarLayoutTokens.vDense + 1)
+                .background(nativeHoverRowBackground(hovered))
+                .animation(.easeInOut(duration: 0.14), value: hovered)
+            },
+            content: { dismiss in
+                HStack(spacing: MenuBarLayoutTokens.hMicro) {
+                    Image(systemName: "shippingbox.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(nativeTeal.opacity(0.92))
+                        .frame(width: 16, alignment: .center)
 
                     Text(name)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(nativePrimaryLabel)
                         .lineLimit(1)
 
-                    if detail?.subscriptionInfo != nil {
-                        Text(expireText)
-                            .font(.system(size: 10, weight: .regular))
-                            .foregroundStyle(nativeSecondaryLabel)
-                            .padding(.horizontal, MenuBarLayoutTokens.hMicro + 2)
-                            .padding(.vertical, MenuBarLayoutTokens.vDense)
-                            .background(nativeBadgeCapsule())
-                    }
-
                     Spacer(minLength: 0)
 
-                    Text(updatedText)
-                        .font(.system(size: 10, weight: .regular))
-                        .foregroundStyle(nativeTertiaryLabel)
-
-                    providerActionButton(
-                        "gauge",
-                        isLoading: appState.providerBatchTesting.contains(name)
-                    ) {
-                        await appState.testAllProxyProviderNodes(provider: name)
-                    }
-
-                    providerActionButton(
-                        "arrow.clockwise",
-                        isLoading: appState.providerUpdating.contains(name)
-                    ) {
-                        await appState.updateProxyProvider(name: name)
-                    }
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(nativeTertiaryLabel)
-                        .frame(width: 8, alignment: .trailing)
+                    Text("\(nodeCount)")
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundStyle(nativeSecondaryLabel)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(nativeBadgeCapsule())
                 }
+                .padding(.horizontal, 4)
+                .padding(.bottom, 2)
 
-                if let remaining, let total, let remainingRatio {
-                    HStack(spacing: MenuBarLayoutTokens.hDense) {
-                        Text("\(ValueFormatter.bytesCompactNoSpace(remaining)) / \(ValueFormatter.bytesCompactNoSpace(total))")
-                            .font(.system(size: 10, weight: .regular, design: .monospaced))
-                            .foregroundStyle(nativeSecondaryLabel)
-                            .lineLimit(1)
-                            .frame(width: quotaTextColumnWidth, alignment: .leading)
+                Divider()
+                    .overlay(nativeSeparator)
+                    .padding(.bottom, 1)
 
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                Capsule().fill(nativeControlFill.opacity(0.92))
-                                Capsule()
-                                    .fill(nativeAccent.opacity(0.9))
-                                    .frame(width: geo.size.width * remainingRatio)
-                            }
-                        }
-                        .frame(height: 5)
+                let nodes = sortedProviderNodes(provider: name, detail: detail)
+                self.popoverNodesList(nodes) { node in
+                    ProxyGroupPopoverNodeItem(
+                        title: node,
+                        delayText: appState.providerNodeDelayText(provider: name, node: node),
+                        delayColor: providerNodeDelayColor(provider: name, node: node),
+                        selected: false)
+                    {
+                        dismiss()
+                        Task { await appState.testProxyProviderNode(provider: name, node: node) }
                     }
                 }
-            }
-            .padding(.horizontal, rowHorizontalPadding)
-            .padding(.vertical, MenuBarLayoutTokens.vDense + 1)
-            .background(nativeHoverRowBackground(hovered))
-            .animation(.easeInOut(duration: 0.14), value: hovered)
-        } content: { dismiss in
-            HStack(spacing: MenuBarLayoutTokens.hMicro) {
-                Image(systemName: "shippingbox.fill")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(nativeTeal.opacity(0.92))
-                    .frame(width: 16, alignment: .center)
-
-                Text(name)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(nativePrimaryLabel)
-                    .lineLimit(1)
-
-                Spacer(minLength: 0)
-
-                Text("\(nodeCount)")
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .foregroundStyle(nativeSecondaryLabel)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 1)
-                    .background(nativeBadgeCapsule())
-            }
-            .padding(.horizontal, 4)
-            .padding(.bottom, 2)
-
-            Divider()
-                .overlay(nativeSeparator)
-                .padding(.bottom, 1)
-
-            let nodes = sortedProviderNodes(provider: name, detail: detail)
-            popoverNodesList(nodes) { node in
-                ProxyGroupPopoverNodeItem(
-                    title: node,
-                    delayText: appState.providerNodeDelayText(provider: name, node: node),
-                    delayColor: providerNodeDelayColor(provider: name, node: node),
-                    selected: false
-                ) {
-                    dismiss()
-                    Task { await appState.testProxyProviderNode(provider: name, node: node) }
-                }
-            }
-        }
-        .onHover { hoveredProxyProviderName = nextHoveredName(current: hoveredProxyProviderName, target: name, isHovering: $0) }
+            })
+            .onHover { hoveredProxyProviderName = self.nextHoveredName(
+                current: hoveredProxyProviderName,
+                target: name,
+                isHovering: $0) }
     }
 
     func providerActionButton(
         _ symbol: String,
         isLoading: Bool = false,
-        action: @escaping () async -> Void
-    ) -> some View {
+        action: @escaping () async -> Void) -> some View
+    {
         let tone = symbol == "gauge" ? nativeTeal : (symbol == "arrow.clockwise" ? nativeInfo : nativeAccent)
 
         return roundedIconActionButton(
@@ -178,19 +187,18 @@ extension MenuBarRoot {
             size: 14,
             foreground: tone.opacity(0.92),
             isLoading: isLoading,
-            action: action
-        )
+            action: action)
     }
 
     var proxyGroupsSection: some View {
         let groups = appState.proxyGroups
 
         return VStack(alignment: .leading, spacing: MenuBarLayoutTokens.sectionGap) {
-            nodesSectionHeader(
+            self.nodesSectionHeader(
                 tr("ui.section.proxy_groups"),
                 symbol: "point.3.connected.trianglepath.dotted",
-                count: "\(groups.count)"
-            ) {
+                count: "\(groups.count)")
+            {
                 Button {
                     Task { await appState.refreshAllGroupLatencies() }
                 } label: {
@@ -210,7 +218,7 @@ extension MenuBarRoot {
             } else {
                 LazyVStack(spacing: 2) {
                     ForEach(groups, id: \.name) { group in
-                        proxyGroupInlineRow(group)
+                        self.proxyGroupInlineRow(group)
                     }
                 }
             }
@@ -227,9 +235,9 @@ extension MenuBarRoot {
 
         return AttachedPopoverMenu(width: 272) {
             GeometryReader { geo in
-                let columns = proxyGroupMainColumnWidths(totalWidth: geo.size.width)
+                let columns = self.proxyGroupMainColumnWidths(totalWidth: geo.size.width)
                 HStack(spacing: MenuBarLayoutTokens.hMicro) {
-                    proxyGroupLeadingIcon(group)
+                    self.proxyGroupLeadingIcon(group)
                         .frame(width: 16, alignment: .center)
 
                     Text(group.name)
@@ -258,9 +266,9 @@ extension MenuBarRoot {
                         .minimumScaleFactor(0.85)
                         .frame(width: columns.delay, alignment: .trailing)
 
-                    compactGroupAction(
-                        isLoading: appState.groupLatencyLoading.contains(group.name)
-                    ) {
+                    self.compactGroupAction(
+                        isLoading: appState.groupLatencyLoading.contains(group.name))
+                    {
                         await appState.refreshGroupLatency(group)
                     }
                     .frame(width: 18, alignment: .center)
@@ -279,7 +287,7 @@ extension MenuBarRoot {
             .animation(.easeInOut(duration: 0.14), value: hovered)
         } content: { dismiss in
             HStack(spacing: MenuBarLayoutTokens.hMicro) {
-                proxyGroupLeadingIcon(group)
+                self.proxyGroupLeadingIcon(group)
                     .frame(width: 16, alignment: .center)
 
                 Text(group.name)
@@ -314,19 +322,22 @@ extension MenuBarRoot {
                 .padding(.bottom, 1)
 
             let nodes = sortedGroupNodes(group)
-            popoverNodesList(nodes) { node in
+            self.popoverNodesList(nodes) { node in
                 ProxyGroupPopoverNodeItem(
                     title: node,
                     delayText: appState.delayText(group: group.name, node: node),
                     delayColor: groupDelayColor(group: group.name, node: node),
-                    selected: node == group.now
-                ) {
+                    selected: node == group.now)
+                {
                     dismiss()
                     Task { await appState.switchProxy(group: group.name, target: node) }
                 }
             }
         }
-        .onHover { hoveredProxyGroupName = nextHoveredName(current: hoveredProxyGroupName, target: group.name, isHovering: $0) }
+        .onHover { hoveredProxyGroupName = self.nextHoveredName(
+            current: hoveredProxyGroupName,
+            target: group.name,
+            isHovering: $0) }
     }
 
     func proxyGroupMainColumnWidths(totalWidth: CGFloat) -> (name: CGFloat, current: CGFloat, delay: CGFloat) {
@@ -349,9 +360,7 @@ extension MenuBarRoot {
                 LinearGradient(
                     colors: [tone.opacity(0.26), tone.opacity(0.14)],
                     startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+                    endPoint: .bottomTrailing))
             .frame(width: 16, height: 16)
             .overlay {
                 Image(systemName: groupSymbol(for: group))
@@ -366,8 +375,8 @@ extension MenuBarRoot {
 
     func compactGroupAction(
         isLoading: Bool = false,
-        action: @escaping () async -> Void
-    ) -> some View {
+        action: @escaping () async -> Void) -> some View
+    {
         asyncBorderedIconButton(
             symbol: "gauge",
             label: tr("ui.action.test_latency"),
@@ -375,16 +384,15 @@ extension MenuBarRoot {
             controlSize: .mini,
             tint: nativeTeal.opacity(0.92),
             isLoading: isLoading,
-            action: action
-        )
+            action: action)
     }
 
-    func nodesSectionHeader<Trailing: View>(
+    func nodesSectionHeader(
         _ title: String,
         symbol: String,
         count: String? = nil,
-        @ViewBuilder trailing: () -> Trailing = { EmptyView() }
-    ) -> some View {
+        @ViewBuilder trailing: () -> some View = { EmptyView() }) -> some View
+    {
         HStack(spacing: MenuBarLayoutTokens.hDense) {
             Image(systemName: symbol)
                 .font(.system(size: 10, weight: .semibold))
@@ -415,10 +423,10 @@ extension MenuBarRoot {
     }
 
     @ViewBuilder
-    func popoverNodesList<Node: Hashable, Row: View>(
+    func popoverNodesList<Node: Hashable>(
         _ nodes: [Node],
-        @ViewBuilder row: @escaping (Node) -> Row
-    ) -> some View {
+        @ViewBuilder row: @escaping (Node) -> some View) -> some View
+    {
         if nodes.isEmpty {
             Text(tr("ui.common.na"))
                 .font(.system(size: 11, weight: .regular))
@@ -434,7 +442,6 @@ extension MenuBarRoot {
             }
         }
     }
-
 }
 
 private struct ProxyGroupPopoverNodeItem: View {
@@ -447,25 +454,26 @@ private struct ProxyGroupPopoverNodeItem: View {
     @State private var isHovered = false
 
     var body: some View {
-        Button(action: action) {
+        Button(action: self.action) {
             HStack(spacing: MenuBarLayoutTokens.hMicro) {
-                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                Image(systemName: self.selected ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(selected ? Color(nsColor: .controlAccentColor) : Color(nsColor: .tertiaryLabelColor))
+                    .foregroundStyle(self
+                        .selected ? Color(nsColor: .controlAccentColor) : Color(nsColor: .tertiaryLabelColor))
                     .frame(width: 11, alignment: .center)
 
-                Text(title)
-                    .font(.system(size: 12, weight: selected ? .semibold : .medium))
-                    .foregroundStyle(selected ? Color.primary : Color.secondary)
+                Text(self.title)
+                    .font(.system(size: 12, weight: self.selected ? .semibold : .medium))
+                    .foregroundStyle(self.selected ? Color.primary : Color.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .minimumScaleFactor(0.9)
 
                 Spacer(minLength: 0)
 
-                Text(delayText)
+                Text(self.delayText)
                     .font(.system(size: 10, weight: .regular, design: .monospaced))
-                    .foregroundStyle(delayColor.opacity(selected ? 1 : 0.85))
+                    .foregroundStyle(self.delayColor.opacity(self.selected ? 1 : 0.85))
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
             }
@@ -474,18 +482,17 @@ private struct ProxyGroupPopoverNodeItem: View {
             .padding(.vertical, 1)
             .background(
                 RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(rowBackground)
-            )
+                    .fill(self.rowBackground))
         }
         .buttonStyle(.plain)
-        .onHover { isHovered = $0 }
+        .onHover { self.isHovered = $0 }
     }
 
     var rowBackground: Color {
-        if selected {
+        if self.selected {
             return Color(nsColor: .controlAccentColor).opacity(0.18)
         }
-        if isHovered {
+        if self.isHovered {
             return Color(nsColor: .selectedContentBackgroundColor).opacity(0.22)
         }
         return .clear

@@ -9,13 +9,13 @@ enum TunConfigFileServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .configPathEmpty:
-            return "Config file path is empty."
+            "Config file path is empty."
         case .configNotFound:
-            return "Config file not found."
+            "Config file not found."
         case let .unableToReadConfig(message):
-            return "Failed to read config file: \(message)"
+            "Failed to read config file: \(message)"
         case let .unableToWriteConfig(message):
-            return "Failed to write config file: \(message)"
+            "Failed to write config file: \(message)"
         }
     }
 }
@@ -31,14 +31,14 @@ struct TunConfigFileService: Sendable {
         "  dns-hijack:",
         "    - any:53",
         "  route-exclude-address: []",
-        "  mtu: 1500"
+        "  mtu: 1500",
     ]
 
     func patchConfig(
         at configPath: String,
         tunEnabled: Bool,
-        ensureDNSEnabledWhenTunOn: Bool
-    ) throws {
+        ensureDNSEnabledWhenTunOn: Bool) throws
+    {
         let trimmedPath = configPath.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedPath.isEmpty else {
             throw TunConfigFileServiceError.configPathEmpty
@@ -56,10 +56,10 @@ struct TunConfigFileService: Sendable {
 
         let lineEnding = originalContent.contains("\r\n") ? "\r\n" : "\n"
         var lines = originalContent.replacingOccurrences(of: "\r\n", with: "\n").components(separatedBy: "\n")
-        ensureTunBlock(lines: &lines, enabled: tunEnabled)
+        self.ensureTunBlock(lines: &lines, enabled: tunEnabled)
 
         if tunEnabled, ensureDNSEnabledWhenTunOn {
-            ensureDNSBlock(lines: &lines)
+            self.ensureDNSBlock(lines: &lines)
         }
 
         var patched = lines.joined(separator: "\n")
@@ -77,55 +77,54 @@ struct TunConfigFileService: Sendable {
 
     private func ensureTunBlock(lines: inout [String], enabled: Bool) {
         if let range = topLevelBlockRange(for: "tun", lines: lines) {
-            replaceTunEnableLine(lines: &lines, range: range, enabled: enabled)
+            self.replaceTunEnableLine(lines: &lines, range: range, enabled: enabled)
             if enabled {
-                ensureTunDefaults(lines: &lines, range: range)
+                self.ensureTunDefaults(lines: &lines, range: range)
             }
             return
         }
 
         guard enabled else { return }
-        appendBlankLineIfNeeded(lines: &lines)
+        self.appendBlankLineIfNeeded(lines: &lines)
         lines.append("tun:")
-        lines.append(contentsOf: tunDefaultLines)
+        lines.append(contentsOf: self.tunDefaultLines)
     }
 
     private func ensureDNSBlock(lines: inout [String]) {
         if let range = topLevelBlockRange(for: "dns", lines: lines) {
-            replaceChildLine(
+            self.replaceChildLine(
                 lines: &lines,
                 range: range,
                 key: "enable",
-                value: "true"
-            )
+                value: "true")
             return
         }
 
-        appendBlankLineIfNeeded(lines: &lines)
+        self.appendBlankLineIfNeeded(lines: &lines)
         lines.append("dns:")
         lines.append("  enable: true")
     }
 
     private func ensureTunDefaults(lines: inout [String], range: Range<Int>) {
-        replaceChildLine(lines: &lines, range: range, key: "device", value: "utun1500")
-        replaceChildLine(lines: &lines, range: range, key: "stack", value: "mixed")
-        replaceChildLine(lines: &lines, range: range, key: "auto-route", value: "true")
-        replaceChildLine(lines: &lines, range: range, key: "auto-redirect", value: "false")
-        replaceChildLine(lines: &lines, range: range, key: "auto-detect-interface", value: "true")
-        replaceChildLine(lines: &lines, range: range, key: "route-exclude-address", value: "[]")
-        replaceChildLine(lines: &lines, range: range, key: "mtu", value: "1500")
-        ensureDnsHijack(lines: &lines, range: range)
+        self.replaceChildLine(lines: &lines, range: range, key: "device", value: "utun1500")
+        self.replaceChildLine(lines: &lines, range: range, key: "stack", value: "mixed")
+        self.replaceChildLine(lines: &lines, range: range, key: "auto-route", value: "true")
+        self.replaceChildLine(lines: &lines, range: range, key: "auto-redirect", value: "false")
+        self.replaceChildLine(lines: &lines, range: range, key: "auto-detect-interface", value: "true")
+        self.replaceChildLine(lines: &lines, range: range, key: "route-exclude-address", value: "[]")
+        self.replaceChildLine(lines: &lines, range: range, key: "mtu", value: "1500")
+        self.ensureDnsHijack(lines: &lines, range: range)
     }
 
     private func replaceTunEnableLine(lines: inout [String], range: Range<Int>, enabled: Bool) {
-        replaceChildLine(lines: &lines, range: range, key: "enable", value: enabled ? "true" : "false")
+        self.replaceChildLine(lines: &lines, range: range, key: "enable", value: enabled ? "true" : "false")
     }
 
     private func ensureDnsHijack(lines: inout [String], range: Range<Int>) {
-        if childLineIndex(for: "dns-hijack", lines: lines, range: range) != nil {
+        if self.childLineIndex(for: "dns-hijack", lines: lines, range: range) != nil {
             return
         }
-        let indent = childIndent(lines: lines, range: range)
+        let indent = self.childIndent(lines: lines, range: range)
         let insertAt = range.upperBound
         lines.insert("\(indent)dns-hijack:", at: insertAt)
         lines.insert("\(indent)  - any:53", at: insertAt + 1)
@@ -135,9 +134,9 @@ struct TunConfigFileService: Sendable {
         lines: inout [String],
         range: Range<Int>,
         key: String,
-        value: String
-    ) {
-        let indent = childIndent(lines: lines, range: range)
+        value: String)
+    {
+        let indent = self.childIndent(lines: lines, range: range)
         if let lineIndex = childLineIndex(for: key, lines: lines, range: range) {
             lines[lineIndex] = "\(indent)\(key): \(value)"
             return
@@ -181,7 +180,7 @@ struct TunConfigFileService: Sendable {
 
         var end = lines.count
         if start + 1 < lines.count {
-            for index in (start + 1)..<lines.count where isTopLevelMappingLine(lines[index]) {
+            for index in (start + 1)..<lines.count where self.isTopLevelMappingLine(lines[index]) {
                 end = index
                 break
             }

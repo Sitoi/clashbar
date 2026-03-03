@@ -22,8 +22,8 @@ extension AppState {
     func startDecodableStream<Payload: Decodable>(
         kind: StreamKind,
         makeWebSocket: @escaping (MihomoAPIClient) throws -> URLSessionWebSocketTask,
-        onDecoded: @escaping (Payload) -> Void
-    ) {
+        onDecoded: @escaping (Payload) -> Void)
+    {
         startStream(
             kind: kind,
             makeWebSocket: makeWebSocket,
@@ -34,8 +34,7 @@ extension AppState {
                     return
                 }
                 onDecoded(decoded)
-            }
-        )
+            })
     }
 
     func decodeLogLinePayload(_ payload: Data) -> (level: String, message: String)? {
@@ -48,7 +47,8 @@ extension AppState {
         }
 
         if let response = try? self.streamJSONDecoder.decode(LogsResponse.self, from: payload),
-           let first = response.logs?.first {
+           let first = response.logs?.first
+        {
             let level = (first.type?.isEmpty == false) ? (first.type ?? "info") : "info"
             let message = first.payload?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             if !message.isEmpty {
@@ -58,7 +58,8 @@ extension AppState {
 
         if let text = String(data: payload, encoding: .utf8)?
             .trimmingCharacters(in: .whitespacesAndNewlines),
-           !text.isEmpty {
+            !text.isEmpty
+        {
             return (level: "info", message: text)
         }
         return nil

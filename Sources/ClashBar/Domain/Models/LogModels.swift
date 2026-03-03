@@ -4,7 +4,9 @@ enum AppLogSource: String, Codable, Equatable, CaseIterable, Identifiable {
     case clashbar
     case mihomo
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 }
 
 struct AppErrorLogEntry: Codable, Equatable, Identifiable {
@@ -19,8 +21,8 @@ struct AppErrorLogEntry: Codable, Equatable, Identifiable {
         timestamp: Date = Date(),
         source: AppLogSource = .clashbar,
         level: String,
-        message: String
-    ) {
+        message: String)
+    {
         self.id = id
         self.timestamp = timestamp
         self.source = source
@@ -44,9 +46,9 @@ struct DelayMeasurement: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         if let map = try? container.decode([String: Int].self) {
-            value = map.values.first
+            self.value = map.values.first
         } else {
-            value = nil
+            self.value = nil
         }
     }
 }
@@ -56,6 +58,6 @@ struct GroupDelayMeasurement: Codable, Equatable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
-        values = (try? container.decode([String: Int].self)) ?? [:]
+        self.values = (try? container.decode([String: Int].self)) ?? [:]
     }
 }

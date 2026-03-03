@@ -10,11 +10,11 @@ enum RootTab: CaseIterable, Hashable {
 
     var titleKey: String {
         switch self {
-        case .proxy: return "ui.tab.proxy"
-        case .rules: return "ui.tab.rules"
-        case .activity: return "ui.tab.activity"
-        case .logs: return "ui.tab.logs"
-        case .system: return "ui.tab.system"
+        case .proxy: "ui.tab.proxy"
+        case .rules: "ui.tab.rules"
+        case .activity: "ui.tab.activity"
+        case .logs: "ui.tab.logs"
+        case .system: "ui.tab.system"
         }
     }
 }
@@ -25,27 +25,29 @@ enum LogLevelFilter: String, CaseIterable, Identifiable {
     case warning = "WARNING"
     case error = "ERROR"
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 
     var titleKey: String {
         switch self {
-        case .all: return "ui.log_filter.all"
-        case .info: return "ui.log_filter.info"
-        case .warning: return "ui.log_filter.warning"
-        case .error: return "ui.log_filter.error"
+        case .all: "ui.log_filter.all"
+        case .info: "ui.log_filter.info"
+        case .warning: "ui.log_filter.warning"
+        case .error: "ui.log_filter.error"
         }
     }
 
     func matches(level: String) -> Bool {
         switch self {
         case .all:
-            return true
+            true
         case .info:
-            return level == "INFO"
+            level == "INFO"
         case .warning:
-            return level == "WARNING"
+            level == "WARNING"
         case .error:
-            return level == "ERROR"
+            level == "ERROR"
         }
     }
 }
@@ -55,27 +57,29 @@ enum LogSourceFilter: String, CaseIterable, Identifiable {
     case clashbar
     case mihomo
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 
     var titleKey: String {
         switch self {
         case .all:
-            return "ui.log_source.all"
+            "ui.log_source.all"
         case .clashbar:
-            return "ui.log_source.clashbar"
+            "ui.log_source.clashbar"
         case .mihomo:
-            return "ui.log_source.mihomo"
+            "ui.log_source.mihomo"
         }
     }
 
     func matches(source: AppLogSource) -> Bool {
         switch self {
         case .all:
-            return true
+            true
         case .clashbar:
-            return source == .clashbar
+            source == .clashbar
         case .mihomo:
-            return source == .mihomo
+            source == .mihomo
         }
     }
 }
@@ -105,18 +109,23 @@ struct MenuBarRoot: View {
     let fallbackTabContentHeight: CGFloat = 380
 
     var contentWidth: CGFloat {
-        panelWidth - (MenuBarLayoutTokens.hPage * 2)
+        self.panelWidth - (MenuBarLayoutTokens.hPage * 2)
     }
 
-    var language: AppLanguage { appState.uiLanguage }
-    var tabContentTopInset: CGFloat { MenuBarLayoutTokens.vDense }
+    var language: AppLanguage {
+        self.appState.uiLanguage
+    }
+
+    var tabContentTopInset: CGFloat {
+        MenuBarLayoutTokens.vDense
+    }
 
     func tr(_ key: String) -> String {
-        L10n.t(key, language: language)
+        L10n.t(key, language: self.language)
     }
 
     func tr(_ key: String, _ args: CVarArg...) -> String {
-        L10n.t(key, language: language, args: args)
+        L10n.t(key, language: self.language, args: args)
     }
 
     var body: some View {
@@ -130,7 +139,7 @@ struct MenuBarRoot: View {
                 .reportHeight { updateSectionHeight($0, target: .modeAndTab) }
 
             ScrollView(.vertical) {
-                tabScrollContent(for: currentTab)
+                self.tabScrollContent(for: self.currentTab)
             }
             .scrollIndicators(.hidden)
             .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -140,40 +149,40 @@ struct MenuBarRoot: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .reportHeight { updateSectionHeight($0, target: .footer) }
         }
-        .frame(width: contentWidth, alignment: .leading)
+        .frame(width: self.contentWidth, alignment: .leading)
         .padding(MenuBarLayoutTokens.hPage)
-        .frame(width: panelWidth, height: resolvedPanelHeight)
-        .background(panelBackground)
+        .frame(width: self.panelWidth, height: resolvedPanelHeight)
+        .background(self.panelBackground)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .onAppear {
             let restoredTab = rootTab(for: appState.activeMenuTab)
-            if currentTab != restoredTab {
+            if self.currentTab != restoredTab {
                 var transaction = Transaction(animation: nil)
                 transaction.disablesAnimations = true
                 withTransaction(transaction) {
-                    currentTab = restoredTab
+                    self.currentTab = restoredTab
                 }
             }
-            appState.setActiveMenuTab(menuPanelTabHint(for: currentTab))
+            self.appState.setActiveMenuTab(menuPanelTabHint(for: self.currentTab))
             publishPreferredPanelHeight()
         }
-        .onChange(of: currentTab) { _, tab in
-            appState.setActiveMenuTab(menuPanelTabHint(for: tab))
+        .onChange(of: self.currentTab) { _, tab in
+            self.appState.setActiveMenuTab(menuPanelTabHint(for: tab))
         }
-        .onChange(of: appState.activeMenuTab) { _, hint in
+        .onChange(of: self.appState.activeMenuTab) { _, hint in
             let tab = rootTab(for: hint)
-            guard currentTab != tab else { return }
+            guard self.currentTab != tab else { return }
 
             var transaction = Transaction(animation: nil)
             transaction.disablesAnimations = true
             withTransaction(transaction) {
-                currentTab = tab
+                self.currentTab = tab
             }
         }
         .onChange(of: resolvedPanelHeight) { _, _ in
             publishPreferredPanelHeight()
         }
-        .onChange(of: popoverLayoutModel.maxPanelHeight) { _, _ in
+        .onChange(of: self.popoverLayoutModel.maxPanelHeight) { _, _ in
             publishPreferredPanelHeight()
         }
     }
@@ -195,11 +204,12 @@ struct MenuBarRoot: View {
     }
 
     func tabScrollContent(for tab: RootTab) -> some View {
-        tabBody(for: tab)
-            .padding(.top, tabContentTopInset)
+        self.tabBody(for: tab)
+            .padding(.top, self.tabContentTopInset)
             .frame(maxWidth: .infinity, alignment: .leading)
             .reportHeight { updateTabContentHeight($0, for: tab) }
     }
+
     var panelBackground: some View {
         RoundedRectangle(cornerRadius: 16, style: .continuous)
             .fill(.regularMaterial)

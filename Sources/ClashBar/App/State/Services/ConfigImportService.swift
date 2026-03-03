@@ -8,8 +8,7 @@ struct ConfigImportService {
             throw NSError(
                 domain: "ClashBar.ConfigImport",
                 code: 422,
-                userInfo: [NSLocalizedDescriptionKey: "Remote config response is empty"]
-            )
+                userInfo: [NSLocalizedDescriptionKey: "Remote config response is empty"])
         }
         try data.write(to: targetURL, options: .atomic)
     }
@@ -68,15 +67,15 @@ struct ConfigImportService {
             throw APIError.statusCode(http.statusCode, HTTPURLResponse.localizedString(forStatusCode: http.statusCode))
         }
 
-        if http.expectedContentLength > Int64(maxRemoteConfigBytes) {
-            throw remoteConfigTooLargeError(limit: maxRemoteConfigBytes)
+        if http.expectedContentLength > Int64(self.maxRemoteConfigBytes) {
+            throw self.remoteConfigTooLargeError(limit: self.maxRemoteConfigBytes)
         }
 
         var data = Data()
-        data.reserveCapacity(min(maxRemoteConfigBytes, 64 * 1024))
+        data.reserveCapacity(min(self.maxRemoteConfigBytes, 64 * 1024))
         for try await byte in bytes {
-            if data.count >= maxRemoteConfigBytes {
-                throw remoteConfigTooLargeError(limit: maxRemoteConfigBytes)
+            if data.count >= self.maxRemoteConfigBytes {
+                throw self.remoteConfigTooLargeError(limit: self.maxRemoteConfigBytes)
             }
             data.append(byte)
         }
@@ -87,7 +86,6 @@ struct ConfigImportService {
         NSError(
             domain: "ClashBar.ConfigImport",
             code: 413,
-            userInfo: [NSLocalizedDescriptionKey: "Remote config exceeds size limit (\(limit) bytes)"]
-        )
+            userInfo: [NSLocalizedDescriptionKey: "Remote config exceeds size limit (\(limit) bytes)"])
     }
 }

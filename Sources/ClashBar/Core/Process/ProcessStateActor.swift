@@ -5,10 +5,10 @@ actor ProcessStateActor {
     private(set) var intentionalStop: Bool = false
 
     func setStatus(_ newStatus: CoreLifecycleStatus) {
-        status = newStatus
+        self.status = newStatus
     }
 
     func setIntentionalStop(_ value: Bool) {
-        intentionalStop = value
+        self.intentionalStop = value
     }
 }

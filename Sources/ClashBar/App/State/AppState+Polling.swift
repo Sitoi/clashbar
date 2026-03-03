@@ -3,13 +3,13 @@ import Foundation
 @MainActor
 extension AppState {
     func startPolling() {
-        teardownStreams()
-        ensurePeriodicTasksForCurrentVisibility()
-        updateDataAcquisitionPolicy()
+        self.teardownStreams()
+        self.ensurePeriodicTasksForCurrentVisibility()
+        self.updateDataAcquisitionPolicy()
     }
 
     func cancelPolling() {
-        teardownStreams()
+        self.teardownStreams()
     }
 
     func teardownStreams() {
@@ -25,8 +25,8 @@ extension AppState {
 
     func startPeriodicTask(
         intervalProvider: @escaping (AppState) -> UInt64,
-        operation: @escaping (AppState) async -> Void
-    ) -> Task<Void, Never> {
+        operation: @escaping (AppState) async -> Void) -> Task<Void, Never>
+    {
         Task { [weak self] in
             guard let self else { return }
             while !Task.isCancelled {
@@ -44,19 +44,19 @@ extension AppState {
     func ensurePeriodicTasksForCurrentVisibility() {
         if isPanelPresented {
             if mediumFrequencyTask == nil {
-                mediumFrequencyTask = startPeriodicTask(intervalProvider: { state in
+                mediumFrequencyTask = self.startPeriodicTask(intervalProvider: { state in
                     state.mediumFrequencyIntervalNanoseconds
-                }) { state in
+                }, operation: { state in
                     await state.refreshMediumFrequency()
-                }
+                })
             }
 
             if lowFrequencyTask == nil {
-                lowFrequencyTask = startPeriodicTask(intervalProvider: { state in
+                lowFrequencyTask = self.startPeriodicTask(intervalProvider: { state in
                     state.lowFrequencyIntervalNanoseconds
-                }) { state in
+                }, operation: { state in
                     await state.refreshLowFrequency()
-                }
+                })
             }
             return
         }
@@ -68,15 +68,15 @@ extension AppState {
     }
 
     func refreshFromAPI(includeSlowCalls: Bool) async {
-        await refreshHighFrequency()
-        await refreshMediumFrequency()
+        await self.refreshHighFrequency()
+        await self.refreshMediumFrequency()
         if includeSlowCalls {
-            await refreshLowFrequency()
+            await self.refreshLowFrequency()
         }
     }
 
     func refreshHighFrequency() async {
-        updateDataAcquisitionPolicy()
+        self.updateDataAcquisitionPolicy()
     }
 
     func setPanelVisibility(_ presented: Bool) {
@@ -84,33 +84,33 @@ extension AppState {
         isPanelPresented = presented
         if !presented {
             cancelProxyPortsAutoSave()
-            clearTrafficPresentationHistory()
-            releasePanelCachedData()
+            self.clearTrafficPresentationHistory()
+            self.releasePanelCachedData()
         }
         trimInMemoryLogsForCurrentVisibility()
-        updateDataAcquisitionPolicy()
+        self.updateDataAcquisitionPolicy()
 
         guard presented else { return }
         Task {
-            await refreshForActivatedTab(activeMenuTab)
+            await self.refreshForActivatedTab(activeMenuTab)
         }
     }
 
     func setActiveMenuTab(_ tab: MenuPanelTabHint) {
         let changed = activeMenuTab != tab
         activeMenuTab = tab
-        updateDataAcquisitionPolicy()
+        self.updateDataAcquisitionPolicy()
 
         guard changed else { return }
         Task {
-            await refreshForActivatedTab(tab)
+            await self.refreshForActivatedTab(tab)
         }
     }
 
     func desiredDataAcquisitionPolicy(
         panelPresented: Bool,
-        activeTab: MenuPanelTabHint
-    ) -> DataAcquisitionPolicy {
+        activeTab: MenuPanelTabHint) -> DataAcquisitionPolicy
+    {
         if !panelPresented {
             return DataAcquisitionPolicy(
                 enableTrafficStream: true,
@@ -119,16 +119,14 @@ extension AppState {
                 connectionsIntervalMilliseconds: nil,
                 enableLogsStream: false,
                 mediumFrequencyIntervalNanoseconds: backgroundMediumFrequencyIntervalNanoseconds,
-                lowFrequencyIntervalNanoseconds: backgroundLowFrequencyIntervalNanoseconds
-            )
+                lowFrequencyIntervalNanoseconds: backgroundLowFrequencyIntervalNanoseconds)
         }
 
-        let lowFrequencyInterval: UInt64
-        switch activeTab {
+        let lowFrequencyInterval: UInt64 = switch activeTab {
         case .proxy, .rules:
-            lowFrequencyInterval = foregroundLowFrequencyPrimaryTabsIntervalNanoseconds
+            foregroundLowFrequencyPrimaryTabsIntervalNanoseconds
         default:
-            lowFrequencyInterval = foregroundLowFrequencyOtherTabsIntervalNanoseconds
+            foregroundLowFrequencyOtherTabsIntervalNanoseconds
         }
 
         let memoryEnabled = activeTab == .proxy
@@ -142,27 +140,25 @@ extension AppState {
             connectionsIntervalMilliseconds: connectionsEnabled ? 1000 : nil,
             enableLogsStream: logsEnabled,
             mediumFrequencyIntervalNanoseconds: foregroundMediumFrequencyIntervalNanoseconds,
-            lowFrequencyIntervalNanoseconds: lowFrequencyInterval
-        )
+            lowFrequencyIntervalNanoseconds: lowFrequencyInterval)
     }
 
     func updateDataAcquisitionPolicy() {
         guard processManager.isRunning else {
-            ensurePeriodicTasksForCurrentVisibility()
+            self.ensurePeriodicTasksForCurrentVisibility()
             mediumFrequencyIntervalNanoseconds = foregroundMediumFrequencyIntervalNanoseconds
             lowFrequencyIntervalNanoseconds = foregroundLowFrequencyPrimaryTabsIntervalNanoseconds
             return
         }
 
-        let policy = desiredDataAcquisitionPolicy(
+        let policy = self.desiredDataAcquisitionPolicy(
             panelPresented: isPanelPresented,
-            activeTab: activeMenuTab
-        )
+            activeTab: activeMenuTab)
 
         mediumFrequencyIntervalNanoseconds = policy.mediumFrequencyIntervalNanoseconds
         lowFrequencyIntervalNanoseconds = policy.lowFrequencyIntervalNanoseconds
-        ensurePeriodicTasksForCurrentVisibility()
-        applyStreamPolicy(policy)
+        self.ensurePeriodicTasksForCurrentVisibility()
+        self.applyStreamPolicy(policy)
     }
 
     func refreshForActivatedTab(_ tab: MenuPanelTabHint) async {
@@ -170,19 +166,19 @@ extension AppState {
 
         switch tab {
         case .proxy:
-            await refreshMediumFrequency()
+            await self.refreshMediumFrequency()
             if proxyProvidersDetail.isEmpty || ruleItems.isEmpty {
                 await refreshProvidersAndRules()
             }
         case .rules:
             await refreshProvidersAndRules()
         case .activity:
-            await refreshConnections()
+            await self.refreshConnections()
         case .logs:
             break
         case .system:
-            await refreshMediumFrequency()
-            await refreshSystemProxyStatus()
+            await self.refreshMediumFrequency()
+            await self.refreshSystemProxyStatus()
         }
     }
 
@@ -213,7 +209,7 @@ extension AppState {
     func fetchRuntimeConfigSnapshot() async throws -> ConfigSnapshot {
         let client = try clientOrThrow()
         let config: ConfigSnapshot = try await client.request(.getConfigs)
-        applyRuntimeConfigSnapshot(config)
+        self.applyRuntimeConfigSnapshot(config)
         return config
     }
 
@@ -238,7 +234,7 @@ extension AppState {
 
     func resetTrafficPresentation() {
         traffic = TrafficSnapshot(up: 0, down: 0)
-        clearTrafficPresentationHistory()
+        self.clearTrafficPresentationHistory()
     }
 
     func clearTrafficPresentationHistory() {
@@ -307,11 +303,11 @@ extension AppState {
         switch activeMenuTab {
         case .proxy:
             await refreshProvidersAndRules()
-            await refreshSystemProxyStatus()
+            await self.refreshSystemProxyStatus()
         case .rules:
             await refreshProvidersAndRules()
         case .system:
-            await refreshSystemProxyStatus()
+            await self.refreshSystemProxyStatus()
         case .activity, .logs:
             break
         }
@@ -327,10 +323,14 @@ extension AppState {
 
     func applyProxyGroupsResponse(_ response: ProxyGroupsResponse) {
         proxyGroups = response.proxies.values
-            .filter { !$0.all.isEmpty && ($0.type == "Selector" || $0.type == "URLTest" || $0.type == "Fallback" || $0.type == nil) }
+            .filter {
+                !$0.all
+                    .isEmpty &&
+                    ($0.type == "Selector" || $0.type == "URLTest" || $0.type == "Fallback" || $0.type == nil)
+            }
             .sorted { lhs, rhs in
-                let lhsPriority = proxyGroupTypePriority(lhs.type)
-                let rhsPriority = proxyGroupTypePriority(rhs.type)
+                let lhsPriority = self.proxyGroupTypePriority(lhs.type)
+                let rhsPriority = self.proxyGroupTypePriority(rhs.type)
                 if lhsPriority != rhsPriority { return lhsPriority < rhsPriority }
                 return lhs.name < rhs.name
             }
@@ -341,8 +341,7 @@ extension AppState {
                     now: group.now,
                     all: group.all,
                     hidden: group.hidden,
-                    latestDelay: nil
-                )
+                    latestDelay: nil)
             }
 
         var historyMap: [String: Int] = [:]
@@ -357,16 +356,16 @@ extension AppState {
     func proxyGroupTypePriority(_ type: String?) -> Int {
         switch type {
         case "Selector":
-            return 0
+            0
         case "URLTest":
-            return 1
+            1
         default:
-            return 2
+            2
         }
     }
 
     func refreshConnections() async {
-        let policy = desiredDataAcquisitionPolicy(panelPresented: isPanelPresented, activeTab: activeMenuTab)
+        let policy = self.desiredDataAcquisitionPolicy(panelPresented: isPanelPresented, activeTab: activeMenuTab)
         guard policy.enableConnectionsStream else {
             cancelStream(.connections)
             return
@@ -383,21 +382,20 @@ extension AppState {
     }
 
     private func applyStreamPolicy(_ policy: DataAcquisitionPolicy) {
-        syncStream(.traffic, enabled: policy.enableTrafficStream) { startTrafficStream() }
-        syncStream(.memory, enabled: policy.enableMemoryStream) { startMemoryStream() }
-        syncConnectionsStream(
+        self.syncStream(.traffic, enabled: policy.enableTrafficStream) { startTrafficStream() }
+        self.syncStream(.memory, enabled: policy.enableMemoryStream) { startMemoryStream() }
+        self.syncConnectionsStream(
             enabled: policy.enableConnectionsStream,
-            intervalMilliseconds: policy.connectionsIntervalMilliseconds
-        )
-        syncStream(.logs, enabled: policy.enableLogsStream) { startLogsStream() }
+            intervalMilliseconds: policy.connectionsIntervalMilliseconds)
+        self.syncStream(.logs, enabled: policy.enableLogsStream) { startLogsStream() }
     }
 
     private func syncConnectionsStream(enabled: Bool, intervalMilliseconds: Int?) {
-        syncStream(
+        self.syncStream(
             .connections,
             enabled: enabled,
-            forceRestart: currentConnectionsStreamIntervalMilliseconds != intervalMilliseconds
-        ) {
+            forceRestart: currentConnectionsStreamIntervalMilliseconds != intervalMilliseconds)
+        {
             startConnectionsStream(intervalMilliseconds: intervalMilliseconds)
         }
     }
@@ -406,8 +404,8 @@ extension AppState {
         _ kind: StreamKind,
         enabled: Bool,
         forceRestart: Bool = false,
-        start: () -> Void
-    ) {
+        start: () -> Void)
+    {
         guard enabled else {
             cancelStream(kind)
             return

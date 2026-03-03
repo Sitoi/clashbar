@@ -4,8 +4,8 @@ import SwiftUI
 extension MenuBarRoot {
     var modeAndTabSection: some View {
         VStack(spacing: MenuBarLayoutTokens.sectionGap) {
-            modeSwitcher
-            topTabs
+            self.modeSwitcher
+            self.topTabs
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .overlay(alignment: .bottom) {
@@ -15,21 +15,18 @@ extension MenuBarRoot {
 
     var modeSwitcher: some View {
         HStack(spacing: 0) {
-            modeSegmentButton(
+            self.modeSegmentButton(
                 title: tr("ui.mode.rule"),
                 mode: .rule,
-                symbol: "line.3.horizontal.decrease.circle"
-            )
-            modeSegmentButton(
+                symbol: "line.3.horizontal.decrease.circle")
+            self.modeSegmentButton(
                 title: tr("ui.mode.global"),
                 mode: .global,
-                symbol: "globe"
-            )
-            modeSegmentButton(
+                symbol: "globe")
+            self.modeSegmentButton(
                 title: tr("ui.mode.direct"),
                 mode: .direct,
-                symbol: "paperplane"
-            )
+                symbol: "paperplane")
         }
         .frame(width: contentWidth)
         .padding(2)
@@ -75,16 +72,13 @@ extension MenuBarRoot {
                     .fill(
                         selected
                             ? nativeAccent.opacity(0.16)
-                            : (hovered ? Color(nsColor: .selectedContentBackgroundColor).opacity(0.20) : .clear)
-                    )
-            )
+                            : (hovered ? Color(nsColor: .selectedContentBackgroundColor).opacity(0.20) : .clear)))
             .overlay {
                 if selected || hovered {
                     RoundedRectangle(cornerRadius: 5, style: .continuous)
                         .stroke(
                             selected ? nativeAccent.opacity(0.30) : nativeControlBorder.opacity(0.82),
-                            lineWidth: 0.7
-                        )
+                            lineWidth: 0.7)
                 }
             }
         }
@@ -97,8 +91,8 @@ extension MenuBarRoot {
     var topTabs: some View {
         EqualWidthSegmentedTabControl(
             items: RootTab.allCases.map { ($0, tr($0.titleKey)) },
-            selected: currentTab
-        ) { tab in
+            selected: currentTab)
+        { tab in
             guard currentTab != tab else { return }
             var transaction = Transaction(animation: nil)
             transaction.disablesAnimations = true

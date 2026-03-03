@@ -54,10 +54,9 @@ extension MenuBarRoot {
                     }
 
                     HStack(spacing: 6) {
-                        headerControllerLink(
+                        self.headerControllerLink(
                             symbol: "network",
-                            text: appState.controller
-                        )
+                            text: appState.controller)
                     }
                 }
             }
@@ -65,19 +64,19 @@ extension MenuBarRoot {
             Spacer(minLength: 6)
 
             HStack(spacing: 6) {
-                compactTopIcon("arrow.clockwise", label: appState.primaryCoreActionLabel) {
+                self.compactTopIcon("arrow.clockwise", label: appState.primaryCoreActionLabel) {
                     await appState.performPrimaryCoreAction()
                 }
                 .disabled(!appState.isPrimaryCoreActionEnabled)
                 .opacity(appState.isPrimaryCoreActionEnabled ? 1 : 0.6)
 
-                compactTopIcon("stop.circle", label: tr("ui.action.stop")) {
+                self.compactTopIcon("stop.circle", label: tr("ui.action.stop")) {
                     await appState.stopCore()
                 }
                 .disabled(appState.isCoreActionProcessing)
                 .opacity(appState.isCoreActionProcessing ? 0.6 : 1)
 
-                compactTopIcon("rectangle.portrait.and.arrow.right", label: tr("ui.action.quit"), warning: true) {
+                self.compactTopIcon("rectangle.portrait.and.arrow.right", label: tr("ui.action.quit"), warning: true) {
                     await appState.quitApp()
                 }
             }
@@ -105,15 +104,15 @@ extension MenuBarRoot {
     func headerControllerLink(symbol: String, text: String) -> some View {
         if let url = makeMetaCubeXDSetupURL(
             controller: appState.controller,
-            secret: appState.controllerSecret
-        ) {
+            secret: appState.controllerSecret)
+        {
             Link(destination: url) {
-                headerMetaLabel(symbol: symbol, text: text)
+                self.headerMetaLabel(symbol: symbol, text: text)
             }
             .buttonStyle(.plain)
             .help(url.absoluteString)
         } else {
-            headerMetaLabel(symbol: symbol, text: text)
+            self.headerMetaLabel(symbol: symbol, text: text)
         }
     }
 
@@ -124,7 +123,7 @@ extension MenuBarRoot {
         var items: [URLQueryItem] = [
             URLQueryItem(name: "hostname", value: endpoint.host),
             URLQueryItem(name: "port", value: "\(endpoint.port)"),
-            URLQueryItem(name: "http", value: endpoint.useHTTP ? "true" : "false")
+            URLQueryItem(name: "http", value: endpoint.useHTTP ? "true" : "false"),
         ]
         let trimmedSecret = secret?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if !trimmedSecret.isEmpty {
@@ -143,7 +142,8 @@ extension MenuBarRoot {
         let normalized = trimmed.contains("://") ? trimmed : "http://\(trimmed)"
         guard let components = URLComponents(string: normalized),
               let host = components.host,
-              !host.isEmpty else {
+              !host.isEmpty
+        else {
             return nil
         }
 
@@ -157,25 +157,23 @@ extension MenuBarRoot {
         _ symbol: String,
         label: String,
         warning: Bool = false,
-        action: @escaping () async -> Void
-    ) -> some View {
-        let tone: Color
-        if warning {
-            tone = nativeCritical
+        action: @escaping () async -> Void) -> some View
+    {
+        let tone: Color = if warning {
+            nativeCritical
         } else if symbol.contains("arrow.clockwise") {
-            tone = nativeInfo
+            nativeInfo
         } else if symbol.contains("stop") {
-            tone = nativeWarning
+            nativeWarning
         } else {
-            tone = nativeSecondaryLabel
+            nativeSecondaryLabel
         }
 
         return TopHeaderIconActionButton(
             symbol: symbol,
             tone: tone.opacity(0.94),
-            action: action
-        )
-        .accessibilityLabel(label)
+            action: action)
+            .accessibilityLabel(label)
     }
 }
 
@@ -188,14 +186,14 @@ private struct TopHeaderIconActionButton: View {
 
     var body: some View {
         Button {
-            Task { await action() }
+            Task { await self.action() }
         } label: {
-            Image(systemName: symbol)
+            Image(systemName: self.symbol)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(hovered ? tone : Color(nsColor: .secondaryLabelColor))
+                .foregroundStyle(self.hovered ? self.tone : Color(nsColor: .secondaryLabelColor))
                 .frame(width: 20, height: 20)
         }
         .buttonStyle(.borderless)
-        .onHover { hovered = $0 }
+        .onHover { self.hovered = $0 }
     }
 }

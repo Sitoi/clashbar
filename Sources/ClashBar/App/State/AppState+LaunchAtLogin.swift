@@ -14,7 +14,7 @@ extension AppState {
             launchAtLoginEnabled = appLaunchService.isEnabled
         } catch {
             launchAtLoginEnabled = appLaunchService.isEnabled
-            launchAtLoginErrorMessage = launchAtLoginMessage(for: error)
+            launchAtLoginErrorMessage = self.launchAtLoginMessage(for: error)
             appendLog(level: "error", message: tr("log.launch_at_login.toggle_failed", error.localizedDescription))
         }
     }

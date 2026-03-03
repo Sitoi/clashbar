@@ -16,23 +16,24 @@ enum SystemProxyServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidHost:
-            return "Invalid proxy host."
+            "Invalid proxy host."
         case .invalidPort:
-            return "Invalid proxy port."
+            "Invalid proxy port."
         case .helperNotBundled:
-            return "Privileged helper not found in app bundle. Please rebuild and run the packaged app."
+            "Privileged helper not found in app bundle. Please rebuild and run the packaged app."
         case .helperRequiresInstallToApplications:
-            return "Privileged helper can only be installed from /Applications. Move ClashBar.app to /Applications and reopen it."
+            "Privileged helper can only be installed from /Applications. " +
+                "Move ClashBar.app to /Applications and reopen it."
         case .helperNeedsApproval:
-            return "Privileged helper requires approval in System Settings > Login Items."
+            "Privileged helper requires approval in System Settings > Login Items."
         case let .helperRegistrationFailed(message):
-            return "Failed to register privileged helper: \(message)"
+            "Failed to register privileged helper: \(message)"
         case let .helperRecoveryFailed(message):
-            return "Failed to recover privileged helper: \(message)"
+            "Failed to recover privileged helper: \(message)"
         case let .helperConnectionFailed(message):
-            return "Failed to connect privileged helper: \(message)"
+            "Failed to connect privileged helper: \(message)"
         case let .helperOperationFailed(message):
-            return "Privileged helper operation failed: \(message)"
+            "Privileged helper operation failed: \(message)"
         }
     }
 }
@@ -46,13 +47,13 @@ private final class ContinuationBox<Value: Sendable>: @unchecked Sendable {
     }
 
     func resume(with result: Result<Value, Error>) {
-        lock.lock()
+        self.lock.lock()
         guard let continuation else {
-            lock.unlock()
+            self.lock.unlock()
             return
         }
         self.continuation = nil
-        lock.unlock()
+        self.lock.unlock()
 
         switch result {
         case let .success(value):
@@ -69,7 +70,7 @@ struct SystemProxyService {
     private let helperResponseTimeoutNanoseconds: UInt64 = 4_000_000_000
 
     func applySystemProxy(enabled: Bool, host: String, ports: SystemProxyPorts) async throws {
-        try validateHost(host)
+        try self.validateHost(host)
 
         if enabled {
             let resolvedPorts = try validateAndResolvePorts(ports, requiresEnabledPort: true)
@@ -83,41 +84,39 @@ struct SystemProxyService {
                     httpPort: resolvedPorts.httpPort,
                     httpsPort: resolvedPorts.httpsPort,
                     socksPort: resolvedPorts.socksPort,
-                    completion: completion
-                )
+                    completion: completion)
             }
         } else {
-            try await invokeMutationWithRecovery { helper, completion in
+            try await self.invokeMutationWithRecovery { helper, completion in
                 helper.clearSystemProxy(completion: completion)
             }
         }
     }
 
     func isSystemProxyEnabled() async throws -> Bool {
-        let daemonService = helperService()
+        let daemonService = self.helperService()
         guard daemonService.status == .enabled else {
             return false
         }
 
-        return try await invokeStateQueryWithRecovery()
+        return try await self.invokeStateQueryWithRecovery()
     }
 
     func isSystemProxyConfigured(host: String, ports: SystemProxyPorts) async throws -> Bool {
-        try validateHost(host)
+        try self.validateHost(host)
         let resolvedPorts = try validateAndResolvePorts(ports, requiresEnabledPort: true)
-        let daemonService = helperService()
+        let daemonService = self.helperService()
         guard daemonService.status == .enabled else {
             return false
         }
 
-        return try await invokeBooleanQueryWithRecovery { helper, completion in
+        return try await self.invokeBooleanQueryWithRecovery { helper, completion in
             helper.isSystemProxyConfigured(
                 host: host,
                 httpPort: resolvedPorts.httpPort,
                 httpsPort: resolvedPorts.httpsPort,
                 socksPort: resolvedPorts.socksPort,
-                completion: completion
-            )
+                completion: completion)
         }
     }
 
@@ -130,13 +129,13 @@ struct SystemProxyService {
 
     private func validateAndResolvePorts(
         _ ports: SystemProxyPorts,
-        requiresEnabledPort: Bool
-    ) throws -> (httpPort: Int, httpsPort: Int, socksPort: Int) {
+        requiresEnabledPort: Bool) throws -> (httpPort: Int, httpsPort: Int, socksPort: Int)
+    {
         let httpPort = try normalizePort(ports.httpPort)
         let httpsPort = try normalizePort(ports.httpsPort)
         let socksPort = try normalizePort(ports.socksPort)
 
-        if requiresEnabledPort && httpPort == 0 && httpsPort == 0 && socksPort == 0 {
+        if requiresEnabledPort, httpPort == 0, httpsPort == 0, socksPort == 0 {
             throw SystemProxyServiceError.invalidPort
         }
 
@@ -152,14 +151,14 @@ struct SystemProxyService {
     }
 
     private func ensureHelperReadyForWrite() throws {
-        guard isHelperBundledInMainApp() else {
+        guard self.isHelperBundledInMainApp() else {
             throw SystemProxyServiceError.helperNotBundled
         }
-        guard !isRunningFromReadOnlyVolume() else {
+        guard !self.isRunningFromReadOnlyVolume() else {
             throw SystemProxyServiceError.helperRequiresInstallToApplications
         }
 
-        let daemonService = helperService()
+        let daemonService = self.helperService()
         do {
             // Always refresh daemon registration. This updates launch constraints
             // when users replace the app bundle (for example, after a DMG upgrade).
@@ -184,7 +183,9 @@ struct SystemProxyService {
             throw SystemProxyServiceError.helperNeedsApproval
         }
 
-        throw SystemProxyServiceError.helperRegistrationFailed("Service remains unavailable after register call. status=\(daemonService.status.rawValue)")
+        throw SystemProxyServiceError
+            .helperRegistrationFailed(
+                "Service remains unavailable after register call. status=\(daemonService.status.rawValue)")
     }
 
     private func isHelperBundledInMainApp() -> Bool {
@@ -214,23 +215,23 @@ struct SystemProxyService {
     }
 
     private func invokeMutationWithRecovery(
-        _ invoke: @escaping (ProxyHelperProtocol, @escaping (Bool, String?) -> Void) -> Void
-    ) async throws {
+        _ invoke: @escaping (ProxyHelperProtocol, @escaping (Bool, String?) -> Void) -> Void) async throws
+    {
         var attempt = 0
         var lastError: Error?
 
-        while attempt < helperRecoveryMaxAttempts {
+        while attempt < self.helperRecoveryMaxAttempts {
             do {
-                try ensureHelperReadyForWrite()
-                try await invokeMutation(invoke)
+                try self.ensureHelperReadyForWrite()
+                try await self.invokeMutation(invoke)
                 return
             } catch {
                 lastError = error
-                let shouldRetry = shouldRetryAfterRecovery(error)
-                if !shouldRetry || attempt == helperRecoveryMaxAttempts - 1 {
+                let shouldRetry = self.shouldRetryAfterRecovery(error)
+                if !shouldRetry || attempt == self.helperRecoveryMaxAttempts - 1 {
                     throw error
                 }
-                try await recoverHelperForRetry(error: error)
+                try await self.recoverHelperForRetry(error: error)
                 attempt += 1
             }
         }
@@ -239,27 +240,27 @@ struct SystemProxyService {
     }
 
     private func invokeStateQueryWithRecovery() async throws -> Bool {
-        try await invokeBooleanQueryWithRecovery { helper, completion in
+        try await self.invokeBooleanQueryWithRecovery { helper, completion in
             helper.getSystemProxyState(completion: completion)
         }
     }
 
     private func invokeBooleanQueryWithRecovery(
-        _ invoke: @escaping (ProxyHelperProtocol, @escaping (Bool, Bool, String?) -> Void) -> Void
-    ) async throws -> Bool {
+        _ invoke: @escaping (ProxyHelperProtocol, @escaping (Bool, Bool, String?) -> Void) -> Void) async throws -> Bool
+    {
         var attempt = 0
         var lastError: Error?
 
-        while attempt < helperRecoveryMaxAttempts {
+        while attempt < self.helperRecoveryMaxAttempts {
             do {
-                return try await invokeBooleanQuery(invoke)
+                return try await self.invokeBooleanQuery(invoke)
             } catch {
                 lastError = error
-                let shouldRetry = shouldRetryAfterRecovery(error)
-                if !shouldRetry || attempt == helperRecoveryMaxAttempts - 1 {
+                let shouldRetry = self.shouldRetryAfterRecovery(error)
+                if !shouldRetry || attempt == self.helperRecoveryMaxAttempts - 1 {
                     throw error
                 }
-                try await recoverHelperForRetry(error: error)
+                try await self.recoverHelperForRetry(error: error)
                 attempt += 1
             }
         }
@@ -275,13 +276,14 @@ struct SystemProxyService {
         switch serviceError {
         case .helperConnectionFailed, .helperOperationFailed, .helperRegistrationFailed:
             return true
-        case .helperNeedsApproval, .helperNotBundled, .helperRequiresInstallToApplications, .invalidHost, .invalidPort, .helperRecoveryFailed:
+        case .helperNeedsApproval, .helperNotBundled, .helperRequiresInstallToApplications, .invalidHost, .invalidPort,
+             .helperRecoveryFailed:
             return false
         }
     }
 
     private func recoverHelperForRetry(error previousError: Error) async throws {
-        let daemonService = helperService()
+        let daemonService = self.helperService()
         do {
             try daemonService.register()
         } catch {
@@ -290,8 +292,7 @@ struct SystemProxyService {
                 throw SystemProxyServiceError.helperNeedsApproval
             }
             throw SystemProxyServiceError.helperRecoveryFailed(
-                "\(previousError.localizedDescription) -> \(error.localizedDescription)"
-            )
+                "\(previousError.localizedDescription) -> \(error.localizedDescription)")
         }
 
         if daemonService.status == .requiresApproval {
@@ -299,13 +300,13 @@ struct SystemProxyService {
             throw SystemProxyServiceError.helperNeedsApproval
         }
 
-        try? await Task.sleep(nanoseconds: helperRecoveryDelayNanoseconds)
+        try? await Task.sleep(nanoseconds: self.helperRecoveryDelayNanoseconds)
     }
 
     private func invokeMutation(
-        _ invoke: @escaping (ProxyHelperProtocol, @escaping (Bool, String?) -> Void) -> Void
-    ) async throws {
-        try await invokeHelper { helper, completion in
+        _ invoke: @escaping (ProxyHelperProtocol, @escaping (Bool, String?) -> Void) -> Void) async throws
+    {
+        try await self.invokeHelper { helper, completion in
             invoke(helper) { success, message in
                 if success {
                     completion(.success(()))
@@ -317,15 +318,15 @@ struct SystemProxyService {
     }
 
     private func invokeStateQuery() async throws -> Bool {
-        try await invokeBooleanQuery { helper, completion in
+        try await self.invokeBooleanQuery { helper, completion in
             helper.getSystemProxyState(completion: completion)
         }
     }
 
     private func invokeBooleanQuery(
-        _ invoke: @escaping (ProxyHelperProtocol, @escaping (Bool, Bool, String?) -> Void) -> Void
-    ) async throws -> Bool {
-        try await invokeHelper { helper, completion in
+        _ invoke: @escaping (ProxyHelperProtocol, @escaping (Bool, Bool, String?) -> Void) -> Void) async throws -> Bool
+    {
+        try await self.invokeHelper { helper, completion in
             invoke(helper) { success, boolValue, message in
                 if success {
                     completion(.success(boolValue))
@@ -337,24 +338,22 @@ struct SystemProxyService {
     }
 
     private func invokeHelper<Value: Sendable>(
-        _ invoke: @escaping (ProxyHelperProtocol, @escaping (Result<Value, Error>) -> Void) -> Void
-    ) async throws -> Value {
+        _ invoke: @escaping (ProxyHelperProtocol, @escaping (Result<Value, Error>) -> Void) -> Void) async throws
+        -> Value
+    {
         try await withCheckedThrowingContinuation { continuation in
-            let connection = makeConnection()
+            let connection = self.makeConnection()
             let box = ContinuationBox<Value>(continuation)
             let timeoutWorkItem = DispatchWorkItem {
                 connection.invalidate()
                 box.resume(
                     with: .failure(
-                        SystemProxyServiceError.helperConnectionFailed("Helper response timed out.")
-                    )
-                )
+                        SystemProxyServiceError.helperConnectionFailed("Helper response timed out.")))
             }
-            let timeoutInterval = DispatchTimeInterval.nanoseconds(Int(helperResponseTimeoutNanoseconds))
+            let timeoutInterval = DispatchTimeInterval.nanoseconds(Int(self.helperResponseTimeoutNanoseconds))
             DispatchQueue.global(qos: .userInitiated).asyncAfter(
                 deadline: .now() + timeoutInterval,
-                execute: timeoutWorkItem
-            )
+                execute: timeoutWorkItem)
 
             guard let helper = connection.remoteObjectProxyWithErrorHandler({ error in
                 timeoutWorkItem.cancel()
@@ -363,7 +362,9 @@ struct SystemProxyService {
             }) as? ProxyHelperProtocol else {
                 timeoutWorkItem.cancel()
                 connection.invalidate()
-                box.resume(with: .failure(SystemProxyServiceError.helperConnectionFailed("Unable to create XPC proxy.")))
+                box
+                    .resume(with: .failure(SystemProxyServiceError
+                            .helperConnectionFailed("Unable to create XPC proxy.")))
                 return
             }
 
@@ -378,8 +379,7 @@ struct SystemProxyService {
     private func makeConnection() -> NSXPCConnection {
         let connection = NSXPCConnection(
             machServiceName: ProxyHelperConstants.machServiceName,
-            options: .privileged
-        )
+            options: .privileged)
         connection.remoteObjectInterface = NSXPCInterface(with: ProxyHelperProtocol.self)
         connection.activate()
         return connection

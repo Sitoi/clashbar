@@ -25,19 +25,19 @@ enum JSONValue: Sendable {
     var foundationObject: Any {
         switch self {
         case let .string(value):
-            return value
+            value
         case let .int(value):
-            return value
+            value
         case let .bool(value):
-            return value
+            value
         case let .double(value):
-            return value
+            value
         case let .object(value):
-            return value.mapValues(\.foundationObject)
+            value.mapValues(\.foundationObject)
         case let .array(value):
-            return value.map(\.foundationObject)
+            value.map(\.foundationObject)
         case .null:
-            return NSNull()
+            NSNull()
         }
     }
 }
@@ -79,88 +79,88 @@ enum Endpoint: Sendable {
     var method: HTTPMethod {
         switch self {
         case .version, .traffic, .memory, .logs, .getConfigs, .groupDelay, .proxies, .proxyProviders,
-                .proxyProvider, .proxyProviderHealthcheck, .proxyProviderProxyHealthcheck, .rules,
-                .ruleProviders, .connections:
-            return .get
+             .proxyProvider, .proxyProviderHealthcheck, .proxyProviderProxyHealthcheck, .rules,
+             .ruleProviders, .connections:
+            .get
         case .putConfigs, .switchProxy, .updateProxyProvider, .updateRuleProvider:
-            return .put
+            .put
         case .patchConfigs:
-            return .patch
+            .patch
         case .closeAllConnections, .closeConnection:
-            return .delete
+            .delete
         case .flushFakeIPCache, .flushDNSCache:
-            return .post
+            .post
         }
     }
 
     var path: String {
         switch self {
-        case .version: return "/version"
-        case .traffic: return "/traffic"
-        case .memory: return "/memory"
-        case .logs: return "/logs"
-        case .getConfigs, .putConfigs, .patchConfigs: return "/configs"
-        case let .groupDelay(name, _, _): return "/group/\(name.urlPathSegmentEscaped)/delay"
-        case .proxies: return "/proxies"
-        case let .switchProxy(name, _): return "/proxies/\(name.urlPathSegmentEscaped)"
+        case .version: "/version"
+        case .traffic: "/traffic"
+        case .memory: "/memory"
+        case .logs: "/logs"
+        case .getConfigs, .putConfigs, .patchConfigs: "/configs"
+        case let .groupDelay(name, _, _): "/group/\(name.urlPathSegmentEscaped)/delay"
+        case .proxies: "/proxies"
+        case let .switchProxy(name, _): "/proxies/\(name.urlPathSegmentEscaped)"
         case .proxyProviders:
-            return Self.proxyProvidersPath
+            Self.proxyProvidersPath
         case let .proxyProvider(name), let .updateProxyProvider(name):
-            return proxyProviderPath(name)
+            self.proxyProviderPath(name)
         case let .proxyProviderHealthcheck(name, _, _):
-            return "\(proxyProviderPath(name))/healthcheck"
+            "\(self.proxyProviderPath(name))/healthcheck"
         case let .proxyProviderProxyHealthcheck(provider, proxy, _, _):
-            return "\(proxyProviderPath(provider))/\(proxy.urlPathSegmentEscaped)/healthcheck"
-        case .rules: return "/rules"
+            "\(self.proxyProviderPath(provider))/\(proxy.urlPathSegmentEscaped)/healthcheck"
+        case .rules: "/rules"
         case .ruleProviders:
-            return Self.ruleProvidersPath
+            Self.ruleProvidersPath
         case let .updateRuleProvider(name):
-            return "\(Self.ruleProvidersPath)/\(name.urlPathSegmentEscaped)"
-        case .connections, .closeAllConnections: return "/connections"
-        case let .closeConnection(id): return "/connections/\(id.urlPathSegmentEscaped)"
-        case .flushFakeIPCache: return "/cache/fakeip/flush"
-        case .flushDNSCache: return "/cache/dns/flush"
+            "\(Self.ruleProvidersPath)/\(name.urlPathSegmentEscaped)"
+        case .connections, .closeAllConnections: "/connections"
+        case let .closeConnection(id): "/connections/\(id.urlPathSegmentEscaped)"
+        case .flushFakeIPCache: "/cache/fakeip/flush"
+        case .flushDNSCache: "/cache/dns/flush"
         }
     }
 
     var queryItems: [URLQueryItem] {
         switch self {
         case let .logs(level):
-            return optionalQueryItem(name: "level", value: level)
+            self.optionalQueryItem(name: "level", value: level)
         case let .putConfigs(force):
-            return force ? [URLQueryItem(name: "force", value: "true")] : []
+            force ? [URLQueryItem(name: "force", value: "true")] : []
         case let .groupDelay(_, url, timeout):
-            return healthcheckQueryItems(url: url, timeout: timeout)
+            self.healthcheckQueryItems(url: url, timeout: timeout)
         case let .proxyProviderHealthcheck(_, url, timeout), let .proxyProviderProxyHealthcheck(_, _, url, timeout):
-            return healthcheckQueryItems(url: url, timeout: timeout)
+            self.healthcheckQueryItems(url: url, timeout: timeout)
         case let .connections(interval):
-            return optionalQueryItem(name: "interval", value: interval.map(String.init))
+            self.optionalQueryItem(name: "interval", value: interval.map(String.init))
         default:
-            return []
+            []
         }
     }
 
     var body: Data? {
         switch self {
         case let .patchConfigs(body):
-            return try? JSONSerialization.data(withJSONObject: body.mapValues(\.foundationObject))
+            try? JSONSerialization.data(withJSONObject: body.mapValues(\.foundationObject))
         case let .switchProxy(_, target):
-            return try? JSONSerialization.data(withJSONObject: ["name": target])
+            try? JSONSerialization.data(withJSONObject: ["name": target])
         default:
-            return nil
+            nil
         }
     }
 
-    // Keep global requests responsive, but allow heavier latency-check endpoints enough time to complete.
+    /// Keep global requests responsive, but allow heavier latency-check endpoints enough time to complete.
     var timeoutInterval: TimeInterval {
         switch self {
         case .proxyProviderHealthcheck:
-            return 180
+            180
         case let .groupDelay(_, _, timeout),
              let .proxyProviderProxyHealthcheck(_, _, _, timeout):
-            return max(5, TimeInterval(timeout) / 1000.0 + 2)
+            max(5, TimeInterval(timeout) / 1000.0 + 2)
         default:
-            return 2
+            2
         }
     }
 
@@ -171,7 +171,7 @@ enum Endpoint: Sendable {
     private func healthcheckQueryItems(url: String, timeout: Int) -> [URLQueryItem] {
         [
             URLQueryItem(name: "url", value: url),
-            URLQueryItem(name: "timeout", value: "\(timeout)")
+            URLQueryItem(name: "timeout", value: "\(timeout)"),
         ]
     }
 
@@ -189,11 +189,11 @@ enum APIError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidURL:
-            return "Controller URL is invalid"
+            "Controller URL is invalid"
         case .invalidResponse:
-            return "Invalid API response"
+            "Invalid API response"
         case let .statusCode(code, message):
-            return "API request failed (\(code)): \(message)"
+            "API request failed (\(code)): \(message)"
         }
     }
 }
@@ -228,7 +228,7 @@ final class MihomoAPIClient: MihomoAPITransporting, @unchecked Sendable {
     }
 
     func updateCredentials(controller: String, secret: String?) {
-        lock.withLock {
+        self.lock.withLock {
             self.controller = controller
             self.secret = secret
         }
@@ -236,31 +236,31 @@ final class MihomoAPIClient: MihomoAPITransporting, @unchecked Sendable {
 
     func request<T: Decodable>(_ endpoint: Endpoint) async throws -> T {
         let data = try await send(endpoint)
-        return try decoder.decode(T.self, from: data)
+        return try self.decoder.decode(T.self, from: data)
     }
 
     func requestNoResponse(_ endpoint: Endpoint) async throws {
-        _ = try await send(endpoint)
+        _ = try await self.send(endpoint)
     }
 
     func makeTrafficWebSocketTask() throws -> URLSessionWebSocketTask {
         let request = try buildWebSocketRequest(for: .traffic)
-        return session.webSocketTask(with: request)
+        return self.session.webSocketTask(with: request)
     }
 
     func makeMemoryWebSocketTask() throws -> URLSessionWebSocketTask {
         let request = try buildWebSocketRequest(for: .memory)
-        return session.webSocketTask(with: request)
+        return self.session.webSocketTask(with: request)
     }
 
     func makeConnectionsWebSocketTask(interval: Int? = nil) throws -> URLSessionWebSocketTask {
         let request = try buildWebSocketRequest(for: .connections(interval: interval))
-        return session.webSocketTask(with: request)
+        return self.session.webSocketTask(with: request)
     }
 
     func makeLogsWebSocketTask(level: String? = nil) throws -> URLSessionWebSocketTask {
         let request = try buildWebSocketRequest(for: .logs(level: level))
-        return session.webSocketTask(with: request)
+        return self.session.webSocketTask(with: request)
     }
 
     private func send(_ endpoint: Endpoint) async throws -> Data {
@@ -292,11 +292,11 @@ final class MihomoAPIClient: MihomoAPITransporting, @unchecked Sendable {
     }
 
     private func buildRequest(for endpoint: Endpoint) throws -> URLRequest {
-        let (controller, secret) = lock.withLock {
+        let (controller, secret) = self.lock.withLock {
             (self.controller, self.secret)
         }
         let url = try endpointURL(for: endpoint, controller: controller, webSocket: false)
-        var request = authorizedRequest(url: url, secret: secret)
+        var request = self.authorizedRequest(url: url, secret: secret)
         request.httpMethod = endpoint.method.rawValue
         request.httpBody = endpoint.body
         request.timeoutInterval = endpoint.timeoutInterval
@@ -305,15 +305,16 @@ final class MihomoAPIClient: MihomoAPITransporting, @unchecked Sendable {
     }
 
     private func buildWebSocketRequest(for endpoint: Endpoint) throws -> URLRequest {
-        let (controller, secret) = lock.withLock {
+        let (controller, secret) = self.lock.withLock {
             (self.controller, self.secret)
         }
         let url = try endpointURL(for: endpoint, controller: controller, webSocket: true)
-        return authorizedRequest(url: url, secret: secret)
+        return self.authorizedRequest(url: url, secret: secret)
     }
 
     private func endpointURL(for endpoint: Endpoint, controller: String, webSocket: Bool) throws -> URL {
-        guard var components = URLComponents(string: normalizedControllerAddress(controller, webSocket: webSocket)) else {
+        guard var components = URLComponents(string: normalizedControllerAddress(controller, webSocket: webSocket))
+        else {
             throw APIError.invalidURL
         }
         components.path = endpoint.path
@@ -353,8 +354,8 @@ final class MihomoAPIClient: MihomoAPITransporting, @unchecked Sendable {
     }
 }
 
-private extension String {
-    var urlPathSegmentEscaped: String {
+extension String {
+    fileprivate var urlPathSegmentEscaped: String {
         var allowed = CharacterSet.urlPathAllowed
         allowed.remove(charactersIn: "/")
         return addingPercentEncoding(withAllowedCharacters: allowed) ?? self

@@ -33,8 +33,8 @@ struct ConnectionSummary: Codable, Equatable, Identifiable {
         rule: String?,
         rulePayload: String?,
         chains: [String]?,
-        metadata: ConnectionMetadata?
-    ) {
+        metadata: ConnectionMetadata?)
+    {
         self.id = id
         self.upload = upload
         self.download = download
@@ -49,17 +49,16 @@ struct ConnectionSummary: Codable, Equatable, Identifiable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let dynamic = try decoder.container(keyedBy: ConnectionAnyCodingKey.self)
 
-        id = try container.decode(String.self, forKey: .id)
-        upload = try container.decodeIfPresent(Int64.self, forKey: .upload)
-        download = try container.decodeIfPresent(Int64.self, forKey: .download)
-        start = try container.decodeIfPresent(String.self, forKey: .start)
-        rule = try container.decodeIfPresent(String.self, forKey: .rule)
-        metadata = try container.decodeIfPresent(ConnectionMetadata.self, forKey: .metadata)
-        rulePayload = ConnectionAnyCodingKey.decodeString(
+        self.id = try container.decode(String.self, forKey: .id)
+        self.upload = try container.decodeIfPresent(Int64.self, forKey: .upload)
+        self.download = try container.decodeIfPresent(Int64.self, forKey: .download)
+        self.start = try container.decodeIfPresent(String.self, forKey: .start)
+        self.rule = try container.decodeIfPresent(String.self, forKey: .rule)
+        self.metadata = try container.decodeIfPresent(ConnectionMetadata.self, forKey: .metadata)
+        self.rulePayload = ConnectionAnyCodingKey.decodeString(
             in: dynamic,
-            keys: ["rulePayload", "rule_payload", "rulepayload", "payload"]
-        )
-        chains = ConnectionAnyCodingKey.decodeStringArray(in: dynamic, keys: ["chains", "chain"])
+            keys: ["rulePayload", "rule_payload", "rulepayload", "payload"])
+        self.chains = ConnectionAnyCodingKey.decodeStringArray(in: dynamic, keys: ["chains", "chain"])
     }
 }
 
@@ -71,8 +70,8 @@ struct ConnectionMetadata: Codable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case network
-        case sourceIP = "sourceIP"
-        case destinationIP = "destinationIP"
+        case sourceIP
+        case destinationIP
         case host
     }
 
@@ -87,21 +86,25 @@ struct ConnectionMetadata: Codable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let dynamic = try decoder.container(keyedBy: ConnectionAnyCodingKey.self)
 
-        network = ConnectionAnyCodingKey.nonEmpty(
-            try container.decodeIfPresent(String.self, forKey: .network)
-        ) ?? ConnectionAnyCodingKey.decodeString(in: dynamic, keys: ["networkType", "type"])
+        self.network = try ConnectionAnyCodingKey.nonEmpty(
+            container.decodeIfPresent(String.self, forKey: .network)) ?? ConnectionAnyCodingKey.decodeString(
+            in: dynamic,
+            keys: ["networkType", "type"])
 
-        sourceIP = ConnectionAnyCodingKey.nonEmpty(
-            try container.decodeIfPresent(String.self, forKey: .sourceIP)
-        ) ?? ConnectionAnyCodingKey.decodeString(in: dynamic, keys: ["source_ip", "source", "clientIP"])
+        self.sourceIP = try ConnectionAnyCodingKey.nonEmpty(
+            container.decodeIfPresent(String.self, forKey: .sourceIP)) ?? ConnectionAnyCodingKey.decodeString(
+            in: dynamic,
+            keys: ["source_ip", "source", "clientIP"])
 
-        destinationIP = ConnectionAnyCodingKey.nonEmpty(
-            try container.decodeIfPresent(String.self, forKey: .destinationIP)
-        ) ?? ConnectionAnyCodingKey.decodeString(in: dynamic, keys: ["destination_ip", "destination", "remoteIP", "remoteAddress"])
+        self.destinationIP = try ConnectionAnyCodingKey.nonEmpty(
+            container.decodeIfPresent(String.self, forKey: .destinationIP)) ?? ConnectionAnyCodingKey.decodeString(
+            in: dynamic,
+            keys: ["destination_ip", "destination", "remoteIP", "remoteAddress"])
 
-        host = ConnectionAnyCodingKey.nonEmpty(
-            try container.decodeIfPresent(String.self, forKey: .host)
-        ) ?? ConnectionAnyCodingKey.decodeString(in: dynamic, keys: ["destinationHost", "remoteHost", "addr"])
+        self.host = try ConnectionAnyCodingKey.nonEmpty(
+            container.decodeIfPresent(String.self, forKey: .host)) ?? ConnectionAnyCodingKey.decodeString(
+            in: dynamic,
+            keys: ["destinationHost", "remoteHost", "addr"])
     }
 }
 
@@ -111,11 +114,11 @@ private struct ConnectionAnyCodingKey: CodingKey {
 
     init?(stringValue: String) {
         self.stringValue = stringValue
-        intValue = nil
+        self.intValue = nil
     }
 
     init?(intValue: Int) {
-        stringValue = "\(intValue)"
+        self.stringValue = "\(intValue)"
         self.intValue = intValue
     }
 
@@ -126,13 +129,14 @@ private struct ConnectionAnyCodingKey: CodingKey {
 
     static func decodeString(
         in container: KeyedDecodingContainer<ConnectionAnyCodingKey>,
-        keys: [String]
-    ) -> String? {
+        keys: [String]) -> String?
+    {
         for keyName in keys {
             guard let key = ConnectionAnyCodingKey(stringValue: keyName) else { continue }
 
             if let raw = try? container.decodeIfPresent(String.self, forKey: key),
-               let value = nonEmpty(raw) {
+               let value = nonEmpty(raw)
+            {
                 return value
             }
 
@@ -153,20 +157,21 @@ private struct ConnectionAnyCodingKey: CodingKey {
 
     static func decodeStringArray(
         in container: KeyedDecodingContainer<ConnectionAnyCodingKey>,
-        keys: [String]
-    ) -> [String]? {
+        keys: [String]) -> [String]?
+    {
         for keyName in keys {
             guard let key = ConnectionAnyCodingKey(stringValue: keyName) else { continue }
 
             if let rawValues = try? container.decodeIfPresent([String].self, forKey: key) {
-                let values = rawValues.compactMap(nonEmpty)
+                let values = rawValues.compactMap(self.nonEmpty)
                 if !values.isEmpty {
                     return values
                 }
             }
 
             if let rawValue = try? container.decodeIfPresent(String.self, forKey: key),
-               let value = nonEmpty(rawValue) {
+               let value = nonEmpty(rawValue)
+            {
                 return [value]
             }
         }

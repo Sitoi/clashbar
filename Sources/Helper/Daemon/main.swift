@@ -14,17 +14,17 @@ private enum ProxyHelperError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidHost:
-            return "Invalid proxy host"
+            "Invalid proxy host"
         case .invalidPort:
-            return "Invalid proxy port"
+            "Invalid proxy port"
         case .missingPreferences:
-            return "Unable to access system network preferences"
+            "Unable to access system network preferences"
         case .missingCurrentSet:
-            return "Unable to find current network set"
+            "Unable to find current network set"
         case .noEnabledNetworkServices:
-            return "No enabled network services found"
+            "No enabled network services found"
         case let .systemConfigurationFailure(action, _, detail):
-            return "\(action) failed: \(detail)"
+            "\(action) failed: \(detail)"
         }
     }
 }
@@ -40,28 +40,24 @@ private final class SystemProxyConfigurator {
         ProxyEntrySpec(
             enableKey: kSCPropNetProxiesHTTPEnable as String,
             hostKey: kSCPropNetProxiesHTTPProxy as String,
-            portKey: kSCPropNetProxiesHTTPPort as String
-        ),
+            portKey: kSCPropNetProxiesHTTPPort as String),
         ProxyEntrySpec(
             enableKey: kSCPropNetProxiesHTTPSEnable as String,
             hostKey: kSCPropNetProxiesHTTPSProxy as String,
-            portKey: kSCPropNetProxiesHTTPSPort as String
-        ),
+            portKey: kSCPropNetProxiesHTTPSPort as String),
         ProxyEntrySpec(
             enableKey: kSCPropNetProxiesSOCKSEnable as String,
             hostKey: kSCPropNetProxiesSOCKSProxy as String,
-            portKey: kSCPropNetProxiesSOCKSPort as String
-        )
+            portKey: kSCPropNetProxiesSOCKSPort as String),
     ]
 
     func setSystemProxy(host: String, httpPort: Int, httpsPort: Int, socksPort: Int) throws {
-        try validate(host: host)
+        try self.validate(host: host)
         let ports = try validatedPorts(
             httpPort: httpPort,
             httpsPort: httpsPort,
             socksPort: socksPort,
-            requiresEnabledProxy: true
-        )
+            requiresEnabledProxy: true)
 
         try withMutableProxyProtocols { protocols in
             for proxyProtocol in protocols {
@@ -72,8 +68,7 @@ private final class SystemProxyConfigurator {
                         config: &config,
                         spec: spec,
                         host: host,
-                        port: portValue
-                    )
+                        port: portValue)
                 }
 
                 guard SCNetworkProtocolSetConfiguration(proxyProtocol, config as CFDictionary) else {
@@ -84,7 +79,7 @@ private final class SystemProxyConfigurator {
     }
 
     func clearSystemProxy() throws {
-        try withMutableProxyProtocols { protocols in
+        try self.withMutableProxyProtocols { protocols in
             for proxyProtocol in protocols {
                 var config = self.configuration(for: proxyProtocol)
                 for spec in Self.proxyEntrySpecs {
@@ -103,7 +98,7 @@ private final class SystemProxyConfigurator {
         let protocols = try proxyProtocols(from: preferences)
 
         for proxyProtocol in protocols {
-            let config = configuration(for: proxyProtocol)
+            let config = self.configuration(for: proxyProtocol)
             if Self.proxyEntrySpecs.contains(where: { isEnabled(config: config, key: $0.enableKey) }) {
                 return true
             }
@@ -113,27 +108,26 @@ private final class SystemProxyConfigurator {
     }
 
     func isSystemProxyConfigured(host: String, httpPort: Int, httpsPort: Int, socksPort: Int) throws -> Bool {
-        try validate(host: host)
+        try self.validate(host: host)
         let ports = try validatedPorts(
             httpPort: httpPort,
             httpsPort: httpsPort,
             socksPort: socksPort,
-            requiresEnabledProxy: true
-        )
+            requiresEnabledProxy: true)
 
         let preferences = try makePreferences()
         let protocols = try proxyProtocols(from: preferences)
         let expectedPorts = [ports.httpPort, ports.httpsPort, ports.socksPort]
 
         for proxyProtocol in protocols {
-            let config = configuration(for: proxyProtocol)
+            let config = self.configuration(for: proxyProtocol)
             for (spec, expectedPort) in zip(Self.proxyEntrySpecs, expectedPorts) {
-                guard proxyMatchesExpectedState(
+                guard self.proxyMatchesExpectedState(
                     config: config,
                     spec: spec,
                     expectedHost: host,
-                    expectedPort: expectedPort
-                ) else {
+                    expectedPort: expectedPort)
+                else {
                     return false
                 }
             }
@@ -153,13 +147,13 @@ private final class SystemProxyConfigurator {
         httpPort: Int,
         httpsPort: Int,
         socksPort: Int,
-        requiresEnabledProxy: Bool
-    ) throws -> (httpPort: Int, httpsPort: Int, socksPort: Int) {
+        requiresEnabledProxy: Bool) throws -> (httpPort: Int, httpsPort: Int, socksPort: Int)
+    {
         let httpPort = try validatedPort(httpPort)
         let httpsPort = try validatedPort(httpsPort)
         let socksPort = try validatedPort(socksPort)
 
-        if requiresEnabledProxy && httpPort == 0 && httpsPort == 0 && socksPort == 0 {
+        if requiresEnabledProxy, httpPort == 0, httpsPort == 0, socksPort == 0 {
             throw ProxyHelperError.invalidPort
         }
 
@@ -177,8 +171,8 @@ private final class SystemProxyConfigurator {
         config: inout [String: Any],
         spec: ProxyEntrySpec,
         host: String,
-        port: Int
-    ) {
+        port: Int)
+    {
         if port > 0 {
             config[spec.enableKey] = 1
             config[spec.hostKey] = host
@@ -194,7 +188,7 @@ private final class SystemProxyConfigurator {
         let preferences = try makePreferences()
 
         guard SCPreferencesLock(preferences, true) else {
-            throw systemConfigurationError(action: "Lock system preferences")
+            throw self.systemConfigurationError(action: "Lock system preferences")
         }
         defer { SCPreferencesUnlock(preferences) }
 
@@ -202,10 +196,10 @@ private final class SystemProxyConfigurator {
         try update(protocols)
 
         guard SCPreferencesCommitChanges(preferences) else {
-            throw systemConfigurationError(action: "Commit proxy preferences")
+            throw self.systemConfigurationError(action: "Commit proxy preferences")
         }
         guard SCPreferencesApplyChanges(preferences) else {
-            throw systemConfigurationError(action: "Apply proxy preferences")
+            throw self.systemConfigurationError(action: "Apply proxy preferences")
         }
     }
 
@@ -260,8 +254,8 @@ private final class SystemProxyConfigurator {
         config: [String: Any],
         spec: ProxyEntrySpec,
         expectedHost: String,
-        expectedPort: Int
-    ) -> Bool {
+        expectedPort: Int) -> Bool
+    {
         let currentHost = (config[spec.hostKey] as? String)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased() ?? ""
@@ -273,28 +267,27 @@ private final class SystemProxyConfigurator {
             return false
         }
 
-        return intValue(config[spec.portKey]) == expectedPort
+        return self.intValue(config[spec.portKey]) == expectedPort
     }
 
     private func proxyMatchesExpectedState(
         config: [String: Any],
         spec: ProxyEntrySpec,
         expectedHost: String,
-        expectedPort: Int
-    ) -> Bool {
-        let enabled = isEnabled(config: config, key: spec.enableKey)
+        expectedPort: Int) -> Bool
+    {
+        let enabled = self.isEnabled(config: config, key: spec.enableKey)
         if expectedPort == 0 {
             return !enabled
         }
         guard enabled else {
             return false
         }
-        return proxyHostAndPortMatch(
+        return self.proxyHostAndPortMatch(
             config: config,
             spec: spec,
             expectedHost: expectedHost,
-            expectedPort: expectedPort
-        )
+            expectedPort: expectedPort)
     }
 
     private func intValue(_ value: Any?) -> Int? {
@@ -325,15 +318,14 @@ private final class ProxyHelperService: NSObject, ProxyHelperProtocol {
         httpPort: Int,
         httpsPort: Int,
         socksPort: Int,
-        completion: @escaping (Bool, String?) -> Void
-    ) {
+        completion: @escaping (Bool, String?) -> Void)
+    {
         do {
-            try configurator.setSystemProxy(
+            try self.configurator.setSystemProxy(
                 host: host,
                 httpPort: httpPort,
                 httpsPort: httpsPort,
-                socksPort: socksPort
-            )
+                socksPort: socksPort)
             completion(true, nil)
         } catch {
             completion(false, error.localizedDescription)
@@ -342,7 +334,7 @@ private final class ProxyHelperService: NSObject, ProxyHelperProtocol {
 
     func clearSystemProxy(completion: @escaping (Bool, String?) -> Void) {
         do {
-            try configurator.clearSystemProxy()
+            try self.configurator.clearSystemProxy()
             completion(true, nil)
         } catch {
             completion(false, error.localizedDescription)
@@ -363,15 +355,14 @@ private final class ProxyHelperService: NSObject, ProxyHelperProtocol {
         httpPort: Int,
         httpsPort: Int,
         socksPort: Int,
-        completion: @escaping (Bool, Bool, String?) -> Void
-    ) {
+        completion: @escaping (Bool, Bool, String?) -> Void)
+    {
         do {
             let configured = try configurator.isSystemProxyConfigured(
                 host: host,
                 httpPort: httpPort,
                 httpsPort: httpsPort,
-                socksPort: socksPort
-            )
+                socksPort: socksPort)
             completion(true, configured, nil)
         } catch {
             completion(false, false, error.localizedDescription)
@@ -401,7 +392,8 @@ private final class XPCClientValidator {
         }
 
         if let helperTeamIdentifier = helperIdentity.teamIdentifier,
-           let clientTeamIdentifier = clientIdentity.teamIdentifier {
+           let clientTeamIdentifier = clientIdentity.teamIdentifier
+        {
             return helperTeamIdentifier == clientTeamIdentifier
         }
 
@@ -415,26 +407,28 @@ private final class XPCClientValidator {
         guard SecCodeCopySelf(SecCSFlags(), &code) == errSecSuccess, let code else {
             return nil
         }
-        return signingIdentity(for: code)
+        return self.signingIdentity(for: code)
     }
 
     private func signingIdentity(for pid: pid_t) -> SigningIdentity? {
         let attributes: [String: Any] = [kSecGuestAttributePid as String: pid]
         var code: SecCode?
         guard SecCodeCopyGuestWithAttributes(nil, attributes as CFDictionary, SecCSFlags(), &code) == errSecSuccess,
-              let code else {
+              let code
+        else {
             return nil
         }
-        return signingIdentity(for: code)
+        return self.signingIdentity(for: code)
     }
 
     private func signingIdentity(for code: SecCode) -> SigningIdentity? {
         var staticCode: SecStaticCode?
         guard SecCodeCopyStaticCode(code, SecCSFlags(), &staticCode) == errSecSuccess,
-              let staticCode else {
+              let staticCode
+        else {
             return nil
         }
-        return signingIdentity(for: staticCode)
+        return self.signingIdentity(for: staticCode)
     }
 
     private func signingIdentity(for staticCode: SecStaticCode) -> SigningIdentity? {
@@ -442,10 +436,10 @@ private final class XPCClientValidator {
         guard SecCodeCopySigningInformation(
             staticCode,
             SecCSFlags(rawValue: kSecCSSigningInformation),
-            &signingInformation
-        ) == errSecSuccess,
+            &signingInformation) == errSecSuccess,
             let signingInformation = signingInformation as? [String: Any],
-            let identifier = signingInformation[kSecCodeInfoIdentifier as String] as? String else {
+            let identifier = signingInformation[kSecCodeInfoIdentifier as String] as? String
+        else {
             return nil
         }
 
@@ -459,11 +453,11 @@ private final class ProxyHelperListenerDelegate: NSObject, NSXPCListenerDelegate
     private let validator = XPCClientValidator()
 
     func listener(_ listener: NSXPCListener, shouldAcceptNewConnection newConnection: NSXPCConnection) -> Bool {
-        guard validator.isValid(connection: newConnection) else {
+        guard self.validator.isValid(connection: newConnection) else {
             return false
         }
         newConnection.exportedInterface = NSXPCInterface(with: ProxyHelperProtocol.self)
-        newConnection.exportedObject = service
+        newConnection.exportedObject = self.service
         newConnection.resume()
         return true
     }

@@ -6,17 +6,16 @@ let package = Package(
     name: "ClashBar",
     defaultLocalization: "zh-Hans",
     platforms: [
-        .macOS(.v14)
+        .macOS(.v14),
     ],
     products: [
         .executable(name: "ClashBar", targets: ["ClashBar"]),
-        .executable(name: "ClashBarProxyHelper", targets: ["ClashBarProxyHelper"])
+        .executable(name: "ClashBarProxyHelper", targets: ["ClashBarProxyHelper"]),
     ],
     targets: [
         .target(
             name: "ProxyHelperShared",
-            path: "Sources/Helper/Shared"
-        ),
+            path: "Sources/Helper/Shared"),
         .executableTarget(
             name: "ClashBar",
             dependencies: ["ProxyHelperShared"],
@@ -25,13 +24,10 @@ let package = Package(
                 .copy("Resources/bin/mihomo"),
                 .copy("Resources/Brand/clashbar-icon.png"),
                 .copy("Resources/ConfigTemplates/ClashBar.yaml"),
-                .process("Resources/Localization")
-            ]
-        ),
+                .process("Resources/Localization"),
+            ]),
         .executableTarget(
             name: "ClashBarProxyHelper",
             dependencies: ["ProxyHelperShared"],
-            path: "Sources/Helper/Daemon"
-        )
-    ]
-)
+            path: "Sources/Helper/Daemon"),
+    ])

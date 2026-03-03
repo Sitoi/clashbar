@@ -16,19 +16,19 @@ extension AppState {
     }
 
     func copyConnectionHost(_ host: String) {
-        copyAndLog(host, message: tr("log.connection.copy_host", host))
+        self.copyAndLog(host, message: tr("log.connection.copy_host", host))
     }
 
     func copyConnectionID(_ id: String) {
-        copyAndLog(id, message: tr("log.connection.copy_id", id))
+        self.copyAndLog(id, message: tr("log.connection.copy_id", id))
     }
 
     func copyLogMessage(_ log: AppErrorLogEntry) {
-        copyAndLog(log.message, message: tr("log.logs.copied_message"))
+        self.copyAndLog(log.message, message: tr("log.logs.copied_message"))
     }
 
     func copyLogEntry(_ log: AppErrorLogEntry) {
-        copyAndLog(formattedLogEntry(log), message: tr("log.logs.copied_entry"))
+        self.copyAndLog(self.formattedLogEntry(log), message: tr("log.logs.copied_entry"))
     }
 
     func copyTextToPasteboard(_ text: String) {
@@ -44,7 +44,7 @@ extension AppState {
 
     private func copyAndLog(_ text: String, message: String) {
         // DRY: all copy actions share the same pasteboard + info-log behavior.
-        copyTextToPasteboard(text)
+        self.copyTextToPasteboard(text)
         appendLog(level: "info", message: message)
     }
 }

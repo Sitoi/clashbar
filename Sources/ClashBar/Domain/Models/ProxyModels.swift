@@ -18,8 +18,8 @@ struct ProxyGroup: Decodable, Equatable {
         now: String? = nil,
         all: [String],
         hidden: Bool? = nil,
-        latestDelay: Int? = nil
-    ) {
+        latestDelay: Int? = nil)
+    {
         self.name = name
         self.type = type
         self.now = now
@@ -39,12 +39,12 @@ struct ProxyGroup: Decodable, Equatable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        name = try container.decodeIfPresent(String.self, forKey: .name) ?? "Unknown"
-        type = try container.decodeIfPresent(String.self, forKey: .type)
-        now = try container.decodeIfPresent(String.self, forKey: .now)
-        all = try container.decodeIfPresent([String].self, forKey: .all) ?? []
-        hidden = try container.decodeIfPresent(Bool.self, forKey: .hidden)
-        latestDelay = Self.decodeLatestDelay(from: container)
+        self.name = try container.decodeIfPresent(String.self, forKey: .name) ?? "Unknown"
+        self.type = try container.decodeIfPresent(String.self, forKey: .type)
+        self.now = try container.decodeIfPresent(String.self, forKey: .now)
+        self.all = try container.decodeIfPresent([String].self, forKey: .all) ?? []
+        self.hidden = try container.decodeIfPresent(Bool.self, forKey: .hidden)
+        self.latestDelay = Self.decodeLatestDelay(from: container)
     }
 
     private static func decodeLatestDelay(from container: KeyedDecodingContainer<CodingKeys>) -> Int? {
@@ -75,19 +75,20 @@ private struct ProxyDelayHistoryEntry: Decodable, Equatable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         if let value = try container.decodeIfPresent(Int.self, forKey: .delay) {
-            delay = value
+            self.delay = value
             return
         }
         if let value = try container.decodeIfPresent(Int64.self, forKey: .delay) {
-            delay = Int(value)
+            self.delay = Int(value)
             return
         }
         if let value = try container.decodeIfPresent(String.self, forKey: .delay),
-           let intValue = Int(value) {
-            delay = intValue
+           let intValue = Int(value)
+        {
+            self.delay = intValue
             return
         }
-        delay = nil
+        self.delay = nil
     }
 }
 
@@ -109,7 +110,9 @@ struct ConfigSnapshot: Codable, Equatable {
     let tun: TunConfig?
     let externalController: String?
 
-    var tunEnabled: Bool? { tun?.enable }
+    var tunEnabled: Bool? {
+        self.tun?.enable
+    }
 
     private enum CodingKeys: String, CodingKey {
         case allowLan = "allow-lan"

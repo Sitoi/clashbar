@@ -6,15 +6,16 @@ extension AppState {
         if let selected = configManager.selectedConfig {
             selectedConfigName = selected.lastPathComponent
             defaults.set(selected.lastPathComponent, forKey: selectedConfigKey)
-            syncConfigDisplayState()
+            self.syncConfigDisplayState()
             return selected.path
         }
 
         if let selectedName = defaults.string(forKey: selectedConfigKey),
-           let selected = configManager.availableConfigs.first(where: { $0.lastPathComponent == selectedName }) {
+           let selected = configManager.availableConfigs.first(where: { $0.lastPathComponent == selectedName })
+        {
             configManager.selectConfig(selected)
             selectedConfigName = selected.lastPathComponent
-            syncConfigDisplayState()
+            self.syncConfigDisplayState()
             return selected.path
         }
 
@@ -25,7 +26,7 @@ extension AppState {
             if let selected = configManager.availableConfigs.first(where: { $0.lastPathComponent == legacyName }) {
                 configManager.selectConfig(selected)
                 selectedConfigName = selected.lastPathComponent
-                syncConfigDisplayState()
+                self.syncConfigDisplayState()
                 return selected.path
             }
         }
@@ -34,7 +35,7 @@ extension AppState {
         if let selected = configManager.selectedConfig {
             defaults.set(selected.lastPathComponent, forKey: selectedConfigKey)
             selectedConfigName = selected.lastPathComponent
-            syncConfigDisplayState()
+            self.syncConfigDisplayState()
             return selected.path
         }
 
@@ -47,7 +48,7 @@ extension AppState {
             selectedConfigName = selected.lastPathComponent
             defaults.set(selected.lastPathComponent, forKey: selectedConfigKey)
         }
-        syncConfigDisplayState()
+        self.syncConfigDisplayState()
     }
 
     func restoreLastSuccessfulConfigIfAvailable() {
@@ -55,14 +56,15 @@ extension AppState {
         let candidate = URL(fileURLWithPath: lastPath)
         guard FileManager.default.fileExists(atPath: candidate.path) else { return }
         guard let matched = configManager.availableConfigs.first(where: {
-            $0.standardizedFileURL.resolvingSymlinksInPath().path == candidate.standardizedFileURL.resolvingSymlinksInPath().path
+            $0.standardizedFileURL.resolvingSymlinksInPath().path == candidate.standardizedFileURL
+                .resolvingSymlinksInPath().path
         }) else {
             return
         }
         configManager.selectConfig(matched)
         selectedConfigName = matched.lastPathComponent
         defaults.set(matched.lastPathComponent, forKey: selectedConfigKey)
-        syncConfigDisplayState()
+        self.syncConfigDisplayState()
     }
 
     func syncConfigDisplayState() {
@@ -71,7 +73,7 @@ extension AppState {
         if selectedConfigName == "-", let first = availableConfigFileNames.first {
             selectedConfigName = first
         }
-        pruneRemoteConfigSourcesIfNeeded()
+        self.pruneRemoteConfigSourcesIfNeeded()
     }
 
     func ensureAPIClient() {
@@ -96,7 +98,8 @@ extension AppState {
 
     func loadPersistedUILanguage() -> AppLanguage {
         if let raw = defaults.string(forKey: uiLanguageKey),
-           let language = AppLanguage(rawValue: raw) {
+           let language = AppLanguage(rawValue: raw)
+        {
             return language
         }
         defaults.set(AppLanguage.zhHans.rawValue, forKey: uiLanguageKey)
@@ -105,7 +108,8 @@ extension AppState {
 
     func loadPersistedAppearanceMode() -> AppAppearanceMode {
         if let raw = defaults.string(forKey: appearanceModeKey),
-           let mode = AppAppearanceMode(rawValue: raw) {
+           let mode = AppAppearanceMode(rawValue: raw)
+        {
             return mode
         }
         defaults.set(AppAppearanceMode.system.rawValue, forKey: appearanceModeKey)
@@ -135,7 +139,6 @@ extension AppState {
         let filtered = remoteConfigSources.filter { availableNames.contains($0.key) }
         guard filtered != remoteConfigSources else { return }
         remoteConfigSources = filtered
-        persistRemoteConfigSources()
+        self.persistRemoteConfigSources()
     }
-
 }

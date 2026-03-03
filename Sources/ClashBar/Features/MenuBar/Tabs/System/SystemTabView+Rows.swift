@@ -38,7 +38,7 @@ extension MenuBarRoot {
 
     func settingsToggleRow(_ title: String, symbol: String, isOn: Binding<Bool>) -> some View {
         HStack(spacing: 10) {
-            settingsRowLabel(symbol: symbol, title: title)
+            self.settingsRowLabel(symbol: symbol, title: title)
                 .layoutPriority(1)
             Spacer(minLength: 0)
             Toggle("", isOn: isOn)
@@ -49,18 +49,18 @@ extension MenuBarRoot {
         .menuRowPadding(vertical: MenuBarLayoutTokens.vDense + 2)
     }
 
-    func settingsMenuRow<Options: View>(
+    func settingsMenuRow(
         _ title: String,
         symbol: String,
         valueText: String,
         controlWidth: CGFloat? = nil,
         popoverWidth: CGFloat? = nil,
-        @ViewBuilder options: @escaping (_ dismiss: @escaping () -> Void) -> Options
-    ) -> some View {
+        @ViewBuilder options: @escaping (_ dismiss: @escaping () -> Void) -> some View) -> some View
+    {
         let resolvedControlWidth = controlWidth ?? settingsMenuControlWidth
 
         return HStack(spacing: 10) {
-            settingsRowLabel(symbol: symbol, title: title)
+            self.settingsRowLabel(symbol: symbol, title: title)
                 .layoutPriority(1)
             Spacer(minLength: 0)
             AttachedPopoverMenu(width: popoverWidth ?? resolvedControlWidth) {
@@ -87,7 +87,7 @@ extension MenuBarRoot {
 
     func settingsPortFieldRow(_ title: String, symbol: String, text: Binding<String>) -> some View {
         HStack(spacing: 10) {
-            settingsRowLabel(symbol: symbol, title: title)
+            self.settingsRowLabel(symbol: symbol, title: title)
                 .layoutPriority(1)
 
             Spacer(minLength: 0)
@@ -144,22 +144,22 @@ extension MenuBarRoot {
     func statusBarModeLabel(_ mode: StatusBarDisplayMode) -> String {
         switch mode {
         case .iconAndSpeed:
-            return tr("ui.settings.display_mode.icon_and_speed")
+            tr("ui.settings.display_mode.icon_and_speed")
         case .iconOnly:
-            return tr("ui.settings.display_mode.icon_only")
+            tr("ui.settings.display_mode.icon_only")
         case .speedOnly:
-            return tr("ui.settings.display_mode.speed_only")
+            tr("ui.settings.display_mode.speed_only")
         }
     }
 
     func appearanceModeLabel(_ mode: AppAppearanceMode) -> String {
         switch mode {
         case .system:
-            return tr("ui.settings.appearance.system")
+            tr("ui.settings.appearance.system")
         case .light:
-            return tr("ui.settings.appearance.light")
+            tr("ui.settings.appearance.light")
         case .dark:
-            return tr("ui.settings.appearance.dark")
+            tr("ui.settings.appearance.dark")
         }
     }
 }

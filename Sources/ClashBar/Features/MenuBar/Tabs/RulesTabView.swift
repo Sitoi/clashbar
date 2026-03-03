@@ -3,17 +3,17 @@ import SwiftUI
 extension MenuBarRoot {
     var rulesTabBody: some View {
         let visibleRules = Array(appState.ruleItems.prefix(100))
-        let providerLookup = ruleProviderLookupMap()
+        let providerLookup = self.ruleProviderLookupMap()
 
         return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 0) {
                 HStack(spacing: 8) {
-                    rulesStatChip(title: tr("ui.rule.stats.rules"), value: "\(appState.rulesCount)")
-                    rulesStatChip(title: tr("ui.rule.stats.sets"), value: "\(appState.providerRuleCount)")
+                    self.rulesStatChip(title: tr("ui.rule.stats.rules"), value: "\(appState.rulesCount)")
+                    self.rulesStatChip(title: tr("ui.rule.stats.sets"), value: "\(appState.providerRuleCount)")
                 }
 
                 Spacer(minLength: 0)
-                rulesRefreshButton
+                self.rulesRefreshButton
             }
             .padding(.vertical, MenuBarLayoutTokens.vRow)
             .background(Color.clear)
@@ -55,7 +55,7 @@ extension MenuBarRoot {
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(visibleRules.enumerated()), id: \.offset) { index, rule in
-                        rulesRow(rule: rule, index: index, providerLookup: providerLookup)
+                        self.rulesRow(rule: rule, index: index, providerLookup: providerLookup)
 
                         if index < visibleRules.count - 1 {
                             Rectangle()
@@ -111,12 +111,15 @@ extension MenuBarRoot {
         let normalizedType = rule.type?.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedPayload = rule.payload?.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedProxy = rule.proxy?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let typeText = ((normalizedType?.isEmpty == false ? normalizedType : tr("ui.common.na")) ?? tr("ui.common.na")).uppercased()
-        let targetText = (normalizedPayload?.isEmpty == false ? normalizedPayload : tr("ui.common.na")) ?? tr("ui.common.na")
-        let policyText = (normalizedProxy?.isEmpty == false ? normalizedProxy : tr("ui.common.na")) ?? tr("ui.common.na")
-        let iconSpec = ruleTypeIcon(for: typeText)
-        let badge = rulePolicyBadge(for: policyText)
-        let stats = ruleStats(for: rule, payload: targetText, providerLookup: providerLookup)
+        let typeText = ((normalizedType?.isEmpty == false ? normalizedType : tr("ui.common.na")) ?? tr("ui.common.na"))
+            .uppercased()
+        let targetText = (normalizedPayload?.isEmpty == false ? normalizedPayload : tr("ui.common.na")) ??
+            tr("ui.common.na")
+        let policyText = (normalizedProxy?.isEmpty == false ? normalizedProxy : tr("ui.common.na")) ??
+            tr("ui.common.na")
+        let iconSpec = self.ruleTypeIcon(for: typeText)
+        let badge = self.rulePolicyBadge(for: policyText)
+        let stats = self.ruleStats(for: rule, payload: targetText, providerLookup: providerLookup)
 
         return HStack(spacing: 0) {
             Image(systemName: iconSpec.symbol)
@@ -154,8 +157,7 @@ extension MenuBarRoot {
             .padding(.vertical, MenuBarLayoutTokens.vDense)
             .background(
                 Capsule(style: .continuous)
-                    .fill(badge.background)
-            )
+                    .fill(badge.background))
             .frame(width: 90, alignment: .leading)
 
             VStack(alignment: .trailing, spacing: 1.5) {
@@ -199,21 +201,19 @@ extension MenuBarRoot {
             return (
                 symbol: "exclamationmark.triangle.fill",
                 color: nativeAccent.opacity(0.92),
-                background: nativeAccent.opacity(0.16)
-            )
+                background: nativeAccent.opacity(0.16))
         }
         return (
             symbol: nil,
             color: nativeSecondaryLabel,
-            background: nativeBadgeFill
-        )
+            background: nativeBadgeFill)
     }
 
     func ruleStats(
         for rule: RuleItem,
         payload: String,
-        providerLookup: [String: ProviderDetail]
-    ) -> (count: Int, updatedText: String?, hasProvider: Bool) {
+        providerLookup: [String: ProviderDetail]) -> (count: Int, updatedText: String?, hasProvider: Bool)
+    {
         let payloadTrimmed = payload.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !payloadTrimmed.isEmpty, payloadTrimmed != tr("ui.common.na") else {
             return (count: 0, updatedText: nil, hasProvider: false)
@@ -221,7 +221,10 @@ extension MenuBarRoot {
 
         if let provider = providerLookup[payloadTrimmed.lowercased()] {
             let count = max(0, provider.ruleCount ?? 0)
-            return (count: count, updatedText: ValueFormatter.relativeTime(from: provider.updatedAt, language: language), hasProvider: true)
+            return (
+                count: count,
+                updatedText: ValueFormatter.relativeTime(from: provider.updatedAt, language: language),
+                hasProvider: true)
         }
 
         let type = rule.type?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
@@ -239,11 +242,11 @@ extension MenuBarRoot {
             map[key.lowercased()] = detail
 
             if let name = detail.name?.trimmingCharacters(in: .whitespacesAndNewlines),
-               !name.isEmpty {
+               !name.isEmpty
+            {
                 map[name.lowercased()] = detail
             }
         }
         return map
     }
-
 }

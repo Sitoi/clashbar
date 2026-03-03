@@ -10,19 +10,19 @@ extension AppState {
 
         var key: String {
             switch self {
-            case .traffic: return "traffic"
-            case .memory: return "memory"
-            case .connections: return "connections"
-            case .logs: return "logs"
+            case .traffic: "traffic"
+            case .memory: "memory"
+            case .connections: "connections"
+            case .logs: "logs"
             }
         }
 
         var label: String {
             switch self {
-            case .traffic: return "app.stream.label.traffic"
-            case .memory: return "app.stream.label.memory"
-            case .connections: return "app.stream.label.connections"
-            case .logs: return "app.stream.label.logs"
+            case .traffic: "app.stream.label.traffic"
+            case .memory: "app.stream.label.memory"
+            case .connections: "app.stream.label.connections"
+            case .logs: "app.stream.label.logs"
             }
         }
     }
@@ -31,14 +31,14 @@ extension AppState {
         kind: StreamKind,
         preserveReconnectState: Bool = false,
         makeWebSocket: @escaping (MihomoAPIClient) throws -> URLSessionWebSocketTask,
-        onPayload: @escaping (Data) -> Void
-    ) {
-        cancelStream(kind, resetReconnectState: !preserveReconnectState)
+        onPayload: @escaping (Data) -> Void)
+    {
+        self.cancelStream(kind, resetReconnectState: !preserveReconnectState)
 
         do {
             guard let client = try? clientOrThrow() else { return }
             let ws = try makeWebSocket(client)
-            setWebSocketTask(ws, for: kind)
+            self.setWebSocketTask(ws, for: kind)
             ws.resume()
 
             let task = Task { @MainActor [weak self] in
@@ -51,35 +51,35 @@ extension AppState {
                             kind: kind,
                             preserveReconnectState: true,
                             makeWebSocket: makeWebSocket,
-                            onPayload: onPayload
-                        )
-                    }
-                )
+                            onPayload: onPayload)
+                    })
             }
-            setReceiveTask(task, for: kind)
+            self.setReceiveTask(task, for: kind)
         } catch {
-            appendLog(level: "error", message: tr("log.stream.start_failed", tr(kind.label), error.localizedDescription))
+            appendLog(
+                level: "error",
+                message: tr("log.stream.start_failed", tr(kind.label), error.localizedDescription))
         }
     }
 
     func cancelStream(_ kind: StreamKind, resetReconnectState: Bool = true) {
-        receiveTask(for: kind)?.cancel()
-        webSocketTask(for: kind)?.cancel(with: .goingAway, reason: nil)
-        setReceiveTask(nil, for: kind)
-        setWebSocketTask(nil, for: kind)
+        self.receiveTask(for: kind)?.cancel()
+        self.webSocketTask(for: kind)?.cancel(with: .goingAway, reason: nil)
+        self.setReceiveTask(nil, for: kind)
+        self.setWebSocketTask(nil, for: kind)
         if kind == .connections {
             currentConnectionsStreamIntervalMilliseconds = nil
         }
         if resetReconnectState {
-            resetStreamReconnectState(for: kind)
+            self.resetStreamReconnectState(for: kind)
         }
     }
 
     func receiveLoop(
         kind: StreamKind,
         onPayload: @escaping (Data) -> Void,
-        restart: @escaping () -> Void
-    ) async {
+        restart: @escaping () -> Void) async
+    {
         while !Task.isCancelled {
             guard let ws = webSocketTask(for: kind) else { return }
 
@@ -89,15 +89,15 @@ extension AppState {
             } catch {
                 if Task.isCancelled { return }
                 let disconnectMessage = error.localizedDescription
-                if shouldLogStreamDisconnect(kind: kind, message: disconnectMessage) {
+                if self.shouldLogStreamDisconnect(kind: kind, message: disconnectMessage) {
                     appendLog(level: "error", message: tr("log.stream.disconnected", tr(kind.label), disconnectMessage))
                 }
-                webSocketTask(for: kind)?.cancel(with: .goingAway, reason: nil)
-                setWebSocketTask(nil, for: kind)
+                self.webSocketTask(for: kind)?.cancel(with: .goingAway, reason: nil)
+                self.setWebSocketTask(nil, for: kind)
 
                 guard processManager.isRunning else { return }
                 do {
-                    try await Task.sleep(nanoseconds: nextReconnectDelayNanoseconds(for: kind))
+                    try await Task.sleep(nanoseconds: self.nextReconnectDelayNanoseconds(for: kind))
                 } catch {
                     return
                 }
@@ -108,7 +108,7 @@ extension AppState {
             }
 
             guard let payload = normalizedWebSocketPayload(from: message) else { continue }
-            markStreamPayloadReceived(for: kind)
+            self.markStreamPayloadReceived(for: kind)
             onPayload(payload)
         }
     }
@@ -145,15 +145,16 @@ extension AppState {
                 guard let self else { return }
                 traffic = snapshot
                 guard isPanelPresented else {
-                    if !trafficHistoryUp.isEmpty || !trafficHistoryDown.isEmpty || displayUpTotal != 0 || displayDownTotal != 0 || lastTrafficSampleAt != nil {
+                    if !trafficHistoryUp.isEmpty || !trafficHistoryDown
+                        .isEmpty || displayUpTotal != 0 || displayDownTotal != 0 || lastTrafficSampleAt != nil
+                    {
                         clearTrafficPresentationHistory()
                     }
                     return
                 }
                 appendTrafficHistory(up: snapshot.up, down: snapshot.down)
                 updateTrafficTotals(from: snapshot)
-            }
-        )
+            })
     }
 
     func startMemoryStream() {
@@ -163,8 +164,7 @@ extension AppState {
             onDecoded: { [weak self] (snapshot: MemorySnapshot) in
                 guard let self else { return }
                 memory = snapshot
-            }
-        )
+            })
     }
 
     func startConnectionsStream(intervalMilliseconds: Int? = nil) {
@@ -173,14 +173,13 @@ extension AppState {
             makeWebSocket: { try $0.makeConnectionsWebSocketTask(interval: intervalMilliseconds) },
             onDecoded: { [weak self] (snapshot: ConnectionsSnapshot) in
                 guard let self else { return }
-                applyConnectionsSnapshot(snapshot)
-            }
-        )
+                self.applyConnectionsSnapshot(snapshot)
+            })
         currentConnectionsStreamIntervalMilliseconds = intervalMilliseconds
     }
 
     func startLogsStream() {
-        startStream(
+        self.startStream(
             kind: .logs,
             makeWebSocket: { try $0.makeLogsWebSocketTask(level: nil) },
             onPayload: { [weak self] payload in
@@ -188,8 +187,7 @@ extension AppState {
                 if let line = decodeLogLinePayload(payload) {
                     appendMihomoLog(level: line.level, message: line.message)
                 }
-            }
-        )
+            })
     }
 
     func applyConnectionsSnapshot(_ snapshot: ConnectionsSnapshot) {
@@ -247,5 +245,4 @@ extension AppState {
         }
         return shouldEmit
     }
-
 }

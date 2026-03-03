@@ -30,8 +30,8 @@ struct TrafficSnapshot: Decodable, Equatable {
         case downTotal
         case upTotalLower = "uptotal"
         case downTotalLower = "downtotal"
-        case uploadTotal = "uploadTotal"
-        case downloadTotal = "downloadTotal"
+        case uploadTotal
+        case downloadTotal
     }
 
     init(up: Int64, down: Int64, upTotal: Int64? = nil, downTotal: Int64? = nil) {
@@ -43,12 +43,12 @@ struct TrafficSnapshot: Decodable, Equatable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        up = try container.decodeIfPresent(Int64.self, forKey: .up) ?? 0
-        down = try container.decodeIfPresent(Int64.self, forKey: .down) ?? 0
-        upTotal = try container.decodeIfPresent(Int64.self, forKey: .upTotal)
+        self.up = try container.decodeIfPresent(Int64.self, forKey: .up) ?? 0
+        self.down = try container.decodeIfPresent(Int64.self, forKey: .down) ?? 0
+        self.upTotal = try container.decodeIfPresent(Int64.self, forKey: .upTotal)
             ?? container.decodeIfPresent(Int64.self, forKey: .upTotalLower)
             ?? container.decodeIfPresent(Int64.self, forKey: .uploadTotal)
-        downTotal = try container.decodeIfPresent(Int64.self, forKey: .downTotal)
+        self.downTotal = try container.decodeIfPresent(Int64.self, forKey: .downTotal)
             ?? container.decodeIfPresent(Int64.self, forKey: .downTotalLower)
             ?? container.decodeIfPresent(Int64.self, forKey: .downloadTotal)
     }
@@ -67,6 +67,6 @@ struct MemorySnapshot: Codable, Equatable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        inuse = try container.decodeIfPresent(Int64.self, forKey: .inuse) ?? 0
+        self.inuse = try container.decodeIfPresent(Int64.self, forKey: .inuse) ?? 0
     }
 }

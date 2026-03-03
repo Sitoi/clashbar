@@ -27,16 +27,16 @@ enum ValueFormatter {
         let tb = gb * 1024
 
         if value >= tb {
-            return roundedBytesText(value, divisor: Double(tb), unit: "TB")
+            return self.roundedBytesText(value, divisor: Double(tb), unit: "TB")
         }
         if value >= gb {
-            return roundedBytesText(value, divisor: Double(gb), unit: "GB")
+            return self.roundedBytesText(value, divisor: Double(gb), unit: "GB")
         }
         if value >= mb {
-            return roundedBytesText(value, divisor: Double(mb), unit: "MB")
+            return self.roundedBytesText(value, divisor: Double(mb), unit: "MB")
         }
         if value >= kb {
-            return roundedBytesText(value, divisor: Double(kb), unit: "KB")
+            return self.roundedBytesText(value, divisor: Double(kb), unit: "KB")
         }
         return "\(value) B"
     }
@@ -56,27 +56,27 @@ enum ValueFormatter {
 
     static func bytesCompactNoSpace(_ value: Int64) -> String {
         if value >= 1024 * 1024 * 1024 * 1024 {
-            return compactNoSpace(value: Double(value) / (1024 * 1024 * 1024 * 1024), unit: "TB")
+            return self.compactNoSpace(value: Double(value) / (1024 * 1024 * 1024 * 1024), unit: "TB")
         }
         if value >= 1024 * 1024 * 1024 {
-            return compactNoSpace(value: Double(value) / (1024 * 1024 * 1024), unit: "GB")
+            return self.compactNoSpace(value: Double(value) / (1024 * 1024 * 1024), unit: "GB")
         }
         if value >= 1024 * 1024 {
-            return compactNoSpace(value: Double(value) / (1024 * 1024), unit: "MB")
+            return self.compactNoSpace(value: Double(value) / (1024 * 1024), unit: "MB")
         }
         if value >= 1024 {
-            return compactNoSpace(value: Double(value) / 1024, unit: "KB")
+            return self.compactNoSpace(value: Double(value) / 1024, unit: "KB")
         }
         return "\(value)B"
     }
 
     static func bytesOrDash(_ value: Int64?) -> String {
         guard let value else { return "--" }
-        return bytesCompact(value)
+        return self.bytesCompact(value)
     }
 
     static func speedAndTotal(rate: Int64, total: Int64?) -> String {
-        "\(speed(rate)) · \(bytesOrDash(total))"
+        "\(self.speed(rate)) · \(self.bytesOrDash(total))"
     }
 
     static func subscriptionUsed(upload: Int64?, download: Int64?) -> Int64? {
@@ -91,12 +91,13 @@ enum ValueFormatter {
 
     static func subscriptionRemainingRatio(total: Int64?, upload: Int64?, download: Int64?) -> Double? {
         guard let total, total > 0 else { return nil }
-        guard let remaining = subscriptionRemaining(total: total, upload: upload, download: download) else { return nil }
+        guard let remaining = subscriptionRemaining(total: total, upload: upload, download: download)
+        else { return nil }
         return min(max(Double(remaining) / Double(total), 0), 1)
     }
 
     static func dateTime(_ date: Date) -> String {
-        timestampFormatter.string(from: date)
+        self.timestampFormatter.string(from: date)
     }
 
     static func relativeTime(from input: String?, language: AppLanguage, now: Date = Date()) -> String {
@@ -104,7 +105,7 @@ enum ValueFormatter {
             return L10n.t("fmt.common.unknown", language: language)
         }
 
-        let parsedDate = parseISO8601Date(input)
+        let parsedDate = self.parseISO8601Date(input)
         guard let date = parsedDate else { return L10n.t("fmt.common.unknown", language: language) }
 
         let interval = max(0, now.timeIntervalSince(date))
@@ -127,7 +128,7 @@ enum ValueFormatter {
             return "--"
         }
         guard let date = parseISO8601Date(input) else { return "--" }
-        return timestampFormatter.string(from: date)
+        return self.timestampFormatter.string(from: date)
     }
 
     static func daysUntilExpiryShort(from unixSeconds: Int64?, language: AppLanguage, now: Date = Date()) -> String {
@@ -135,7 +136,7 @@ enum ValueFormatter {
 
         let expiryDate = Date(timeIntervalSince1970: TimeInterval(unixSeconds))
         let seconds = expiryDate.timeIntervalSince(now)
-        let day = 86_400.0
+        let day = 86400.0
 
         if seconds < 0 {
             return L10n.t("fmt.expiry_short.expired", language: language)
@@ -165,11 +166,11 @@ enum ValueFormatter {
         if let date = threadLocalISO8601Formatter(withFractionalSeconds: true).date(from: input) {
             return date
         }
-        return threadLocalISO8601Formatter(withFractionalSeconds: false).date(from: input)
+        return self.threadLocalISO8601Formatter(withFractionalSeconds: false).date(from: input)
     }
 
     private static func threadLocalISO8601Formatter(withFractionalSeconds: Bool) -> ISO8601DateFormatter {
-        let key = withFractionalSeconds ? iso8601WithFractionalKey : iso8601BasicKey
+        let key = withFractionalSeconds ? self.iso8601WithFractionalKey : self.iso8601BasicKey
         if let formatter = Thread.current.threadDictionary[key] as? ISO8601DateFormatter {
             return formatter
         }

@@ -1,7 +1,7 @@
 import Darwin
 import Foundation
 
-// Process callbacks run on system-managed threads. Shared mutable state is guarded by `lock`.
+/// Process callbacks run on system-managed threads. Shared mutable state is guarded by `lock`.
 final class MihomoProcessManager: MihomoControlling, @unchecked Sendable {
     private(set) var status: CoreLifecycleStatus = .stopped
     private var process: Process?
@@ -15,12 +15,12 @@ final class MihomoProcessManager: MihomoControlling, @unchecked Sendable {
     var onTermination: ((Int32) -> Void)?
 
     var detectedBinaryPath: String? {
-        try? resolveMihomoBinary()
+        try? self.resolveMihomoBinary()
     }
 
     var isRunning: Bool {
-        lock.withLock {
-            process?.isRunning == true
+        self.lock.withLock {
+            self.process?.isRunning == true
         }
     }
 
@@ -34,13 +34,13 @@ final class MihomoProcessManager: MihomoControlling, @unchecked Sendable {
             return .running(pid: runningPid)
         }
 
-        lock.withLock {
-            intentionalStop = false
-            status = .starting
+        self.lock.withLock {
+            self.intentionalStop = false
+            self.status = .starting
         }
         Task {
-            await stateActor.setIntentionalStop(false)
-            await stateActor.setStatus(.starting)
+            await self.stateActor.setIntentionalStop(false)
+            await self.stateActor.setStatus(.starting)
         }
 
         let binary = try resolveMihomoBinary()
@@ -49,11 +49,10 @@ final class MihomoProcessManager: MihomoControlling, @unchecked Sendable {
 
         let configFileURL = URL(fileURLWithPath: configPath).standardizedFileURL.resolvingSymlinksInPath()
         let configDirectoryURL = configFileURL.deletingLastPathComponent()
-        let workingDirectoryURL: URL
-        if configDirectoryURL.lastPathComponent == "config" {
-            workingDirectoryURL = configDirectoryURL.deletingLastPathComponent()
+        let workingDirectoryURL: URL = if configDirectoryURL.lastPathComponent == "config" {
+            configDirectoryURL.deletingLastPathComponent()
         } else {
-            workingDirectoryURL = configDirectoryURL
+            configDirectoryURL
         }
         proc.currentDirectoryURL = workingDirectoryURL
 
@@ -66,11 +65,11 @@ final class MihomoProcessManager: MihomoControlling, @unchecked Sendable {
         let stderr = Pipe()
         proc.standardOutput = stdout
         proc.standardError = stderr
-        stdoutHandle = stdout.fileHandleForReading
-        stderrHandle = stderr.fileHandleForReading
+        self.stdoutHandle = stdout.fileHandleForReading
+        self.stderrHandle = stderr.fileHandleForReading
 
-        wireLogPipe(stdout.fileHandleForReading)
-        wireLogPipe(stderr.fileHandleForReading)
+        self.wireLogPipe(stdout.fileHandleForReading)
+        self.wireLogPipe(stderr.fileHandleForReading)
 
         proc.terminationHandler = { [weak self] terminatedProcess in
             guard let self else { return }
@@ -80,110 +79,115 @@ final class MihomoProcessManager: MihomoControlling, @unchecked Sendable {
 
         do {
             try proc.run()
-            lock.withLock {
-                process = proc
-                status = .running(pid: proc.processIdentifier)
+            self.lock.withLock {
+                self.process = proc
+                self.status = .running(pid: proc.processIdentifier)
             }
             Task {
-                await stateActor.setStatus(.running(pid: proc.processIdentifier))
+                await self.stateActor.setStatus(.running(pid: proc.processIdentifier))
             }
-            onLog?("[mihomo started] pid=\(proc.processIdentifier) controller=\(controller) binary=\(binary) workdir=\(workingDirectoryURL.path)")
-            return status
+            let startMessage =
+                "[mihomo started] pid=\(proc.processIdentifier) " +
+                "controller=\(controller) " +
+                "binary=\(binary) " +
+                "workdir=\(workingDirectoryURL.path)"
+            self.onLog?(startMessage)
+            return self.status
         } catch {
             let reason = "Failed to launch mihomo: \(error.localizedDescription)"
-            lock.withLock {
-                status = .failed(reason: reason)
-                intentionalStop = false
-                releasePipeHandlesLocked()
+            self.lock.withLock {
+                self.status = .failed(reason: reason)
+                self.intentionalStop = false
+                self.releasePipeHandlesLocked()
             }
             Task {
-                await stateActor.setIntentionalStop(false)
-                await stateActor.setStatus(.failed(reason: reason))
+                await self.stateActor.setIntentionalStop(false)
+                await self.stateActor.setStatus(.failed(reason: reason))
             }
-            onLog?("[mihomo error] \(reason)")
+            self.onLog?("[mihomo error] \(reason)")
             throw error
         }
     }
 
     func stop() {
-        let running: Process? = lock.withLock {
-            intentionalStop = true
-            return process
+        let running: Process? = self.lock.withLock {
+            self.intentionalStop = true
+            return self.process
         }
         Task {
-            await stateActor.setIntentionalStop(true)
+            await self.stateActor.setIntentionalStop(true)
         }
 
         guard let running else {
-            lock.withLock {
-                status = .stopped
-                intentionalStop = false
-                releasePipeHandlesLocked()
+            self.lock.withLock {
+                self.status = .stopped
+                self.intentionalStop = false
+                self.releasePipeHandlesLocked()
             }
             Task {
-                await stateActor.setIntentionalStop(false)
-                await stateActor.setStatus(.stopped)
+                await self.stateActor.setIntentionalStop(false)
+                await self.stateActor.setStatus(.stopped)
             }
             return
         }
 
         guard running.isRunning else {
-            handleProcessTermination(running, code: running.terminationStatus)
+            self.handleProcessTermination(running, code: running.terminationStatus)
             return
         }
 
-        onLog?("[mihomo stop] terminate signal sent pid=\(running.processIdentifier)")
+        self.onLog?("[mihomo stop] terminate signal sent pid=\(running.processIdentifier)")
         running.terminate()
 
-        if waitForProcessExit(running, timeout: 2.0) {
-            handleProcessTermination(running, code: running.terminationStatus)
+        if self.waitForProcessExit(running, timeout: 2.0) {
+            self.handleProcessTermination(running, code: running.terminationStatus)
             return
         }
 
-        onLog?("[mihomo stop] force kill pid=\(running.processIdentifier)")
+        self.onLog?("[mihomo stop] force kill pid=\(running.processIdentifier)")
         _ = Darwin.kill(running.processIdentifier, SIGKILL)
-        _ = waitForProcessExit(running, timeout: 1.0)
-        handleProcessTermination(running, code: running.terminationStatus)
+        _ = self.waitForProcessExit(running, timeout: 1.0)
+        self.handleProcessTermination(running, code: running.terminationStatus)
     }
 
     @discardableResult
     func restart(configPath: String, controller: String) throws -> CoreLifecycleStatus {
-        stop()
-        return try start(configPath: configPath, controller: controller)
+        self.stop()
+        return try self.start(configPath: configPath, controller: controller)
     }
 
     private func handleProcessTermination(_ terminatedProcess: Process, code: Int32) {
-        let outcome = lock.withLock { () -> (handled: Bool, intentional: Bool) in
+        let outcome = self.lock.withLock { () -> (handled: Bool, intentional: Bool) in
             guard let current = process, current === terminatedProcess else {
                 return (false, false)
             }
 
-            let intentional = intentionalStop
-            intentionalStop = false
-            process = nil
-            status = .stopped
-            releasePipeHandlesLocked()
+            let intentional = self.intentionalStop
+            self.intentionalStop = false
+            self.process = nil
+            self.status = .stopped
+            self.releasePipeHandlesLocked()
             return (true, intentional)
         }
 
         guard outcome.handled else { return }
         Task {
-            await stateActor.setIntentionalStop(false)
-            await stateActor.setStatus(.stopped)
+            await self.stateActor.setIntentionalStop(false)
+            await self.stateActor.setStatus(.stopped)
         }
 
         if outcome.intentional {
-            onLog?("[mihomo stopped] exit=\(code)")
+            self.onLog?("[mihomo stopped] exit=\(code)")
         } else {
-            onLog?("[mihomo terminated] exit=\(code)")
-            onTermination?(code)
+            self.onLog?("[mihomo terminated] exit=\(code)")
+            self.onTermination?(code)
         }
     }
 
     private func waitForProcessExit(_ process: Process, timeout: TimeInterval) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
-        while process.isRunning && Date() < deadline {
-            usleep(50_000)
+        while process.isRunning, Date() < deadline {
+            usleep(50000)
         }
         return !process.isRunning
     }
@@ -195,7 +199,7 @@ final class MihomoProcessManager: MihomoControlling, @unchecked Sendable {
             let candidates = [
                 root.appendingPathComponent("bin/mihomo").path,
                 root.appendingPathComponent("Resources/bin/mihomo").path,
-                root.appendingPathComponent("mihomo").path
+                root.appendingPathComponent("mihomo").path,
             ]
             for candidate in candidates where fm.isExecutableFile(atPath: candidate) {
                 try validateBinarySecurity(at: candidate)
@@ -206,8 +210,7 @@ final class MihomoProcessManager: MihomoControlling, @unchecked Sendable {
         throw NSError(
             domain: "ClashBar.Core",
             code: 404,
-            userInfo: [NSLocalizedDescriptionKey: "mihomo binary not found in app resources"]
-        )
+            userInfo: [NSLocalizedDescriptionKey: "mihomo binary not found in app resources"])
     }
 
     private func validateBinarySecurity(at path: String) throws {
@@ -218,27 +221,24 @@ final class MihomoProcessManager: MihomoControlling, @unchecked Sendable {
             throw NSError(
                 domain: "ClashBar.Core",
                 code: 403,
-                userInfo: [NSLocalizedDescriptionKey: "mihomo binary path must not be a symbolic link: \(path)"]
-            )
+                userInfo: [NSLocalizedDescriptionKey: "mihomo binary path must not be a symbolic link: \(path)"])
         }
         if values.isRegularFile != true {
             throw NSError(
                 domain: "ClashBar.Core",
                 code: 403,
-                userInfo: [NSLocalizedDescriptionKey: "mihomo binary must be a regular file: \(path)"]
-            )
+                userInfo: [NSLocalizedDescriptionKey: "mihomo binary must be a regular file: \(path)"])
         }
 
         let attrs = try FileManager.default.attributesOfItem(atPath: path)
         let uid = Int(getuid())
         if let owner = attrs[.ownerAccountID] as? NSNumber {
             let ownerID = owner.intValue
-            if ownerID != 0 && ownerID != uid {
+            if ownerID != 0, ownerID != uid {
                 throw NSError(
                     domain: "ClashBar.Core",
                     code: 403,
-                    userInfo: [NSLocalizedDescriptionKey: "mihomo binary owner must be current user or root: \(path)"]
-                )
+                    userInfo: [NSLocalizedDescriptionKey: "mihomo binary owner must be current user or root: \(path)"])
             }
         }
 
@@ -249,11 +249,13 @@ final class MihomoProcessManager: MihomoControlling, @unchecked Sendable {
                 throw NSError(
                     domain: "ClashBar.Core",
                     code: 403,
-                    userInfo: [NSLocalizedDescriptionKey: "mihomo binary permissions are too permissive (writable by group/others): \(path)"]
-                )
+                    userInfo: [
+                        NSLocalizedDescriptionKey:
+                            "mihomo binary permissions are too permissive " +
+                            "(writable by group/others): \(path)",
+                    ])
             }
         }
-
     }
 
     private func wireLogPipe(_ handle: FileHandle) {
@@ -266,11 +268,11 @@ final class MihomoProcessManager: MihomoControlling, @unchecked Sendable {
     }
 
     private func releasePipeHandlesLocked() {
-        stdoutHandle?.readabilityHandler = nil
-        stderrHandle?.readabilityHandler = nil
-        stdoutHandle?.closeFile()
-        stderrHandle?.closeFile()
-        stdoutHandle = nil
-        stderrHandle = nil
+        self.stdoutHandle?.readabilityHandler = nil
+        self.stderrHandle?.readabilityHandler = nil
+        self.stdoutHandle?.closeFile()
+        self.stderrHandle?.closeFile()
+        self.stdoutHandle = nil
+        self.stderrHandle = nil
     }
 }

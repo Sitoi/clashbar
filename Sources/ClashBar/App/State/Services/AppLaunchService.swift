@@ -16,22 +16,22 @@ struct AppLaunchService {
     }
 
     var isEnabled: Bool {
-        service.status == .enabled
+        self.service.status == .enabled
     }
 
     func setEnabled(_ enabled: Bool) throws {
-        guard isRunningFromAppBundle else {
+        guard self.isRunningFromAppBundle else {
             throw AppLaunchServiceError.unsupportedEnvironment
         }
 
         if enabled {
             do {
-                try service.register()
+                try self.service.register()
             } catch {
                 throw AppLaunchServiceError.registrationFailed(error.localizedDescription)
             }
 
-            let status = service.status
+            let status = self.service.status
             if status == .enabled { return }
             if status == .requiresApproval {
                 SMAppService.openSystemSettingsLoginItems()
@@ -40,13 +40,13 @@ struct AppLaunchService {
             throw AppLaunchServiceError.registrationFailed("status=\(status.rawValue)")
         } else {
             do {
-                try service.unregister()
+                try self.service.unregister()
             } catch {
                 throw AppLaunchServiceError.unregistrationFailed(error.localizedDescription)
             }
 
-            if service.status == .enabled {
-                throw AppLaunchServiceError.unregistrationFailed("status=\(service.status.rawValue)")
+            if self.service.status == .enabled {
+                throw AppLaunchServiceError.unregistrationFailed("status=\(self.service.status.rawValue)")
             }
         }
     }

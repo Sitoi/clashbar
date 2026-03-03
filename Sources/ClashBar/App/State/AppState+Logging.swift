@@ -14,17 +14,17 @@ extension AppState {
     }
 
     func appendLog(level: String, message: String) {
-        appendLog(source: .clashbar, level: level, message: message)
+        self.appendLog(source: .clashbar, level: level, message: message)
     }
 
     func appendMihomoLog(level: String, message: String) {
-        appendLog(source: .mihomo, level: level, message: message)
+        self.appendLog(source: .mihomo, level: level, message: message)
     }
 
     func appendLog(source: AppLogSource, level: String, message: String) {
         let safeMessage = LogSanitizer.redact(message)
         errorLogs.insert(AppErrorLogEntry(source: source, level: level, message: safeMessage), at: 0)
-        persistLogToFile(source: source, level: level, message: safeMessage)
+        self.persistLogToFile(source: source, level: level, message: safeMessage)
         let maxEntries = isPanelPresented ? maxLogEntries : hiddenPanelMaxInMemoryLogEntries
         if errorLogs.count > maxEntries {
             errorLogs.removeLast(errorLogs.count - maxEntries)
@@ -53,5 +53,4 @@ extension AppState {
     func tr(_ key: String, _ args: CVarArg...) -> String {
         L10n.t(key, language: uiLanguage, args: args)
     }
-
 }

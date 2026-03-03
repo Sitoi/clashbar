@@ -3,15 +3,15 @@ import Foundation
 @MainActor
 extension AppState {
     func applySettingAllowLan(_ value: Bool) async {
-        await applyBooleanSetting(\.settingsAllowLan, configKey: "allow-lan", value: value)
+        await self.applyBooleanSetting(\.settingsAllowLan, configKey: "allow-lan", value: value)
     }
 
     func applySettingIPv6(_ value: Bool) async {
-        await applyBooleanSetting(\.settingsIPv6, configKey: "ipv6", value: value)
+        await self.applyBooleanSetting(\.settingsIPv6, configKey: "ipv6", value: value)
     }
 
     func applySettingUnifiedDelay(_ value: Bool) async {
-        await applyBooleanSetting(\.settingsUnifiedDelay, configKey: "unified-delay", value: value)
+        await self.applyBooleanSetting(\.settingsUnifiedDelay, configKey: "unified-delay", value: value)
     }
 
     func applySettingTunMode(_ value: Bool) async {
@@ -20,19 +20,18 @@ extension AppState {
 
     func applySettingLogLevel(_ value: String) async {
         settingsLogLevel = value
-        await applySettingEnumLogLevel(value)
+        await self.applySettingEnumLogLevel(value)
     }
 
     func applyProxyPorts(autoSaved: Bool = false) async {
         guard let body = validatedPortPatchBody(
             fields: proxyPortFields,
             errorMessageKey: "app.settings.error.port_range",
-            skipEmptyValues: false
-        ) else { return }
+            skipEmptyValues: false) else { return }
 
         let syncingKey = autoSaved ? "ports-auto" : "ports"
         let successMessage = autoSaved ? tr("app.settings.saved.ports_auto") : tr("app.settings.saved.ports")
-        await patchConfigBody(body, syncingKey: syncingKey, successMessage: successMessage)
+        await self.patchConfigBody(body, syncingKey: syncingKey, successMessage: successMessage)
     }
 
     func scheduleProxyPortsAutoSaveIfNeeded() {
@@ -72,25 +71,24 @@ extension AppState {
         }
 
         guard let previous = lastSyncedEditableSettings else {
-            applyEditableSettingsSnapshotToUI(incoming)
+            self.applyEditableSettingsSnapshotToUI(incoming)
             lastSyncedEditableSettings = incoming
             persistEditableSettingsSnapshot()
             return
         }
 
         suppressSettingsPersistence = true
-        syncEditableFields(
+        self.syncEditableFields(
             from: previous,
             to: incoming,
             fields: [
                 (\.settingsAllowLan, \.allowLan),
                 (\.settingsIPv6, \.ipv6),
                 (\.settingsUnifiedDelay, \.unifiedDelay),
-                (\.isTunEnabled, \.tunEnabled)
-            ]
-        )
+                (\.isTunEnabled, \.tunEnabled),
+            ])
 
-        syncEditableFields(
+        self.syncEditableFields(
             from: previous,
             to: incoming,
             fields: [
@@ -99,9 +97,8 @@ extension AppState {
                 (\.settingsSocksPort, \.socksPort),
                 (\.settingsMixedPort, \.mixedPort),
                 (\.settingsRedirPort, \.redirPort),
-                (\.settingsTProxyPort, \.tproxyPort)
-            ]
-        )
+                (\.settingsTProxyPort, \.tproxyPort),
+            ])
         suppressSettingsPersistence = false
 
         lastSyncedEditableSettings = incoming
@@ -119,36 +116,33 @@ extension AppState {
             socksPort: settingsSocksPort,
             mixedPort: settingsMixedPort,
             redirPort: settingsRedirPort,
-            tproxyPort: settingsTProxyPort
-        )
+            tproxyPort: settingsTProxyPort)
     }
 
     func applyPendingConfigSwitchSettingsOverlayIfNeeded() async {
         guard let overlay = pendingConfigSwitchOverlaySettings else { return }
         pendingConfigSwitchOverlaySettings = nil
-        await applyEditableSettingsOverlay(
+        await self.applyEditableSettingsOverlay(
             overlay,
             syncingKey: "config-switch-overlay",
-            successMessage: tr("app.settings.overlay_success")
-        )
+            successMessage: tr("app.settings.overlay_success"))
     }
 
     func applyPendingAppLaunchSettingsOverlayIfNeeded() async {
         guard let overlay = pendingAppLaunchOverlaySettings else { return }
         guard apiStatus == .healthy else { return }
         pendingAppLaunchOverlaySettings = nil
-        await applyEditableSettingsOverlay(
+        await self.applyEditableSettingsOverlay(
             overlay,
             syncingKey: "app-launch-overlay",
-            successMessage: ""
-        )
+            successMessage: "")
     }
 
     func applyEditableSettingsOverlay(
         _ overlay: EditableSettingsSnapshot,
         syncingKey: String,
-        successMessage: String
-    ) async {
+        successMessage: String) async
+    {
         let fallback = lastSyncedEditableSettings
         let resolvedLogLevel = overlay.logLevel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? (fallback?.logLevel ?? ConfigLogLevel.info.rawValue)
@@ -160,25 +154,24 @@ extension AppState {
             return
         }
 
-        let resolvedPortFields = resolvedOverlayPortFields(overlay: overlay, fallback: fallback)
+        let resolvedPortFields = self.resolvedOverlayPortFields(overlay: overlay, fallback: fallback)
         guard let portBody = validatedPortPatchBody(
             fields: resolvedPortFields,
             errorMessageKey: "app.settings.error.overlay_port_range",
-            skipEmptyValues: true
-        ) else { return }
+            skipEmptyValues: true) else { return }
 
         var body: [String: ConfigPatchValue] = [
             "allow-lan": .bool(overlay.allowLan),
             "ipv6": .bool(overlay.ipv6),
             "unified-delay": .bool(overlay.unifiedDelay),
             "tun": .object(["enable": .bool(overlay.tunEnabled)]),
-            "log-level": .string(resolvedLogLevel)
+            "log-level": .string(resolvedLogLevel),
         ]
         for (key, value) in portBody {
             body[key] = value
         }
 
-        await patchConfigBody(body, syncingKey: syncingKey, successMessage: successMessage)
+        await self.patchConfigBody(body, syncingKey: syncingKey, successMessage: successMessage)
     }
 
     func effectiveMixedPort() -> Int {
@@ -208,7 +201,7 @@ extension AppState {
     }
 
     func applySettingBool(key: String, value: Bool) async {
-        await patchSingleConfig(key, value: .bool(value))
+        await self.patchSingleConfig(key, value: .bool(value))
     }
 
     func applySettingEnumLogLevel(_ value: String) async {
@@ -217,15 +210,18 @@ extension AppState {
             settingsSavedMessage = nil
             return
         }
-        await patchSingleConfig("log-level", value: .string(value))
+        await self.patchSingleConfig("log-level", value: .string(value))
     }
 
     func patchSingleConfig(_ key: String, value: ConfigPatchValue) async {
-        await patchConfigBody([key: value], syncingKey: key, successMessage: tr("app.settings.saved.single_key", key))
+        await self.patchConfigBody(
+            [key: value],
+            syncingKey: key,
+            successMessage: tr("app.settings.saved.single_key", key))
     }
 
     func patchConfigBody(_ body: [String: ConfigPatchValue], syncingKey: String, successMessage: String) async {
-        cancelProxyPortsAutoSave()
+        self.cancelProxyPortsAutoSave()
         settingsFeedbackClearTask?.cancel()
         settingsFeedbackClearTask = nil
         settingsSyncingKey = syncingKey
@@ -235,19 +231,19 @@ extension AppState {
         let shouldSyncSystemProxyPort = body.keys.contains { key in
             key == "mixed-port" || key == "port" || key == "socks-port"
         }
-        let previousSystemProxyPorts = await previousSystemProxyPortsForSyncIfNeeded(shouldSync: shouldSyncSystemProxyPort)
+        let previousSystemProxyPorts =
+            await previousSystemProxyPortsForSyncIfNeeded(shouldSync: shouldSyncSystemProxyPort)
 
         do {
             ensureAPIClient()
             let payload = body.mapValues(\.jsonValue)
-            try await settingsPatchTransport().requestNoResponse(.patchConfigs(body: payload))
+            try await self.settingsPatchTransport().requestNoResponse(.patchConfigs(body: payload))
             settingsSavedMessage = successMessage
-            scheduleSettingsFeedbackAutoClearIfNeeded(message: successMessage)
+            self.scheduleSettingsFeedbackAutoClearIfNeeded(message: successMessage)
             await refreshFromAPI(includeSlowCalls: false)
-            await syncSystemProxyPortIfNeeded(
+            await self.syncSystemProxyPortIfNeeded(
                 shouldSync: shouldSyncSystemProxyPort,
-                previousPorts: previousSystemProxyPorts
-            )
+                previousPorts: previousSystemProxyPorts)
         } catch {
             settingsErrorMessage = tr("app.settings.error.save_failed", syncingKey, error.localizedDescription)
             settingsSavedMessage = nil
@@ -285,11 +281,11 @@ extension AppState {
     }
 
     func modeSwitchTransport() throws -> MihomoAPITransporting {
-        try resolvedTransport(override: modeSwitchTransportOverride)
+        try self.resolvedTransport(override: modeSwitchTransportOverride)
     }
 
     func settingsPatchTransport() throws -> MihomoAPITransporting {
-        try resolvedTransport(override: settingsPatchTransportOverride)
+        try self.resolvedTransport(override: settingsPatchTransportOverride)
     }
 
     func previousSystemProxyPortsForSyncIfNeeded(shouldSync: Bool) async -> SystemProxyPorts? {
@@ -322,10 +318,10 @@ extension AppState {
     func applyBooleanSetting(
         _ keyPath: ReferenceWritableKeyPath<AppState, Bool>,
         configKey: String,
-        value: Bool
-    ) async {
+        value: Bool) async
+    {
         self[keyPath: keyPath] = value
-        await applySettingBool(key: configKey, value: value)
+        await self.applySettingBool(key: configKey, value: value)
     }
 
     func validatedPort(_ textValue: String, key: String, errorMessageKey: String) -> Int? {
@@ -344,20 +340,20 @@ extension AppState {
             ("socks-port", settingsSocksPort),
             ("mixed-port", settingsMixedPort),
             ("redir-port", settingsRedirPort),
-            ("tproxy-port", settingsTProxyPort)
+            ("tproxy-port", settingsTProxyPort),
         ]
     }
 
     func resolvedOverlayPortFields(
         overlay: EditableSettingsSnapshot,
-        fallback: EditableSettingsSnapshot?
-    ) -> [(key: String, value: String)] {
+        fallback: EditableSettingsSnapshot?) -> [(key: String, value: String)]
+    {
         [
-            ("port", resolvedOverlayPortValue(overlay.port, fallback: fallback?.port ?? "")),
-            ("socks-port", resolvedOverlayPortValue(overlay.socksPort, fallback: fallback?.socksPort ?? "")),
-            ("mixed-port", resolvedOverlayPortValue(overlay.mixedPort, fallback: fallback?.mixedPort ?? "")),
-            ("redir-port", resolvedOverlayPortValue(overlay.redirPort, fallback: fallback?.redirPort ?? "")),
-            ("tproxy-port", resolvedOverlayPortValue(overlay.tproxyPort, fallback: fallback?.tproxyPort ?? ""))
+            ("port", self.resolvedOverlayPortValue(overlay.port, fallback: fallback?.port ?? "")),
+            ("socks-port", self.resolvedOverlayPortValue(overlay.socksPort, fallback: fallback?.socksPort ?? "")),
+            ("mixed-port", self.resolvedOverlayPortValue(overlay.mixedPort, fallback: fallback?.mixedPort ?? "")),
+            ("redir-port", self.resolvedOverlayPortValue(overlay.redirPort, fallback: fallback?.redirPort ?? "")),
+            ("tproxy-port", self.resolvedOverlayPortValue(overlay.tproxyPort, fallback: fallback?.tproxyPort ?? "")),
         ]
     }
 
@@ -370,8 +366,8 @@ extension AppState {
     func validatedPortPatchBody(
         fields: [(key: String, value: String)],
         errorMessageKey: String,
-        skipEmptyValues: Bool
-    ) -> [String: ConfigPatchValue]? {
+        skipEmptyValues: Bool) -> [String: ConfigPatchValue]?
+    {
         var body: [String: ConfigPatchValue] = [:]
         for field in fields {
             if skipEmptyValues, field.value.isEmpty {
@@ -380,8 +376,7 @@ extension AppState {
             guard let intValue = validatedPort(
                 field.value,
                 key: field.key,
-                errorMessageKey: errorMessageKey
-            ) else { return nil }
+                errorMessageKey: errorMessageKey) else { return nil }
             body[field.key] = .int(intValue)
         }
         return body
@@ -390,8 +385,8 @@ extension AppState {
     func syncEditableFields<Value: Equatable>(
         from previous: EditableSettingsSnapshot,
         to incoming: EditableSettingsSnapshot,
-        fields: [(ReferenceWritableKeyPath<AppState, Value>, KeyPath<EditableSettingsSnapshot, Value>)]
-    ) {
+        fields: [(ReferenceWritableKeyPath<AppState, Value>, KeyPath<EditableSettingsSnapshot, Value>)])
+    {
         for (stateKeyPath, snapshotKeyPath) in fields {
             guard self[keyPath: stateKeyPath] == previous[keyPath: snapshotKeyPath] else { continue }
             self[keyPath: stateKeyPath] = incoming[keyPath: snapshotKeyPath]
@@ -402,7 +397,6 @@ extension AppState {
         if let override {
             return override
         }
-        return try clientOrThrow()
+        return try self.clientOrThrow()
     }
-
 }

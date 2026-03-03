@@ -1,17 +1,15 @@
 @MainActor
 extension AppState {
     func closeAllConnections() async {
-        await runConnectionMutation(
+        await self.runConnectionMutation(
             actionName: tr("log.action_name.close_all_connections"),
-            endpoint: .closeAllConnections
-        )
+            endpoint: .closeAllConnections)
     }
 
     func closeConnection(id: String) async {
-        await runConnectionMutation(
+        await self.runConnectionMutation(
             actionName: tr("log.action_name.close_connection", id),
-            endpoint: .closeConnection(id: id)
-        )
+            endpoint: .closeConnection(id: id))
     }
 
     func copyAllLogs() {
@@ -30,5 +28,4 @@ extension AppState {
             await self.refreshConnections()
         }
     }
-
 }

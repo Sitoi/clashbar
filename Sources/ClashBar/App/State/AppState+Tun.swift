@@ -7,9 +7,9 @@ enum TunModeError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .configNotSelected:
-            return "No config file selected."
+            "No config file selected."
         case let .runtimeStateMismatch(expected):
-            return "TUN runtime state mismatch. expected=\(expected)"
+            "TUN runtime state mismatch. expected=\(expected)"
         }
     }
 }
@@ -26,43 +26,41 @@ extension AppState {
 
         do {
             if enabled {
-                try await ensureTunPermissions(requestIfMissing: true)
+                try await self.ensureTunPermissions(requestIfMissing: true)
             }
 
             isTunEnabled = enabled
             persistEditableSettingsSnapshot()
-            try await persistTunConfigToSelectedFile(enabled: enabled, ensureDNSEnabled: enabled)
-            try await applyTunRuntimeChange(enabled: enabled)
+            try await self.persistTunConfigToSelectedFile(enabled: enabled, ensureDNSEnabled: enabled)
+            try await self.applyTunRuntimeChange(enabled: enabled)
 
             appendLog(
                 level: "info",
-                message: tr("log.tun.toggled", enabled ? tr("log.tun.enabled") : tr("log.tun.disabled"))
-            )
+                message: tr("log.tun.toggled", enabled ? tr("log.tun.enabled") : tr("log.tun.disabled")))
         } catch {
             isTunEnabled = previousValue
             persistEditableSettingsSnapshot()
-            appendLog(level: "error", message: tr("log.tun.toggle_failed", tunErrorMessage(error)))
-            await refreshTunStatusFromRuntimeConfig()
+            appendLog(level: "error", message: tr("log.tun.toggle_failed", self.tunErrorMessage(error)))
+            await self.refreshTunStatusFromRuntimeConfig()
         }
     }
 
     func prepareTunOverlayForCoreStartup(
         configPath: String,
-        overlay: EditableSettingsSnapshot
-    ) async throws -> EditableSettingsSnapshot {
+        overlay: EditableSettingsSnapshot) async throws -> EditableSettingsSnapshot
+    {
         guard overlay.tunEnabled else { return overlay }
 
         do {
             // On app updates, bundled mihomo may lose setuid/root ownership.
             // Request permission proactively to avoid silently disabling TUN on startup.
-            try await ensureTunPermissions(requestIfMissing: true)
+            try await self.ensureTunPermissions(requestIfMissing: true)
             return overlay
         } catch {
             try tunConfigFileService.patchConfig(
                 at: configPath,
                 tunEnabled: false,
-                ensureDNSEnabledWhenTunOn: false
-            )
+                ensureDNSEnabledWhenTunOn: false)
             isTunEnabled = false
             persistEditableSettingsSnapshot()
             appendLog(level: "warning", message: tr("log.tun.startup_disabled"))
@@ -73,18 +71,18 @@ extension AppState {
     func validateTunPermissionsOnStartup() async {
         guard isTunEnabled else { return }
         do {
-            try await ensureTunPermissions(requestIfMissing: false)
+            try await self.ensureTunPermissions(requestIfMissing: false)
         } catch {
             do {
-                try? await persistTunConfigToSelectedFile(enabled: false, ensureDNSEnabled: false)
+                try? await self.persistTunConfigToSelectedFile(enabled: false, ensureDNSEnabled: false)
                 if isRuntimeRunning {
-                    try await patchTunConfig(enable: false)
+                    try await self.patchTunConfig(enable: false)
                 }
                 isTunEnabled = false
                 persistEditableSettingsSnapshot()
                 appendLog(level: "warning", message: tr("log.tun.startup_disabled"))
             } catch {
-                appendLog(level: "error", message: tr("log.tun.startup_check_failed", tunErrorMessage(error)))
+                appendLog(level: "error", message: tr("log.tun.startup_check_failed", self.tunErrorMessage(error)))
             }
         }
     }
@@ -124,7 +122,8 @@ extension AppState {
         }
 
         if let apiError = error as? APIError,
-           case .statusCode = apiError {
+           case .statusCode = apiError
+        {
             return tr("app.tun.error.patch_failed", apiError.localizedDescription)
         }
 
@@ -133,7 +132,8 @@ extension AppState {
 
     func resolvedMihomoBinaryPath() -> String? {
         if let detected = processManager.detectedBinaryPath,
-           !detected.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+           !detected.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        {
             return detected
         }
 
@@ -168,14 +168,13 @@ extension AppState {
         try tunConfigFileService.patchConfig(
             at: configPath,
             tunEnabled: enabled,
-            ensureDNSEnabledWhenTunOn: ensureDNSEnabled
-        )
+            ensureDNSEnabledWhenTunOn: ensureDNSEnabled)
     }
 
     func applyTunRuntimeChange(enabled: Bool) async throws {
         guard isRuntimeRunning else { return }
         await restartCore(trigger: .restart)
-        try await verifyTunRuntimeState(expectedEnabled: enabled)
+        try await self.verifyTunRuntimeState(expectedEnabled: enabled)
     }
 
     func verifyTunRuntimeState(expectedEnabled: Bool) async throws {
@@ -199,7 +198,7 @@ extension AppState {
     func patchTunConfig(enable: Bool) async throws {
         let client = try clientOrThrow()
         var body: [String: JSONValue] = [
-            "tun": .object(["enable": .bool(enable)])
+            "tun": .object(["enable": .bool(enable)]),
         ]
         if enable {
             body["dns"] = .object(["enable": .bool(true)])

@@ -2,16 +2,18 @@ import Foundation
 
 enum AppLanguage: String, CaseIterable, Identifiable {
     case zhHans = "zh-Hans"
-    case en = "en"
+    case en
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 
     var localeIdentifier: String {
         switch self {
         case .zhHans:
-            return "zh_Hans_CN"
+            "zh_Hans_CN"
         case .en:
-            return "en_US_POSIX"
+            "en_US_POSIX"
         }
     }
 }
@@ -22,13 +24,13 @@ enum L10n {
     private static let localeCacheKeyPrefix = "clashbar.localization.locale."
 
     static func t(_ key: String, language: AppLanguage, _ args: CVarArg...) -> String {
-        t(key, language: language, args: args)
+        self.t(key, language: language, args: args)
     }
 
     static func t(_ key: String, language: AppLanguage, args: [CVarArg]) -> String {
-        let format = localizedString(for: key, language: language)
+        let format = self.localizedString(for: key, language: language)
         guard !args.isEmpty else { return format }
-        return String(format: format, locale: locale(for: language), arguments: args)
+        return String(format: format, locale: self.locale(for: language), arguments: args)
     }
 
     private static func localizedString(for key: String, language: AppLanguage) -> String {
@@ -37,7 +39,8 @@ enum L10n {
         }
         if language != .zhHans,
            let fallbackValue = localizedString(in: bundle(for: .zhHans), key: key),
-           fallbackValue != key {
+           fallbackValue != key
+        {
             return fallbackValue
         }
         return key
@@ -48,7 +51,7 @@ enum L10n {
     }
 
     private static func bundle(for language: AppLanguage) -> Bundle? {
-        let key = bundleCacheKeyPrefix + language.rawValue
+        let key = self.bundleCacheKeyPrefix + language.rawValue
         let threadStorage = Thread.current.threadDictionary
 
         if let cached = threadStorage[key] as? Bundle {
@@ -58,11 +61,11 @@ enum L10n {
             return nil
         }
 
-        let resolved = resolveBundle(for: language)
+        let resolved = self.resolveBundle(for: language)
         if let resolved {
             threadStorage[key] = resolved
         } else {
-            threadStorage[key] = missingBundleMarker
+            threadStorage[key] = self.missingBundleMarker
         }
         return resolved
     }
@@ -76,7 +79,8 @@ enum L10n {
             for directory in candidateDirectories {
                 for languageID in languageIDs {
                     if let path = sourceBundle.path(forResource: languageID, ofType: "lproj", inDirectory: directory),
-                       let bundle = Bundle(path: path) {
+                       let bundle = Bundle(path: path)
+                    {
                         return bundle
                     }
                 }
@@ -86,7 +90,7 @@ enum L10n {
     }
 
     private static func locale(for language: AppLanguage) -> Locale {
-        let key = localeCacheKeyPrefix + language.rawValue
+        let key = self.localeCacheKeyPrefix + language.rawValue
         let threadStorage = Thread.current.threadDictionary
         if let cached = threadStorage[key] as? Locale {
             return cached

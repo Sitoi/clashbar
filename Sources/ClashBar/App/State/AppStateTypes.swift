@@ -37,13 +37,13 @@ enum ConfigPatchValue: Sendable {
     var jsonValue: JSONValue {
         switch self {
         case let .bool(value):
-            return .bool(value)
+            .bool(value)
         case let .int(value):
-            return .int(value)
+            .int(value)
         case let .string(value):
-            return .string(value)
+            .string(value)
         case let .object(value):
-            return .object(value.mapValues(\.jsonValue))
+            .object(value.mapValues(\.jsonValue))
         }
     }
 }
@@ -53,15 +53,19 @@ enum StatusBarDisplayMode: String, CaseIterable, Identifiable {
     case iconAndSpeed = "icon_and_speed"
     case speedOnly = "speed_only"
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 }
 
 enum AppAppearanceMode: String, CaseIterable, Identifiable {
-    case system = "system"
-    case light = "light"
-    case dark = "dark"
+    case system
+    case light
+    case dark
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 }
 
 enum MenuPanelTabHint: Equatable {
@@ -110,8 +114,7 @@ struct ProviderRefreshStatus {
         progressDone: 0,
         progressTotal: 0,
         message: nil,
-        updatedAt: nil
-    )
+        updatedAt: nil)
 }
 
 struct ProviderNodeKey: Hashable {
@@ -158,16 +161,16 @@ struct EditableSettingsSnapshot: Equatable, Codable {
     }
 
     init(config: ConfigSnapshot) {
-        allowLan = config.allowLan ?? false
-        ipv6 = config.ipv6 ?? false
-        unifiedDelay = config.unifiedDelay ?? false
-        tunEnabled = config.tunEnabled ?? false
-        logLevel = ConfigLogLevel(rawValue: config.logLevel ?? "")?.rawValue ?? ConfigLogLevel.info.rawValue
-        port = config.port.map(String.init) ?? ""
-        socksPort = config.socksPort.map(String.init) ?? ""
-        mixedPort = config.mixedPort.map(String.init) ?? ""
-        redirPort = config.redirPort.map(String.init) ?? ""
-        tproxyPort = config.tproxyPort.map(String.init) ?? ""
+        self.allowLan = config.allowLan ?? false
+        self.ipv6 = config.ipv6 ?? false
+        self.unifiedDelay = config.unifiedDelay ?? false
+        self.tunEnabled = config.tunEnabled ?? false
+        self.logLevel = ConfigLogLevel(rawValue: config.logLevel ?? "")?.rawValue ?? ConfigLogLevel.info.rawValue
+        self.port = config.port.map(String.init) ?? ""
+        self.socksPort = config.socksPort.map(String.init) ?? ""
+        self.mixedPort = config.mixedPort.map(String.init) ?? ""
+        self.redirPort = config.redirPort.map(String.init) ?? ""
+        self.tproxyPort = config.tproxyPort.map(String.init) ?? ""
     }
 
     init(
@@ -180,8 +183,8 @@ struct EditableSettingsSnapshot: Equatable, Codable {
         socksPort: String,
         mixedPort: String,
         redirPort: String,
-        tproxyPort: String
-    ) {
+        tproxyPort: String)
+    {
         self.allowLan = allowLan
         self.ipv6 = ipv6
         self.unifiedDelay = unifiedDelay
@@ -196,33 +199,32 @@ struct EditableSettingsSnapshot: Equatable, Codable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        allowLan = try container.decode(Bool.self, forKey: .allowLan)
-        ipv6 = try container.decode(Bool.self, forKey: .ipv6)
-        unifiedDelay = try container.decode(Bool.self, forKey: .unifiedDelay)
-        tunEnabled = try container.decodeIfPresent(Bool.self, forKey: .tunEnabled) ?? false
-        logLevel = try container.decode(String.self, forKey: .logLevel)
-        port = try container.decode(String.self, forKey: .port)
-        socksPort = try container.decode(String.self, forKey: .socksPort)
-        mixedPort = try container.decode(String.self, forKey: .mixedPort)
-        redirPort = try container.decode(String.self, forKey: .redirPort)
-        tproxyPort = try container.decode(String.self, forKey: .tproxyPort)
+        self.allowLan = try container.decode(Bool.self, forKey: .allowLan)
+        self.ipv6 = try container.decode(Bool.self, forKey: .ipv6)
+        self.unifiedDelay = try container.decode(Bool.self, forKey: .unifiedDelay)
+        self.tunEnabled = try container.decodeIfPresent(Bool.self, forKey: .tunEnabled) ?? false
+        self.logLevel = try container.decode(String.self, forKey: .logLevel)
+        self.port = try container.decode(String.self, forKey: .port)
+        self.socksPort = try container.decode(String.self, forKey: .socksPort)
+        self.mixedPort = try container.decode(String.self, forKey: .mixedPort)
+        self.redirPort = try container.decode(String.self, forKey: .redirPort)
+        self.tproxyPort = try container.decode(String.self, forKey: .tproxyPort)
     }
 }
 
 extension EditableSettingsSnapshot {
     func withTunEnabled(_ enabled: Bool) -> EditableSettingsSnapshot {
         EditableSettingsSnapshot(
-            allowLan: allowLan,
-            ipv6: ipv6,
-            unifiedDelay: unifiedDelay,
+            allowLan: self.allowLan,
+            ipv6: self.ipv6,
+            unifiedDelay: self.unifiedDelay,
             tunEnabled: enabled,
-            logLevel: logLevel,
-            port: port,
-            socksPort: socksPort,
-            mixedPort: mixedPort,
-            redirPort: redirPort,
-            tproxyPort: tproxyPort
-        )
+            logLevel: self.logLevel,
+            port: self.port,
+            socksPort: self.socksPort,
+            mixedPort: self.mixedPort,
+            redirPort: self.redirPort,
+            tproxyPort: self.tproxyPort)
     }
 }
 
@@ -234,10 +236,10 @@ struct SystemProxyPorts: Equatable, Sendable {
     static let disabled = SystemProxyPorts(httpPort: nil, httpsPort: nil, socksPort: nil)
 
     var hasEnabledPort: Bool {
-        httpPort != nil || httpsPort != nil || socksPort != nil
+        self.httpPort != nil || self.httpsPort != nil || self.socksPort != nil
     }
 
     var primaryPort: Int? {
-        httpPort ?? httpsPort ?? socksPort
+        self.httpPort ?? self.httpsPort ?? self.socksPort
     }
 }

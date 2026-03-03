@@ -4,13 +4,19 @@ import SwiftUI
 
 @MainActor
 final class AppState: ObservableObject {
-    @Published var statusText: String = "Stopped" { didSet { refreshMenuBarDisplaySnapshotIfNeeded() } }
+    @Published var statusText: String = "Stopped" {
+        didSet { self.refreshMenuBarDisplaySnapshotIfNeeded() }
+    }
+
     @Published var version: String = "-"
     @Published var controller: String = "127.0.0.1:9090"
     @Published var controllerUIURL: String = "http://127.0.0.1:9090/ui"
     @Published var controllerSecret: String?
 
-    @Published var traffic = TrafficSnapshot(up: 0, down: 0) { didSet { refreshMenuBarDisplaySnapshotIfNeeded() } }
+    @Published var traffic = TrafficSnapshot(up: 0, down: 0) {
+        didSet { self.refreshMenuBarDisplaySnapshotIfNeeded() }
+    }
+
     @Published var memory = MemorySnapshot(inuse: 0)
     @Published var displayUpTotal: Int64 = 0
     @Published var displayDownTotal: Int64 = 0
@@ -56,7 +62,10 @@ final class AppState: ObservableObject {
     @Published var isTunEnabled: Bool = false
     @Published var isTunSyncing: Bool = false
 
-    @Published var apiStatus: APIHealth = .unknown { didSet { refreshMenuBarDisplaySnapshotIfNeeded() } }
+    @Published var apiStatus: APIHealth = .unknown {
+        didSet { self.refreshMenuBarDisplaySnapshotIfNeeded() }
+    }
+
     @Published var errorLogs: [AppErrorLogEntry] = []
     @Published var startupErrorMessage: String?
     @Published var coreActionState: CoreActionState = .idle
@@ -70,18 +79,46 @@ final class AppState: ObservableObject {
     @Published private(set) var menuBarDisplaySnapshot = MenuBarDisplay(
         mode: .iconOnly,
         symbolName: "bolt.slash.circle",
-        speedLines: nil
-    )
+        speedLines: nil)
 
-    @Published var settingsAllowLan: Bool = false { didSet { persistEditableSettingsSnapshot() } }
-    @Published var settingsIPv6: Bool = false { didSet { persistEditableSettingsSnapshot() } }
-    @Published var settingsUnifiedDelay: Bool = false { didSet { persistEditableSettingsSnapshot() } }
-    @Published var settingsLogLevel: String = ConfigLogLevel.info.rawValue { didSet { persistEditableSettingsSnapshot() } }
-    @Published var settingsPort: String = "0" { didSet { persistEditableSettingsSnapshot() } }
-    @Published var settingsSocksPort: String = "0" { didSet { persistEditableSettingsSnapshot() } }
-    @Published var settingsMixedPort: String = "7890" { didSet { persistEditableSettingsSnapshot() } }
-    @Published var settingsRedirPort: String = "0" { didSet { persistEditableSettingsSnapshot() } }
-    @Published var settingsTProxyPort: String = "0" { didSet { persistEditableSettingsSnapshot() } }
+    @Published var settingsAllowLan: Bool = false {
+        didSet { persistEditableSettingsSnapshot() }
+    }
+
+    @Published var settingsIPv6: Bool = false {
+        didSet { persistEditableSettingsSnapshot() }
+    }
+
+    @Published var settingsUnifiedDelay: Bool = false {
+        didSet { persistEditableSettingsSnapshot() }
+    }
+
+    @Published var settingsLogLevel: String = ConfigLogLevel.info
+        .rawValue
+    {
+        didSet { persistEditableSettingsSnapshot() }
+    }
+
+    @Published var settingsPort: String = "0" {
+        didSet { persistEditableSettingsSnapshot() }
+    }
+
+    @Published var settingsSocksPort: String = "0" {
+        didSet { persistEditableSettingsSnapshot() }
+    }
+
+    @Published var settingsMixedPort: String = "7890" {
+        didSet { persistEditableSettingsSnapshot() }
+    }
+
+    @Published var settingsRedirPort: String = "0" {
+        didSet { persistEditableSettingsSnapshot() }
+    }
+
+    @Published var settingsTProxyPort: String = "0" {
+        didSet { persistEditableSettingsSnapshot() }
+    }
+
     @Published var settingsSyncingKey: String?
     @Published var settingsErrorMessage: String?
     @Published var settingsSavedMessage: String?
@@ -92,13 +129,13 @@ final class AppState: ObservableObject {
     var suppressSettingsPersistence = false
 
     var runtimeVisualStatus: RuntimeVisualStatus {
-        let normalized = statusText.lowercased()
+        let normalized = self.statusText.lowercased()
         if normalized == "starting" { return .starting }
         if normalized == "failed" { return .failed }
 
-        let running = processManager.isRunning || normalized == "running"
+        let running = self.processManager.isRunning || normalized == "running"
         if running {
-            switch apiStatus {
+            switch self.apiStatus {
             case .healthy:
                 return .runningHealthy
             case .failed:
@@ -111,63 +148,63 @@ final class AppState: ObservableObject {
     }
 
     var runtimeStatusText: String {
-        switch runtimeVisualStatus {
-        case .starting: return tr("app.runtime.starting")
-        case .runningHealthy, .runningDegraded: return tr("app.runtime.running")
-        case .failed: return tr("app.runtime.failed")
-        case .stopped: return tr("app.runtime.stopped")
+        switch self.runtimeVisualStatus {
+        case .starting: tr("app.runtime.starting")
+        case .runningHealthy, .runningDegraded: tr("app.runtime.running")
+        case .failed: tr("app.runtime.failed")
+        case .stopped: tr("app.runtime.stopped")
         }
     }
 
     // DRY: unify "running" checks across AppState and extensions.
     var isRuntimeRunning: Bool {
-        processManager.isRunning || statusText.caseInsensitiveCompare("running") == .orderedSame
+        self.processManager.isRunning || self.statusText.caseInsensitiveCompare("running") == .orderedSame
     }
 
     var menuBarSymbolName: String {
-        switch runtimeVisualStatus {
+        switch self.runtimeVisualStatus {
         case .runningHealthy:
-            return "bolt.horizontal.circle.fill"
+            "bolt.horizontal.circle.fill"
         case .runningDegraded:
-            return "bolt.horizontal.circle"
+            "bolt.horizontal.circle"
         case .starting:
-            return "clock.arrow.circlepath"
+            "clock.arrow.circlepath"
         case .failed:
-            return "exclamationmark.triangle.fill"
+            "exclamationmark.triangle.fill"
         case .stopped:
-            return "bolt.slash.circle"
+            "bolt.slash.circle"
         }
     }
 
     var statusBarDisplayMode: StatusBarDisplayMode {
-        get { StatusBarDisplayMode(rawValue: statusBarDisplayModeRaw) ?? .iconOnly }
+        get { StatusBarDisplayMode(rawValue: self.statusBarDisplayModeRaw) ?? .iconOnly }
         set {
-            guard statusBarDisplayModeRaw != newValue.rawValue else { return }
-            statusBarDisplayModeRaw = newValue.rawValue
-            refreshMenuBarDisplaySnapshotIfNeeded()
+            guard self.statusBarDisplayModeRaw != newValue.rawValue else { return }
+            self.statusBarDisplayModeRaw = newValue.rawValue
+            self.refreshMenuBarDisplaySnapshotIfNeeded()
         }
     }
 
     var menuBarSpeedLines: MenuBarSpeedLines {
-        guard isRuntimeRunning else { return .zero }
+        guard self.isRuntimeRunning else { return .zero }
 
-        let up = compactMenuBarRate(max(0, traffic.up))
-        let down = compactMenuBarRate(max(0, traffic.down))
+        let up = self.compactMenuBarRate(max(0, self.traffic.up))
+        let down = self.compactMenuBarRate(max(0, self.traffic.down))
         return MenuBarSpeedLines(up: "↑\(up)", down: "↓\(down)")
     }
 
     var menuBarDisplay: MenuBarDisplay {
-        menuBarDisplaySnapshot
+        self.menuBarDisplaySnapshot
     }
 
     private var computedMenuBarDisplay: MenuBarDisplay {
-        switch statusBarDisplayMode {
+        switch self.statusBarDisplayMode {
         case .iconOnly:
-            return MenuBarDisplay(mode: .iconOnly, symbolName: menuBarSymbolName, speedLines: nil)
+            MenuBarDisplay(mode: .iconOnly, symbolName: self.menuBarSymbolName, speedLines: nil)
         case .iconAndSpeed:
-            return MenuBarDisplay(mode: .iconAndSpeed, symbolName: menuBarSymbolName, speedLines: menuBarSpeedLines)
+            MenuBarDisplay(mode: .iconAndSpeed, symbolName: self.menuBarSymbolName, speedLines: self.menuBarSpeedLines)
         case .speedOnly:
-            return MenuBarDisplay(mode: .speedOnly, symbolName: nil, speedLines: menuBarSpeedLines)
+            MenuBarDisplay(mode: .speedOnly, symbolName: nil, speedLines: self.menuBarSpeedLines)
         }
     }
 
@@ -186,40 +223,40 @@ final class AppState: ObservableObject {
     }
 
     func refreshMenuBarDisplaySnapshotIfNeeded() {
-        let next = computedMenuBarDisplay
-        guard next != menuBarDisplaySnapshot else { return }
-        menuBarDisplaySnapshot = next
+        let next = self.computedMenuBarDisplay
+        guard next != self.menuBarDisplaySnapshot else { return }
+        self.menuBarDisplaySnapshot = next
     }
 
     var isModeSwitchEnabled: Bool {
-        processManager.isRunning && apiStatus == .healthy
+        self.processManager.isRunning && self.apiStatus == .healthy
     }
 
     var isTunToggleEnabled: Bool {
-        isRuntimeRunning && !isCoreActionProcessing && !isTunSyncing
+        self.isRuntimeRunning && !self.isCoreActionProcessing && !self.isTunSyncing
     }
 
     var autoStartCoreEnabled: Bool {
-        get { autoStartCore }
-        set { autoStartCore = newValue }
+        get { self.autoStartCore }
+        set { self.autoStartCore = newValue }
     }
 
     var isCoreActionProcessing: Bool {
-        coreActionState != .idle
+        self.coreActionState != .idle
     }
 
     var primaryCoreActionLabel: String {
-        if isCoreActionProcessing { return tr("app.primary.processing") }
-        return isRuntimeRunning ? tr("app.primary.restart") : tr("app.primary.start")
+        if self.isCoreActionProcessing { return tr("app.primary.processing") }
+        return self.isRuntimeRunning ? tr("app.primary.restart") : tr("app.primary.start")
     }
 
     var primaryCoreActionIconName: String {
-        if isCoreActionProcessing { return "hourglass" }
-        return isRuntimeRunning ? "arrow.clockwise" : "play.fill"
+        if self.isCoreActionProcessing { return "hourglass" }
+        return self.isRuntimeRunning ? "arrow.clockwise" : "play.fill"
     }
 
     var isPrimaryCoreActionEnabled: Bool {
-        !isCoreActionProcessing
+        !self.isCoreActionProcessing
     }
 
     let processManager: any MihomoControlling
@@ -250,7 +287,8 @@ final class AppState: ObservableObject {
 
     let defaults = UserDefaults.standard
     @AppStorage("clashbar.auto.start.core") private var autoStartCore: Bool = false
-    @AppStorage("clashbar.statusbar.display.mode") private var statusBarDisplayModeRaw: String = StatusBarDisplayMode.iconOnly.rawValue
+    @AppStorage("clashbar.statusbar.display.mode") private var statusBarDisplayModeRaw: String = StatusBarDisplayMode
+        .iconOnly.rawValue
     let selectedConfigKey = "clashbar.config.selected.filename"
     let legacySelectedConfigKey = "clashbar.config.selected"
     let remoteConfigSourcesKey = "clashbar.config.remote.sources.v1"
@@ -297,8 +335,8 @@ final class AppState: ObservableObject {
         appLaunchService: AppLaunchService = AppLaunchService(),
         clashbarLogStore: AppLogStore? = nil,
         mihomoLogStore: AppLogStore? = nil,
-        startBackgroundRefresh: Bool = true
-    ) {
+        startBackgroundRefresh: Bool = true)
+    {
         self.processManager = processManager ?? MihomoProcessManager()
         self.workingDirectoryManager = workingDirectoryManager
         self.systemProxyService = systemProxyService
@@ -309,12 +347,12 @@ final class AppState: ObservableObject {
         self.clashbarLogStore = clashbarLogStore
         self.mihomoLogStore = mihomoLogStore
         self.configManager = configManager ?? ConfigDirectoryManager(workingDirectoryManager: workingDirectoryManager)
-        uiLanguage = loadPersistedUILanguage()
-        appearanceMode = loadPersistedAppearanceMode()
+        self.uiLanguage = loadPersistedUILanguage()
+        self.appearanceMode = loadPersistedAppearanceMode()
         applyAppAppearance()
         refreshLaunchAtLoginStatus()
 
-        mihomoBinaryPath = self.processManager.detectedBinaryPath ?? "-"
+        self.mihomoBinaryPath = self.processManager.detectedBinaryPath ?? "-"
         if let managedProcess = self.processManager as? MihomoProcessManager {
             managedProcess.onLog = { [weak self] line in
                 Task { @MainActor in
@@ -333,8 +371,12 @@ final class AppState: ObservableObject {
         }
         do {
             try self.workingDirectoryManager.bootstrapDirectories()
-            clashbarLogFileURL = self.workingDirectoryManager.logsDirectoryURL.appendingPathComponent("clashbar.log", isDirectory: false)
-            mihomoLogFileURL = self.workingDirectoryManager.logsDirectoryURL.appendingPathComponent("mihomo.log", isDirectory: false)
+            clashbarLogFileURL = self.workingDirectoryManager.logsDirectoryURL.appendingPathComponent(
+                "clashbar.log",
+                isDirectory: false)
+            mihomoLogFileURL = self.workingDirectoryManager.logsDirectoryURL.appendingPathComponent(
+                "mihomo.log",
+                isDirectory: false)
 
             if let clashbarLogFileURL, self.clashbarLogStore == nil {
                 self.clashbarLogStore = AppLogStore(logFileURL: clashbarLogFileURL)
@@ -349,13 +391,13 @@ final class AppState: ObservableObject {
         }
         restoreSavedConfigDirectory()
         restoreLastSuccessfulConfigIfAvailable()
-        remoteConfigSources = loadPersistedRemoteConfigSources()
+        self.remoteConfigSources = loadPersistedRemoteConfigSources()
         pruneRemoteConfigSourcesIfNeeded()
-        controllerUIURL = makeControllerUIURL(controller)
+        self.controllerUIURL = makeControllerUIURL(self.controller)
         if let persisted = loadPersistedEditableSettingsSnapshot() {
             applyEditableSettingsSnapshotToUI(persisted)
-            preserveLocalSettingsOnNextSync = true
-            pendingAppLaunchOverlaySettings = persisted
+            self.preserveLocalSettingsOnNextSync = true
+            self.pendingAppLaunchOverlaySettings = persisted
         }
 
         if startBackgroundRefresh {
@@ -366,13 +408,13 @@ final class AppState: ObservableObject {
                 await ensureSystemProxyConsistencyOnFirstLaunchIfNeeded()
             }
         }
-        if startBackgroundRefresh && autoStartCore {
+        if startBackgroundRefresh, self.autoStartCore {
             Task { [weak self] in
                 await self?.attemptAutoStartIfNeeded()
             }
         }
 
-        refreshMenuBarDisplaySnapshotIfNeeded()
+        self.refreshMenuBarDisplaySnapshotIfNeeded()
     }
 
     deinit {

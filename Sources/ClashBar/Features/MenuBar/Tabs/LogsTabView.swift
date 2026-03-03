@@ -3,17 +3,17 @@ import SwiftUI
 
 extension MenuBarRoot {
     var logsTabBody: some View {
-        let logs = filteredLogs
+        let logs = self.filteredLogs
 
         return VStack(alignment: .leading, spacing: MenuBarLayoutTokens.sectionGap) {
-            logsControlCard
+            self.logsControlCard
 
             if logs.isEmpty {
                 emptyCard(tr("ui.empty.logs"))
             } else {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     ForEach(Array(logs.enumerated()), id: \.element.id) { index, log in
-                        logEntryRow(log)
+                        self.logEntryRow(log)
                             .padding(.horizontal, MenuBarLayoutTokens.hRow)
                             .padding(.vertical, MenuBarLayoutTokens.vDense + 2)
 
@@ -31,9 +31,9 @@ extension MenuBarRoot {
 
     var logsControlCard: some View {
         VStack(alignment: .leading, spacing: MenuBarLayoutTokens.vDense + 2) {
-            logsPrimaryControlRow
-            logsSecondaryControlRow
-            logsSearchControlRow
+            self.logsPrimaryControlRow
+            self.logsSecondaryControlRow
+            self.logsSearchControlRow
         }
         .menuRowPadding(vertical: MenuBarLayoutTokens.vDense + 2)
         .background(nativeSectionCard())
@@ -41,20 +41,20 @@ extension MenuBarRoot {
 
     var logsPrimaryControlRow: some View {
         HStack(spacing: MenuBarLayoutTokens.hDense) {
-            logsSourceFilterButtons
+            self.logsSourceFilterButtons
 
             Spacer(minLength: 0)
 
-            logsCountSummaryBadge
+            self.logsCountSummaryBadge
         }
     }
 
     var logsSecondaryControlRow: some View {
         HStack(spacing: MenuBarLayoutTokens.hDense) {
-            logsLevelFilterButtons
+            self.logsLevelFilterButtons
 
             Button {
-                resetLogFilters()
+                self.resetLogFilters()
             } label: {
                 Image(systemName: "line.3.horizontal.decrease.circle")
                     .font(.system(size: 11, weight: .semibold))
@@ -64,7 +64,7 @@ extension MenuBarRoot {
             .controlSize(.small)
             .help(tr("ui.action.reset_log_filters"))
             .accessibilityLabel(tr("ui.action.reset_log_filters"))
-            .disabled(!hasActiveLogFilters)
+            .disabled(!self.hasActiveLogFilters)
 
             Spacer(minLength: 0)
 
@@ -110,20 +110,18 @@ extension MenuBarRoot {
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(nativeTertiaryLabel)
 
-            logFilterToggleButton(
+            self.logFilterToggleButton(
                 title: tr("ui.log_source.all"),
-                selected: selectedLogSources == allLogSourceSelection,
-                action: { selectedLogSources = allLogSourceSelection }
-            )
-            .help(tr("ui.log_source.all"))
+                selected: selectedLogSources == self.allLogSourceSelection,
+                action: { selectedLogSources = self.allLogSourceSelection })
+                .help(tr("ui.log_source.all"))
 
             ForEach(AppLogSource.allCases) { source in
-                logFilterToggleButton(
-                    title: localizedLogSourceLabel(source),
+                self.logFilterToggleButton(
+                    title: self.localizedLogSourceLabel(source),
                     selected: selectedLogSources.contains(source),
-                    action: { toggleLogSource(source) }
-                )
-                .help(tr("ui.log_source.all"))
+                    action: { self.toggleLogSource(source) })
+                    .help(tr("ui.log_source.all"))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -135,20 +133,18 @@ extension MenuBarRoot {
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(nativeTertiaryLabel)
 
-            logFilterToggleButton(
+            self.logFilterToggleButton(
                 title: tr("ui.log_filter.all"),
-                selected: selectedLogLevels == allLogLevelSelection,
-                action: { selectedLogLevels = allLogLevelSelection }
-            )
-            .help(tr("ui.log_filter.all"))
+                selected: selectedLogLevels == self.allLogLevelSelection,
+                action: { selectedLogLevels = self.allLogLevelSelection })
+                .help(tr("ui.log_filter.all"))
 
-            ForEach(logSelectableLevels, id: \.self) { level in
-                logFilterToggleButton(
+            ForEach(self.logSelectableLevels, id: \.self) { level in
+                self.logFilterToggleButton(
                     title: tr(level.titleKey),
                     selected: selectedLogLevels.contains(level),
-                    action: { toggleLogLevel(level) }
-                )
-                .help(tr("ui.settings.log_level"))
+                    action: { self.toggleLogLevel(level) })
+                    .help(tr("ui.settings.log_level"))
             }
         }
     }
@@ -157,8 +153,8 @@ extension MenuBarRoot {
     func logFilterToggleButton(
         title: String,
         selected: Bool,
-        action: @escaping () -> Void
-    ) -> some View {
+        action: @escaping () -> Void) -> some View
+    {
         if selected {
             Button(action: action) {
                 Text(title)
@@ -187,12 +183,12 @@ extension MenuBarRoot {
     }
 
     var allLogLevelSelection: Set<LogLevelFilter> {
-        Set(logSelectableLevels)
+        Set(self.logSelectableLevels)
     }
 
     var logsCountSummaryBadge: some View {
         HStack(spacing: MenuBarLayoutTokens.hMicro) {
-            Text("\(filteredLogs.count)")
+            Text("\(self.filteredLogs.count)")
                 .font(.system(size: 11, weight: .bold, design: .monospaced))
             Text("/")
                 .font(.system(size: 10, weight: .medium, design: .monospaced))
@@ -209,7 +205,7 @@ extension MenuBarRoot {
         if selectedLogSources.contains(source) {
             selectedLogSources.remove(source)
             if selectedLogSources.isEmpty {
-                selectedLogSources = allLogSourceSelection
+                selectedLogSources = self.allLogSourceSelection
             }
         } else {
             selectedLogSources.insert(source)
@@ -220,7 +216,7 @@ extension MenuBarRoot {
         if selectedLogLevels.contains(level) {
             selectedLogLevels.remove(level)
             if selectedLogLevels.isEmpty {
-                selectedLogLevels = allLogLevelSelection
+                selectedLogLevels = self.allLogLevelSelection
             }
         } else {
             selectedLogLevels.insert(level)
@@ -228,7 +224,8 @@ extension MenuBarRoot {
     }
 
     var hasActiveLogFilters: Bool {
-        selectedLogSources != allLogSourceSelection || selectedLogLevels != allLogLevelSelection || !trimmedLogKeyword.isEmpty
+        selectedLogSources != self.allLogSourceSelection || selectedLogLevels != self.allLogLevelSelection || !self
+            .trimmedLogKeyword.isEmpty
     }
 
     var trimmedLogKeyword: String {
@@ -239,42 +236,42 @@ extension MenuBarRoot {
         let logs = Array(appState.errorLogs.prefix(120))
         return logs.filter { log in
             guard selectedLogSources.contains(log.source) else { return false }
-            guard !trimmedLogKeyword.isEmpty else { return true }
-            return logSearchTextContent(for: log).localizedStandardContains(trimmedLogKeyword)
+            guard !self.trimmedLogKeyword.isEmpty else { return true }
+            return self.logSearchTextContent(for: log).localizedStandardContains(self.trimmedLogKeyword)
         }
     }
 
     func resetLogFilters() {
-        selectedLogSources = allLogSourceSelection
-        selectedLogLevels = allLogLevelSelection
+        selectedLogSources = self.allLogSourceSelection
+        selectedLogLevels = self.allLogLevelSelection
         logSearchText = ""
     }
 
     var filteredLogs: [AppErrorLogEntry] {
-        logsMatchingSourceAndSearch.filter { log in
-            selectedLogLevels.contains(levelFilterOption(from: normalizedLogLevel(log.level)))
+        self.logsMatchingSourceAndSearch.filter { log in
+            selectedLogLevels.contains(self.levelFilterOption(from: self.normalizedLogLevel(log.level)))
         }
     }
 
     func levelFilterOption(from normalizedLevel: String) -> LogLevelFilter {
         switch normalizedLevel {
         case "ERROR":
-            return .error
+            .error
         case "WARNING":
-            return .warning
+            .warning
         default:
-            return .info
+            .info
         }
     }
 
     func logEntryRow(_ log: AppErrorLogEntry) -> some View {
-        let level = normalizedLogLevel(log.level)
-        let sourceLabel = localizedLogSourceLabel(log.source)
-        let sourceTone = logSourceStyle(log.source)
-        let displayLevel = localizedLogLevelLabel(level)
-        let parsed = parseLogMessage(log.message)
-        let tone = logLevelStyle(level)
-        let symbol = logLevelSymbol(level)
+        let level = self.normalizedLogLevel(log.level)
+        let sourceLabel = self.localizedLogSourceLabel(log.source)
+        let sourceTone = self.logSourceStyle(log.source)
+        let displayLevel = self.localizedLogLevelLabel(level)
+        let parsed = self.parseLogMessage(log.message)
+        let tone = self.logLevelStyle(level)
+        let symbol = self.logLevelSymbol(level)
 
         return HStack(alignment: .top, spacing: MenuBarLayoutTokens.hDense + 1) {
             RoundedRectangle(cornerRadius: 4, style: .continuous)
@@ -357,55 +354,56 @@ extension MenuBarRoot {
     func localizedLogLevelLabel(_ level: String) -> String {
         switch level {
         case "ERROR":
-            return tr("ui.log_filter.error")
+            tr("ui.log_filter.error")
         case "WARNING":
-            return tr("ui.log_filter.warning")
+            tr("ui.log_filter.warning")
         default:
-            return tr("ui.log_filter.info")
+            tr("ui.log_filter.info")
         }
     }
 
     func localizedLogSourceLabel(_ source: AppLogSource) -> String {
         switch source {
         case .clashbar:
-            return tr("ui.log_source.clashbar")
+            tr("ui.log_source.clashbar")
         case .mihomo:
-            return tr("ui.log_source.mihomo")
+            tr("ui.log_source.mihomo")
         }
     }
 
     func logSourceStyle(_ source: AppLogSource) -> Color {
         switch source {
         case .clashbar:
-            return nativeSecondaryLabel
+            nativeSecondaryLabel
         case .mihomo:
-            return nativeAccent.opacity(0.95)
+            nativeAccent.opacity(0.95)
         }
     }
 
     func logLevelStyle(_ level: String) -> Color {
         switch level {
         case "ERROR":
-            return nativeCritical.opacity(0.92)
+            nativeCritical.opacity(0.92)
         case "WARNING":
-            return nativeWarning.opacity(0.92)
+            nativeWarning.opacity(0.92)
         default:
-            return nativeAccent.opacity(0.9)
+            nativeAccent.opacity(0.9)
         }
     }
 
     func logLevelSymbol(_ level: String) -> String {
         switch level {
         case "ERROR":
-            return "exclamationmark.octagon.fill"
+            "exclamationmark.octagon.fill"
         case "WARNING":
-            return "exclamationmark.triangle.fill"
+            "exclamationmark.triangle.fill"
         default:
-            return "info.circle.fill"
+            "info.circle.fill"
         }
     }
 
-    func parseLogMessage(_ raw: String) -> (protocolTag: String?, protocolColor: Color, mainText: String, detailText: String?) {
+    func parseLogMessage(_ raw: String)
+    -> (protocolTag: String?, protocolColor: Color, mainText: String, detailText: String?) {
         var message = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if message.isEmpty {
             return (nil, nativeSecondaryLabel, tr("ui.common.na"), nil)
@@ -418,7 +416,8 @@ extension MenuBarRoot {
         var detailText: String?
         if let trailingBracket = firstRegexCapture(in: message, regex: CachedLogRegex.trailingBracket) {
             detailText = trailingBracket
-            message = message.replacingOccurrences(of: trailingBracket, with: "").trimmingCharacters(in: .whitespacesAndNewlines)
+            message = message.replacingOccurrences(of: trailingBracket, with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
         var protocolTag: String?
@@ -452,13 +451,12 @@ extension MenuBarRoot {
     }
 
     func logSearchTextContent(for log: AppErrorLogEntry) -> String {
-        let source = localizedLogSourceLabel(log.source)
-        let level = normalizedLogLevel(log.level)
+        let source = self.localizedLogSourceLabel(log.source)
+        let level = self.normalizedLogLevel(log.level)
         let time = ValueFormatter.dateTime(log.timestamp)
         let message = log.message
         return "\(source) \(level) \(time) \(message)"
     }
-
 }
 
 private enum CachedLogRegex {

@@ -2,12 +2,14 @@ import AppKit
 import SwiftUI
 
 extension MenuBarRoot {
-    var proxyModuleSpacing: CGFloat { MenuBarLayoutTokens.sectionGap }
+    var proxyModuleSpacing: CGFloat {
+        MenuBarLayoutTokens.sectionGap
+    }
 
     var proxyTabBody: some View {
-        VStack(alignment: .leading, spacing: proxyModuleSpacing) {
-            trafficOverview
-            proxyQuickRows
+        VStack(alignment: .leading, spacing: self.proxyModuleSpacing) {
+            self.trafficOverview
+            self.proxyQuickRows
             proxyProvidersSection
             proxyGroupsSection
         }
@@ -20,50 +22,43 @@ extension MenuBarRoot {
         return ZStack {
             TrafficSparklineView(
                 upValues: appState.trafficHistoryUp,
-                downValues: appState.trafficHistoryDown
-            )
+                downValues: appState.trafficHistoryDown)
                 .frame(height: sparklineHeight)
                 .padding(.horizontal, sparklineHorizontalInset)
 
             VStack(spacing: 0) {
                 HStack(spacing: MenuBarLayoutTokens.hDense) {
-                    cornerIconMetric(
+                    self.cornerIconMetric(
                         symbol: "link",
                         value: "\(appState.connectionsCount)",
-                        color: nativeIndigo
-                    )
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                        color: nativeIndigo)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                    cornerTrafficMetric(
+                    self.cornerTrafficMetric(
                         symbol: "arrow.up.circle",
                         color: nativeInfo,
                         value: ValueFormatter.speedAndTotal(
                             rate: appState.traffic.up,
-                            total: appState.displayUpTotal
-                        )
-                    )
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                            total: appState.displayUpTotal))
+                        .frame(maxWidth: .infinity, alignment: .trailing)
                 }
 
                 Spacer(minLength: 0)
 
                 HStack(spacing: MenuBarLayoutTokens.hDense) {
-                    cornerIconMetric(
+                    self.cornerIconMetric(
                         symbol: "memorychip",
                         value: ValueFormatter.bytesInteger(appState.memory.inuse),
-                        color: nativeTeal
-                    )
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                        color: nativeTeal)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                    cornerTrafficMetric(
+                    self.cornerTrafficMetric(
                         symbol: "arrow.down.circle",
                         color: nativePositive.opacity(0.92),
                         value: ValueFormatter.speedAndTotal(
                             rate: appState.traffic.down,
-                            total: appState.displayDownTotal
-                        )
-                    )
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                            total: appState.displayDownTotal))
+                        .frame(maxWidth: .infinity, alignment: .trailing)
                 }
             }
             .padding(.horizontal, MenuBarLayoutTokens.hDense)
@@ -77,8 +72,8 @@ extension MenuBarRoot {
     func cornerIconMetric(
         symbol: String,
         value: String,
-        color: Color
-    ) -> some View {
+        color: Color) -> some View
+    {
         HStack(spacing: MenuBarLayoutTokens.hMicro + 1) {
             Image(systemName: symbol)
                 .font(.system(size: 11, weight: .semibold))
@@ -94,8 +89,8 @@ extension MenuBarRoot {
     func cornerTrafficMetric(
         symbol: String,
         color: Color,
-        value: String
-    ) -> some View {
+        value: String) -> some View
+    {
         HStack(spacing: MenuBarLayoutTokens.hMicro) {
             Text(value)
                 .font(.system(size: 12, weight: .regular, design: .monospaced))
@@ -112,7 +107,7 @@ extension MenuBarRoot {
         VStack(spacing: 0) {
             AttachedPopoverMenu {
                 HStack(spacing: MenuBarLayoutTokens.hDense) {
-                    quickIcon(symbol: "doc.text", foreground: nativePurple, background: nativePurple.opacity(0.14))
+                    self.quickIcon(symbol: "doc.text", foreground: nativePurple, background: nativePurple.opacity(0.14))
                     Text(tr("ui.quick.switch_config"))
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(nativePrimaryLabel)
@@ -132,8 +127,8 @@ extension MenuBarRoot {
                 ForEach(appState.availableConfigFileNames, id: \.self) { name in
                     AttachedPopoverMenuItem(
                         title: name,
-                        selected: name == appState.selectedConfigName
-                    ) {
+                        selected: name == appState.selectedConfigName)
+                    {
                         dismiss()
                         Task { await appState.selectConfigFile(named: name) }
                     }
@@ -162,10 +157,10 @@ extension MenuBarRoot {
             }
             .buttonStyle(.plain)
 
-            quickRowsDivider
+            self.quickRowsDivider
 
             HStack(spacing: MenuBarLayoutTokens.hDense) {
-                quickIcon(symbol: "network", foreground: nativeInfo, background: nativeInfo.opacity(0.14))
+                self.quickIcon(symbol: "network", foreground: nativeInfo, background: nativeInfo.opacity(0.14))
                 Text(tr("ui.quick.system_proxy"))
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(nativePrimaryLabel)
@@ -176,20 +171,21 @@ extension MenuBarRoot {
                         get: { appState.isSystemProxyEnabled },
                         set: { value in
                             Task { await appState.toggleSystemProxy(value) }
-                        }
-                    )
-                )
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .controlSize(.small)
-                .disabled(appState.isProxySyncing)
+                        }))
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                        .disabled(appState.isProxySyncing)
             }
             .menuRowPadding()
 
-            quickRowsDivider
+            self.quickRowsDivider
 
             HStack(spacing: MenuBarLayoutTokens.hDense) {
-                quickIcon(symbol: "shield.lefthalf.filled", foreground: nativePositive, background: nativePositive.opacity(0.14))
+                self.quickIcon(
+                    symbol: "shield.lefthalf.filled",
+                    foreground: nativePositive,
+                    background: nativePositive.opacity(0.14))
                 Text(tr("ui.quick.tun_mode"))
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(nativePrimaryLabel)
@@ -200,23 +196,24 @@ extension MenuBarRoot {
                         get: { appState.isTunEnabled },
                         set: { value in
                             Task { await appState.toggleTunMode(value) }
-                        }
-                    )
-                )
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .controlSize(.small)
-                .disabled(!appState.isTunToggleEnabled)
+                        }))
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                        .disabled(!appState.isTunToggleEnabled)
             }
             .menuRowPadding()
 
-            quickRowsDivider
+            self.quickRowsDivider
 
             Button {
                 appState.copyProxyCommand()
             } label: {
                 HStack(spacing: MenuBarLayoutTokens.hDense) {
-                    quickIcon(symbol: "terminal", foreground: nativeWarning, background: nativeWarning.opacity(0.14))
+                    self.quickIcon(
+                        symbol: "terminal",
+                        foreground: nativeWarning,
+                        background: nativeWarning.opacity(0.14))
                     Text(tr("ui.quick.copy_terminal"))
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(nativePrimaryLabel)
@@ -250,5 +247,4 @@ extension MenuBarRoot {
                     .foregroundStyle(foreground)
             }
     }
-
 }

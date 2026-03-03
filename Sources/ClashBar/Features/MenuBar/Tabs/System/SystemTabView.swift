@@ -19,17 +19,20 @@ extension MenuBarRoot {
 
     var settingsFeedbackState: (message: String, color: Color, symbol: String)? {
         if let error = appState.settingsErrorMessage?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !error.isEmpty {
+           !error.isEmpty
+        {
             return (error, nativeCritical.opacity(0.92), "exclamationmark.triangle.fill")
         }
 
         if let launchError = appState.launchAtLoginErrorMessage?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !launchError.isEmpty {
+           !launchError.isEmpty
+        {
             return (launchError, nativeWarning.opacity(0.92), "exclamationmark.circle.fill")
         }
 
         if let saved = appState.settingsSavedMessage?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !saved.isEmpty {
+           !saved.isEmpty
+        {
             return (saved, nativePositive.opacity(0.92), "checkmark.circle.fill")
         }
 
@@ -42,42 +45,38 @@ extension MenuBarRoot {
                 settingsFeedbackBanner(
                     text: feedback.message,
                     color: feedback.color,
-                    symbol: feedback.symbol
-                )
+                    symbol: feedback.symbol)
             }
 
             VStack(spacing: 0) {
                 settingsCardHeader(
                     tr("ui.section.basic_settings"),
-                    symbol: "slider.horizontal.3"
-                )
+                    symbol: "slider.horizontal.3")
                 settingsDivider
                 settingsToggleRow(
                     tr("ui.settings.auto_start_core"),
                     symbol: "power.circle",
                     isOn: Binding(
-                    get: { appState.autoStartCoreEnabled },
-                    set: { appState.autoStartCoreEnabled = $0 }
-                ))
+                        get: { appState.autoStartCoreEnabled },
+                        set: { appState.autoStartCoreEnabled = $0 }))
                 settingsDivider
                 settingsToggleRow(
                     tr("ui.settings.launch_at_login"),
                     symbol: "person.crop.circle.badge.checkmark",
                     isOn: Binding(
-                    get: { appState.launchAtLoginEnabled },
-                    set: { appState.applyLaunchAtLogin($0) }
-                ))
+                        get: { appState.launchAtLoginEnabled },
+                        set: { appState.applyLaunchAtLogin($0) }))
                 settingsDivider
                 settingsMenuRow(
                     tr("ui.settings.menu_bar_style"),
                     symbol: "menubar.rectangle",
-                    valueText: statusBarModeLabel(appState.statusBarDisplayMode)
-                ) { dismiss in
+                    valueText: statusBarModeLabel(appState.statusBarDisplayMode))
+                { dismiss in
                     ForEach(StatusBarDisplayMode.allCases) { mode in
                         AttachedPopoverMenuItem(
                             title: statusBarModeLabel(mode),
-                            selected: appState.statusBarDisplayMode == mode
-                        ) {
+                            selected: appState.statusBarDisplayMode == mode)
+                        {
                             appState.statusBarDisplayMode = mode
                             dismiss()
                         }
@@ -87,19 +86,20 @@ extension MenuBarRoot {
                 settingsMenuRow(
                     tr("ui.settings.language"),
                     symbol: "character.book.closed",
-                    valueText: appState.uiLanguage == .zhHans ? tr("ui.language.zh_hans") : tr("ui.language.en")
-                ) { dismiss in
+                    valueText: appState.uiLanguage == .zhHans ? tr("ui.language.zh_hans") : tr(
+                        "ui.language.en"))
+                { dismiss in
                     AttachedPopoverMenuItem(
                         title: tr("ui.language.zh_hans"),
-                        selected: appState.uiLanguage == .zhHans
-                    ) {
+                        selected: appState.uiLanguage == .zhHans)
+                    {
                         appState.setUILanguage(.zhHans)
                         dismiss()
                     }
                     AttachedPopoverMenuItem(
                         title: tr("ui.language.en"),
-                        selected: appState.uiLanguage == .en
-                    ) {
+                        selected: appState.uiLanguage == .en)
+                    {
                         appState.setUILanguage(.en)
                         dismiss()
                     }
@@ -108,13 +108,13 @@ extension MenuBarRoot {
                 settingsMenuRow(
                     tr("ui.settings.appearance"),
                     symbol: "circle.lefthalf.filled",
-                    valueText: appearanceModeLabel(appState.appearanceMode)
-                ) { dismiss in
+                    valueText: appearanceModeLabel(appState.appearanceMode))
+                { dismiss in
                     ForEach(AppAppearanceMode.allCases) { mode in
                         AttachedPopoverMenuItem(
                             title: appearanceModeLabel(mode),
-                            selected: appState.appearanceMode == mode
-                        ) {
+                            selected: appState.appearanceMode == mode)
+                        {
                             appState.setAppearanceMode(mode)
                             dismiss()
                         }
@@ -125,45 +125,42 @@ extension MenuBarRoot {
                     tr("ui.settings.allow_lan"),
                     symbol: "network",
                     isOn: Binding(
-                    get: { appState.settingsAllowLan },
-                    set: { value in Task { await appState.applySettingAllowLan(value) } }
-                ))
+                        get: { appState.settingsAllowLan },
+                        set: { value in Task { await appState.applySettingAllowLan(value) } }))
                 settingsDivider
                 settingsToggleRow(
                     tr("ui.settings.ipv6"),
                     symbol: "globe",
                     isOn: Binding(
-                    get: { appState.settingsIPv6 },
-                    set: { value in Task { await appState.applySettingIPv6(value) } }
-                ))
+                        get: { appState.settingsIPv6 },
+                        set: { value in Task { await appState.applySettingIPv6(value) } }))
                 settingsDivider
                 settingsToggleRow(
                     tr("ui.settings.unified_delay"),
                     symbol: "gauge.with.dots.needle.50percent",
                     isOn: Binding(
-                    get: { appState.settingsUnifiedDelay },
-                    set: { value in Task { await appState.applySettingUnifiedDelay(value) } }
-                ))
+                        get: { appState.settingsUnifiedDelay },
+                        set: { value in Task { await appState.applySettingUnifiedDelay(value) } }))
                 settingsDivider
                 settingsToggleRow(
                     tr("ui.settings.tun_mode"),
                     symbol: "shield.lefthalf.filled",
                     isOn: Binding(
-                    get: { appState.isTunEnabled },
-                    set: { value in Task { await appState.applySettingTunMode(value) } }
-                ))
-                .disabled(!appState.isTunToggleEnabled)
+                        get: { appState.isTunEnabled },
+                        set: { value in Task { await appState.applySettingTunMode(value) } }))
+                    .disabled(!appState.isTunToggleEnabled)
                 settingsDivider
                 settingsMenuRow(
                     tr("ui.settings.log_level"),
                     symbol: "text.alignleft",
-                    valueText: appState.settingsLogLevel
-                ) { dismiss in
+                    valueText: appState.settingsLogLevel)
+                { dismiss in
                     ForEach(ConfigLogLevel.allCases, id: \.rawValue) { level in
                         AttachedPopoverMenuItem(
                             title: level.rawValue,
-                            selected: appState.settingsLogLevel.caseInsensitiveCompare(level.rawValue) == .orderedSame
-                        ) {
+                            selected: appState.settingsLogLevel
+                                .caseInsensitiveCompare(level.rawValue) == .orderedSame)
+                        {
                             dismiss()
                             Task { await appState.applySettingLogLevel(level.rawValue) }
                         }
@@ -175,8 +172,7 @@ extension MenuBarRoot {
             VStack(spacing: 0) {
                 settingsCardHeader(
                     tr("ui.section.proxy_ports"),
-                    symbol: "point.3.connected.trianglepath.dotted"
-                )
+                    symbol: "point.3.connected.trianglepath.dotted")
                 settingsDivider
 
                 VStack(alignment: .leading, spacing: MenuBarLayoutTokens.vDense + 2) {
@@ -187,7 +183,7 @@ extension MenuBarRoot {
 
                         Spacer(minLength: 0)
 
-                        if portAutoSaving {
+                        if self.portAutoSaving {
                             HStack(spacing: MenuBarLayoutTokens.hMicro + 1) {
                                 ProgressView()
                                     .controlSize(.mini)
@@ -201,28 +197,23 @@ extension MenuBarRoot {
                     settingsPortFieldRow(
                         tr("ui.settings.port.port"),
                         symbol: "network",
-                        text: $appState.settingsPort
-                    )
+                        text: $appState.settingsPort)
                     settingsPortFieldRow(
                         tr("ui.settings.port.socks"),
                         symbol: "wave.3.right",
-                        text: $appState.settingsSocksPort
-                    )
+                        text: $appState.settingsSocksPort)
                     settingsPortFieldRow(
                         tr("ui.settings.port.mixed"),
                         symbol: "arrow.triangle.merge",
-                        text: $appState.settingsMixedPort
-                    )
+                        text: $appState.settingsMixedPort)
                     settingsPortFieldRow(
                         tr("ui.settings.port.redir"),
                         symbol: "arrowshape.turn.up.right",
-                        text: $appState.settingsRedirPort
-                    )
+                        text: $appState.settingsRedirPort)
                     settingsPortFieldRow(
                         tr("ui.settings.port.tproxy"),
                         symbol: "shield.lefthalf.filled",
-                        text: $appState.settingsTProxyPort
-                    )
+                        text: $appState.settingsTProxyPort)
                 }
                 .menuRowPadding(vertical: MenuBarLayoutTokens.vDense + 2)
             }
@@ -231,23 +222,22 @@ extension MenuBarRoot {
             VStack(spacing: 0) {
                 settingsCardHeader(
                     tr("ui.section.maintenance"),
-                    symbol: "wrench.and.screwdriver"
-                )
+                    symbol: "wrench.and.screwdriver")
                 settingsDivider
 
                 VStack(alignment: .leading, spacing: MenuBarLayoutTokens.vDense + 2) {
                     HStack(spacing: MenuBarLayoutTokens.hDense) {
                         maintenanceActionButton(
                             tr("ui.action.flush_fakeip_cache"),
-                            symbol: "externaldrive.badge.minus"
-                        ) {
+                            symbol: "externaldrive.badge.minus")
+                        {
                             await appState.flushFakeIPCache()
                         }
 
                         maintenanceActionButton(
                             tr("ui.action.flush_dns_cache"),
-                            symbol: "network.badge.shield.half.filled"
-                        ) {
+                            symbol: "network.badge.shield.half.filled")
+                        {
                             await appState.flushDNSCache()
                         }
                     }

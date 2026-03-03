@@ -15,8 +15,7 @@ public protocol ProxyHelperProtocol {
         httpPort: Int,
         httpsPort: Int,
         socksPort: Int,
-        completion: @escaping (Bool, String?) -> Void
-    )
+        completion: @escaping (Bool, String?) -> Void)
     func clearSystemProxy(completion: @escaping (Bool, String?) -> Void)
     func getSystemProxyState(completion: @escaping (Bool, Bool, String?) -> Void)
     func isSystemProxyConfigured(
@@ -24,6 +23,5 @@ public protocol ProxyHelperProtocol {
         httpPort: Int,
         httpsPort: Int,
         socksPort: Int,
-        completion: @escaping (Bool, Bool, String?) -> Void
-    )
+        completion: @escaping (Bool, Bool, String?) -> Void)
 }

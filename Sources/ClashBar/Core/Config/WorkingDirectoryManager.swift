@@ -8,37 +8,36 @@ struct WorkingDirectoryManager {
     }
 
     var rootDirectoryURL: URL {
-        homeDirectory.appendingPathComponent("Library/Application Support/clashbar", isDirectory: true)
+        self.homeDirectory.appendingPathComponent("Library/Application Support/clashbar", isDirectory: true)
     }
 
     var configDirectoryURL: URL {
-        rootDirectoryURL.appendingPathComponent("config", isDirectory: true)
+        self.rootDirectoryURL.appendingPathComponent("config", isDirectory: true)
     }
 
     var logsDirectoryURL: URL {
-        rootDirectoryURL.appendingPathComponent("logs", isDirectory: true)
+        self.rootDirectoryURL.appendingPathComponent("logs", isDirectory: true)
     }
 
     var stateDirectoryURL: URL {
-        rootDirectoryURL.appendingPathComponent("state", isDirectory: true)
+        self.rootDirectoryURL.appendingPathComponent("state", isDirectory: true)
     }
 
     func bootstrapDirectories(fileManager: FileManager = .default) throws {
-        try createDirectoryIfNeeded(rootDirectoryURL, fileManager: fileManager)
-        try createDirectoryIfNeeded(configDirectoryURL, fileManager: fileManager)
-        try createDirectoryIfNeeded(logsDirectoryURL, fileManager: fileManager)
-        try createDirectoryIfNeeded(stateDirectoryURL, fileManager: fileManager)
+        try self.createDirectoryIfNeeded(self.rootDirectoryURL, fileManager: fileManager)
+        try self.createDirectoryIfNeeded(self.configDirectoryURL, fileManager: fileManager)
+        try self.createDirectoryIfNeeded(self.logsDirectoryURL, fileManager: fileManager)
+        try self.createDirectoryIfNeeded(self.stateDirectoryURL, fileManager: fileManager)
     }
 
     func normalizeAndValidateWithinRoot(_ url: URL, mustBeDirectory: Bool? = nil) throws -> URL {
         let standardized = url.standardizedFileURL.resolvingSymlinksInPath()
-        let root = rootDirectoryURL.standardizedFileURL.resolvingSymlinksInPath()
-        guard isDescendantOrEqual(standardized, parent: root) else {
+        let root = self.rootDirectoryURL.standardizedFileURL.resolvingSymlinksInPath()
+        guard self.isDescendantOrEqual(standardized, parent: root) else {
             throw NSError(
                 domain: "ClashBar.PathSecurity",
                 code: 403,
-                userInfo: [NSLocalizedDescriptionKey: "Path escapes ClashBar working directory: \(standardized.path)"]
-            )
+                userInfo: [NSLocalizedDescriptionKey: "Path escapes ClashBar working directory: \(standardized.path)"])
         }
 
         if let mustBeDirectory {
@@ -49,8 +48,7 @@ struct WorkingDirectoryManager {
                     code: 400,
                     userInfo: [NSLocalizedDescriptionKey: mustBeDirectory
                         ? "Expected directory path: \(standardized.path)"
-                        : "Expected file path: \(standardized.path)"]
-                )
+                        : "Expected file path: \(standardized.path)"])
             }
         }
 
@@ -64,8 +62,7 @@ struct WorkingDirectoryManager {
                 throw NSError(
                     domain: "ClashBar.PathSecurity",
                     code: 409,
-                    userInfo: [NSLocalizedDescriptionKey: "Expected directory but found file: \(url.path)"]
-                )
+                    userInfo: [NSLocalizedDescriptionKey: "Expected directory but found file: \(url.path)"])
             }
             return
         }

@@ -11,17 +11,17 @@ enum TunPermissionServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .coreBinaryNotFound:
-            return "mihomo binary not found."
+            "mihomo binary not found."
         case .coreBinaryNotExecutable:
-            return "mihomo binary is not executable."
+            "mihomo binary is not executable."
         case .permissionMissing:
-            return "mihomo binary does not have required TUN privileges."
+            "mihomo binary does not have required TUN privileges."
         case .authorizationCancelled:
-            return "Administrator authorization was cancelled."
+            "Administrator authorization was cancelled."
         case let .authorizationFailed(message):
-            return "Failed to authorize TUN privileges: \(message)"
+            "Failed to authorize TUN privileges: \(message)"
         case .permissionVerificationFailed:
-            return "TUN privileges were not applied successfully."
+            "TUN privileges were not applied successfully."
         }
     }
 }
@@ -52,13 +52,13 @@ struct TunPermissionService: Sendable {
     func grantPermissions(binaryPath: String) async throws {
         let resolvedBinaryPath = try validateBinaryPath(binaryPath)
         try await Task.detached(priority: .userInitiated) {
-            try grantPermissionsSynchronously(binaryPath: resolvedBinaryPath)
+            try self.grantPermissionsSynchronously(binaryPath: resolvedBinaryPath)
         }.value
     }
 
     func validateCurrentPermissions(binaryPath: String) throws {
         let resolvedBinaryPath = try validateBinaryPath(binaryPath)
-        guard hasRequiredPermissions(binaryPath: resolvedBinaryPath) else {
+        guard self.hasRequiredPermissions(binaryPath: resolvedBinaryPath) else {
             throw TunPermissionServiceError.permissionMissing
         }
     }
@@ -80,12 +80,12 @@ struct TunPermissionService: Sendable {
     }
 
     private func grantPermissionsSynchronously(binaryPath: String) throws {
-        let escapedPath = shellQuoted(binaryPath)
+        let escapedPath = self.shellQuoted(binaryPath)
         let shellCommand = "/usr/sbin/chown root:admin \(escapedPath) && /bin/chmod u+s \(escapedPath)"
         let appleScript = "do shell script \"\(appleScriptEscaped(shellCommand))\" with administrator privileges"
         try runAppleScriptSynchronously(appleScript)
 
-        guard hasRequiredPermissions(binaryPath: binaryPath) else {
+        guard self.hasRequiredPermissions(binaryPath: binaryPath) else {
             throw TunPermissionServiceError.permissionVerificationFailed
         }
     }

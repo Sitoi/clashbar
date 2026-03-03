@@ -10,22 +10,20 @@ extension AppState {
         let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
-        guard isValidExternalController(trimmed) else {
-            appendExternalControllerWarningOnce(
+        guard self.isValidExternalController(trimmed) else {
+            self.appendExternalControllerWarningOnce(
                 key: "invalid:\(trimmed)",
-                message: "Ignored invalid external-controller value: \(trimmed)"
-            )
+                message: "Ignored invalid external-controller value: \(trimmed)")
             return
         }
 
         if let host = controllerHost(from: trimmed), !isLoopbackHost(host) {
-            appendExternalControllerWarningOnce(
+            self.appendExternalControllerWarningOnce(
                 key: "risk:\(host.lowercased())",
-                message: "[security] external-controller host is not loopback: \(host)"
-            )
+                message: "[security] external-controller host is not loopback: \(host)")
         }
 
-        let clientController = normalizedControllerForClientAccess(trimmed)
+        let clientController = self.normalizedControllerForClientAccess(trimmed)
         let didChangeController = controller != clientController
         if didChangeController {
             controller = clientController
@@ -40,7 +38,8 @@ extension AppState {
         guard let components = parsedControllerComponents(from: value),
               let scheme = components.scheme?.lowercased(),
               let host = components.host,
-              !host.isEmpty else {
+              !host.isEmpty
+        else {
             return false
         }
         guard scheme == "http" || scheme == "https" else {
@@ -53,7 +52,7 @@ extension AppState {
     }
 
     func controllerHost(from value: String) -> String? {
-        parsedControllerComponents(from: value)?.host
+        self.parsedControllerComponents(from: value)?.host
     }
 
     func isLoopbackHost(_ host: String) -> Bool {
@@ -75,14 +74,14 @@ extension AppState {
     }
 
     func parsedControllerComponents(from value: String) -> URLComponents? {
-        URLComponents(string: normalizedControllerAddress(value))
+        URLComponents(string: self.normalizedControllerAddress(value))
     }
 
     @discardableResult
     func applyExternalControllerFromSelectedConfigFile(configPath: String) -> String {
-        let launchController = resolvedControllerFromSelectedConfigFile(configPath: configPath)
-        applyExternalControllerFromConfig(launchController)
-        syncControllerSecretFromConfigFileIfReadable(configPath: configPath)
+        let launchController = self.resolvedControllerFromSelectedConfigFile(configPath: configPath)
+        self.applyExternalControllerFromConfig(launchController)
+        self.syncControllerSecretFromConfigFileIfReadable(configPath: configPath)
         return launchController
     }
 
@@ -90,19 +89,19 @@ extension AppState {
         guard let raw = try? String(contentsOfFile: configPath, encoding: .utf8) else {
             return nil
         }
-        return parseYAMLScalarValue(forKey: "external-controller", fromConfigContent: raw)
+        return self.parseYAMLScalarValue(forKey: "external-controller", fromConfigContent: raw)
     }
 
     func parseControllerSecret(fromConfigAt configPath: String) -> String? {
         guard let raw = try? String(contentsOfFile: configPath, encoding: .utf8) else {
             return nil
         }
-        return parseYAMLScalarValue(forKey: "secret", fromConfigContent: raw)
+        return self.parseYAMLScalarValue(forKey: "secret", fromConfigContent: raw)
     }
 
     func applyControllerSecretFromConfig(_ rawValue: String?) {
-        let normalizedSecret = normalizedControllerSecret(rawValue)
-        let currentSecret = normalizedControllerSecret(controllerSecret)
+        let normalizedSecret = self.normalizedControllerSecret(rawValue)
+        let currentSecret = self.normalizedControllerSecret(controllerSecret)
         if normalizedSecret != currentSecret {
             controllerSecret = normalizedSecret
         }
@@ -113,15 +112,15 @@ extension AppState {
         guard let raw = try? String(contentsOfFile: configPath, encoding: .utf8) else {
             return
         }
-        let parsedSecret = parseYAMLScalarValue(forKey: "secret", fromConfigContent: raw)
-        applyControllerSecretFromConfig(parsedSecret)
+        let parsedSecret = self.parseYAMLScalarValue(forKey: "secret", fromConfigContent: raw)
+        self.applyControllerSecretFromConfig(parsedSecret)
     }
 
     private func parseYAMLScalarValue(forKey key: String, fromConfigContent raw: String) -> String? {
         var topLevelIndent: Int?
         for line in raw.split(whereSeparator: \.isNewline) {
             let lineText = String(line)
-            let indent = leadingWhitespaceCount(in: lineText)
+            let indent = self.leadingWhitespaceCount(in: lineText)
             let content = String(lineText.dropFirst(indent))
             let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmedContent.isEmpty || trimmedContent.hasPrefix("#") {
@@ -148,8 +147,8 @@ extension AppState {
         let linePattern = #"^\#(escapedKey)\s*:\s*(.*)$"#
         guard let range = line.range(
             of: linePattern,
-            options: [.regularExpression]
-        ) else {
+            options: [.regularExpression])
+        else {
             return nil
         }
 
@@ -157,10 +156,9 @@ extension AppState {
         var value = String(line[range]).replacingOccurrences(
             of: prefixPattern,
             with: "",
-            options: [.regularExpression]
-        )
+            options: [.regularExpression])
 
-        value = stripYAMLInlineComment(value).trimmingCharacters(in: .whitespacesAndNewlines)
+        value = self.stripYAMLInlineComment(value).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty else { return nil }
 
         if (value.hasPrefix("\"") && value.hasSuffix("\"")) || (value.hasPrefix("'") && value.hasSuffix("'")) {
@@ -203,25 +201,25 @@ extension AppState {
                 continue
             }
 
-            if char == "\\" && inDoubleQuote {
+            if char == "\\", inDoubleQuote {
                 result.append(char)
                 isEscaped = true
                 continue
             }
 
-            if char == "'" && !inDoubleQuote {
+            if char == "'", !inDoubleQuote {
                 inSingleQuote.toggle()
                 result.append(char)
                 continue
             }
 
-            if char == "\"" && !inSingleQuote {
+            if char == "\"", !inSingleQuote {
                 inDoubleQuote.toggle()
                 result.append(char)
                 continue
             }
 
-            if char == "#" && !inSingleQuote && !inDoubleQuote {
+            if char == "#", !inSingleQuote, !inDoubleQuote {
                 break
             }
 
@@ -233,21 +231,21 @@ extension AppState {
 
     private func resolvedControllerFromSelectedConfigFile(configPath: String) -> String {
         if let parsed = parseExternalController(fromConfigAt: configPath) {
-            guard isValidExternalController(parsed) else {
-                appendExternalControllerWarningOnce(
+            guard self.isValidExternalController(parsed) else {
+                self.appendExternalControllerWarningOnce(
                     key: "invalid:\(parsed)",
-                    message: "Ignored invalid external-controller value: \(parsed)"
-                )
-                return defaultControllerAddress
+                    message: "Ignored invalid external-controller value: \(parsed)")
+                return self.defaultControllerAddress
             }
             return parsed
         }
-        return defaultControllerAddress
+        return self.defaultControllerAddress
     }
 
     private func normalizedControllerForClientAccess(_ value: String) -> String {
         guard var components = parsedControllerComponents(from: value),
-              let host = components.host else {
+              let host = components.host
+        else {
             return value
         }
 

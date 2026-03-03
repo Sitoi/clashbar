@@ -10,13 +10,14 @@ enum BrandIcon {
             if let url = bundle.url(
                 forResource: resourceName,
                 withExtension: resourceExtension,
-                subdirectory: resourceSubdirectory
-            ), let image = NSImage(contentsOf: url) {
+                subdirectory: resourceSubdirectory), let image = NSImage(contentsOf: url)
+            {
                 return image
             }
 
             if let url = bundle.url(forResource: resourceName, withExtension: resourceExtension),
-               let image = NSImage(contentsOf: url) {
+               let image = NSImage(contentsOf: url)
+            {
                 return image
             }
         }

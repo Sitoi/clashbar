@@ -11,82 +11,84 @@ struct ClashBarApp: App {
         }
         .commands {
             CommandMenu("Core") {
-                Button(appDelegate.appState.primaryCoreActionLabel) {
-                    Task { await appDelegate.appState.performPrimaryCoreAction() }
+                Button(self.appDelegate.appState.primaryCoreActionLabel) {
+                    Task { await self.appDelegate.appState.performPrimaryCoreAction() }
                 }
                 .keyboardShortcut("R", modifiers: [.command, .shift])
-                .disabled(!appDelegate.appState.isPrimaryCoreActionEnabled)
+                .disabled(!self.appDelegate.appState.isPrimaryCoreActionEnabled)
 
-                Button(tr("ui.action.stop")) {
-                    Task { await appDelegate.appState.stopCore() }
+                Button(self.tr("ui.action.stop")) {
+                    Task { await self.appDelegate.appState.stopCore() }
                 }
                 .keyboardShortcut(".", modifiers: [.command, .shift])
-                .disabled(appDelegate.appState.isCoreActionProcessing)
+                .disabled(self.appDelegate.appState.isCoreActionProcessing)
 
                 Divider()
 
-                Button(appDelegate.appState.isTunEnabled ? tr("ui.action.disable_tun") : tr("ui.action.enable_tun")) {
-                    let toggled = !appDelegate.appState.isTunEnabled
-                    Task { await appDelegate.appState.toggleTunMode(toggled) }
+                Button(self.appDelegate.appState.isTunEnabled ? self.tr("ui.action.disable_tun") : self
+                    .tr("ui.action.enable_tun"))
+                {
+                    let toggled = !self.appDelegate.appState.isTunEnabled
+                    Task { await self.appDelegate.appState.toggleTunMode(toggled) }
                 }
                 .keyboardShortcut("T", modifiers: [.command, .option])
-                .disabled(!appDelegate.appState.isTunToggleEnabled)
+                .disabled(!self.appDelegate.appState.isTunToggleEnabled)
             }
 
             CommandMenu("Panel") {
-                Button(tr("ui.tab.proxy")) {
-                    appDelegate.appState.setActiveMenuTab(.proxy)
+                Button(self.tr("ui.tab.proxy")) {
+                    self.appDelegate.appState.setActiveMenuTab(.proxy)
                 }
                 .keyboardShortcut("1", modifiers: [.command, .option])
 
-                Button(tr("ui.tab.rules")) {
-                    appDelegate.appState.setActiveMenuTab(.rules)
+                Button(self.tr("ui.tab.rules")) {
+                    self.appDelegate.appState.setActiveMenuTab(.rules)
                 }
                 .keyboardShortcut("2", modifiers: [.command, .option])
 
-                Button(tr("ui.tab.activity")) {
-                    appDelegate.appState.setActiveMenuTab(.activity)
+                Button(self.tr("ui.tab.activity")) {
+                    self.appDelegate.appState.setActiveMenuTab(.activity)
                 }
                 .keyboardShortcut("3", modifiers: [.command, .option])
 
-                Button(tr("ui.tab.logs")) {
-                    appDelegate.appState.setActiveMenuTab(.logs)
+                Button(self.tr("ui.tab.logs")) {
+                    self.appDelegate.appState.setActiveMenuTab(.logs)
                 }
                 .keyboardShortcut("4", modifiers: [.command, .option])
 
-                Button(tr("ui.tab.system")) {
-                    appDelegate.appState.setActiveMenuTab(.system)
+                Button(self.tr("ui.tab.system")) {
+                    self.appDelegate.appState.setActiveMenuTab(.system)
                 }
                 .keyboardShortcut("5", modifiers: [.command, .option])
             }
 
             CommandMenu("Actions") {
-                Button(tr("ui.action.refresh")) {
-                    Task { await appDelegate.appState.refreshActiveTab() }
+                Button(self.tr("ui.action.refresh")) {
+                    Task { await self.appDelegate.appState.refreshActiveTab() }
                 }
                 .keyboardShortcut("K", modifiers: [.command, .shift])
 
-                Button(tr("ui.quick.copy_terminal")) {
-                    appDelegate.appState.copyProxyCommand()
+                Button(self.tr("ui.quick.copy_terminal")) {
+                    self.appDelegate.appState.copyProxyCommand()
                 }
                 .keyboardShortcut("C", modifiers: [.command, .option, .shift])
 
-                Button(tr("ui.action.copy_all_logs")) {
-                    appDelegate.appState.copyAllLogs()
+                Button(self.tr("ui.action.copy_all_logs")) {
+                    self.appDelegate.appState.copyAllLogs()
                 }
                 .keyboardShortcut("L", modifiers: [.command, .option, .shift])
 
-                Button(tr("ui.action.clear_all_logs")) {
-                    appDelegate.appState.clearAllLogs()
+                Button(self.tr("ui.action.clear_all_logs")) {
+                    self.appDelegate.appState.clearAllLogs()
                 }
                 .keyboardShortcut(.delete, modifiers: [.command, .option, .shift])
-                .disabled(appDelegate.appState.errorLogs.isEmpty)
+                .disabled(self.appDelegate.appState.errorLogs.isEmpty)
             }
         }
     }
 
     private func tr(_ key: String) -> String {
-        L10n.t(key, language: appDelegate.appState.uiLanguage)
+        L10n.t(key, language: self.appDelegate.appState.uiLanguage)
     }
 }
 
@@ -100,12 +102,12 @@ final class ClashBarAppDelegate: NSObject, NSApplicationDelegate {
             NSApp.applicationIconImage = image
         }
         NSApp.setActivationPolicy(.accessory)
-        statusItemController = StatusItemController(appState: appState)
+        self.statusItemController = StatusItemController(appState: self.appState)
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        appState.shutdownForTermination()
-        statusItemController?.shutdown()
-        statusItemController = nil
+        self.appState.shutdownForTermination()
+        self.statusItemController?.shutdown()
+        self.statusItemController = nil
     }
 }

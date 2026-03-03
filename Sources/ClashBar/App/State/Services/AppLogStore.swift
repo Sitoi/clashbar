@@ -10,16 +10,17 @@ struct AppLogStore {
     }()
 
     func ensureLogFileExists() {
-        if !FileManager.default.fileExists(atPath: logFileURL.path) {
-            FileManager.default.createFile(atPath: logFileURL.path, contents: nil)
+        if !FileManager.default.fileExists(atPath: self.logFileURL.path) {
+            FileManager.default.createFile(atPath: self.logFileURL.path, contents: nil)
         }
     }
 
     func append(level: String, message: String) {
-        ensureLogFileExists()
+        self.ensureLogFileExists()
         let line = "[\(Self.timestampString(from: Date()))] [\(level.uppercased())] \(message)\n"
         guard let data = line.data(using: .utf8),
-              let handle = FileHandle(forWritingAtPath: logFileURL.path) else {
+              let handle = FileHandle(forWritingAtPath: logFileURL.path)
+        else {
             return
         }
         defer { handle.closeFile() }
@@ -28,16 +29,16 @@ struct AppLogStore {
     }
 
     func clear() {
-        if FileManager.default.fileExists(atPath: logFileURL.path) {
-            try? Data().write(to: logFileURL, options: .atomic)
+        if FileManager.default.fileExists(atPath: self.logFileURL.path) {
+            try? Data().write(to: self.logFileURL, options: .atomic)
         } else {
-            ensureLogFileExists()
+            self.ensureLogFileExists()
         }
     }
 
     private static func timestampString(from date: Date) -> String {
-        formatterLock.lock()
+        self.formatterLock.lock()
         defer { formatterLock.unlock() }
-        return timestampFormatter.string(from: date)
+        return self.timestampFormatter.string(from: date)
     }
 }

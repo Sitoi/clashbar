@@ -8,10 +8,10 @@ final class KeychainSecretStore: SecretStore {
     func loadControllerSecret() -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
+            kSecAttrService as String: self.service,
+            kSecAttrAccount as String: self.account,
             kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
+            kSecMatchLimit as String: kSecMatchLimitOne,
         ]
 
         var item: CFTypeRef?
@@ -19,7 +19,8 @@ final class KeychainSecretStore: SecretStore {
         guard status == errSecSuccess,
               let data = item as? Data,
               let secret = String(data: data, encoding: .utf8),
-              !secret.isEmpty else {
+              !secret.isEmpty
+        else {
             return nil
         }
         return secret
@@ -28,8 +29,8 @@ final class KeychainSecretStore: SecretStore {
     func saveControllerSecret(_ value: String?) throws {
         let deleteQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account
+            kSecAttrService as String: self.service,
+            kSecAttrAccount as String: self.account,
         ]
         SecItemDelete(deleteQuery as CFDictionary)
 
@@ -38,18 +39,19 @@ final class KeychainSecretStore: SecretStore {
         let data = Data(value.utf8)
         let addQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
+            kSecAttrService as String: self.service,
+            kSecAttrAccount as String: self.account,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
-            kSecValueData as String: data
+            kSecValueData as String: data,
         ]
         let status = SecItemAdd(addQuery as CFDictionary, nil)
         guard status == errSecSuccess else {
             throw NSError(
                 domain: "ClashBar.Keychain",
                 code: Int(status),
-                userInfo: [NSLocalizedDescriptionKey: "Failed to save controller secret to Keychain (status=\(status))"]
-            )
+                userInfo: [
+                    NSLocalizedDescriptionKey: "Failed to save controller secret to Keychain (status=\(status))",
+                ])
         }
     }
 }

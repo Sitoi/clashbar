@@ -18,11 +18,9 @@ final class StatusItemContentView: NSView {
     }()
 
     private let upLabel = StatusItemContentView.makeLineLabel(
-        color: NSColor.systemBlue.withAlphaComponent(0.92)
-    )
+        color: NSColor.systemBlue.withAlphaComponent(0.92))
     private let downLabel = StatusItemContentView.makeLineLabel(
-        color: NSColor.systemGreen.withAlphaComponent(0.92)
-    )
+        color: NSColor.systemGreen.withAlphaComponent(0.92))
 
     private var currentDisplay: MenuBarDisplay?
     private lazy var brandStatusIconImage: NSImage? = Self.makeBrandStatusIconImage(size: brandIconRenderSize)
@@ -30,9 +28,9 @@ final class StatusItemContentView: NSView {
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = false
-        addSubview(iconView)
-        addSubview(upLabel)
-        addSubview(downLabel)
+        addSubview(self.iconView)
+        addSubview(self.upLabel)
+        addSubview(self.downLabel)
     }
 
     @available(*, unavailable)
@@ -45,52 +43,55 @@ final class StatusItemContentView: NSView {
     }
 
     override var intrinsicContentSize: NSSize {
-        CGSize(width: requiredWidth, height: NSStatusBar.system.thickness)
+        CGSize(width: self.requiredWidth, height: NSStatusBar.system.thickness)
     }
 
     var requiredWidth: CGFloat {
-        let display = currentDisplay ?? MenuBarDisplay(mode: .iconOnly, symbolName: "bolt.slash.circle", speedLines: nil)
+        let display = self.currentDisplay ?? MenuBarDisplay(
+            mode: .iconOnly,
+            symbolName: "bolt.slash.circle",
+            speedLines: nil)
         switch display.mode {
         case .iconOnly:
-            return statusItemHorizontalPadding * 2 + iconSize
+            return self.statusItemHorizontalPadding * 2 + self.iconSize
         case .iconAndSpeed:
-            return statusItemHorizontalPadding * 2 + iconSize + iconTextSpacing + textContainerWidth
+            return self.statusItemHorizontalPadding * 2 + self.iconSize + self.iconTextSpacing + self.textContainerWidth
         case .speedOnly:
-            return statusItemHorizontalPadding * 2 + textContainerWidth
+            return self.statusItemHorizontalPadding * 2 + self.textContainerWidth
         }
     }
 
     func apply(display: MenuBarDisplay) {
-        currentDisplay = display
-        upLabel.stringValue = display.speedLines?.up ?? ""
-        downLabel.stringValue = display.speedLines?.down ?? ""
+        self.currentDisplay = display
+        self.upLabel.stringValue = display.speedLines?.up ?? ""
+        self.downLabel.stringValue = display.speedLines?.down ?? ""
 
         let shouldShowIcon = display.mode != .speedOnly
         if shouldShowIcon, let brandIcon = brandStatusIconImage {
-            iconView.image = brandIcon
-            iconView.contentTintColor = nil
+            self.iconView.image = brandIcon
+            self.iconView.contentTintColor = nil
         } else if let symbolName = display.symbolName {
             let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "ClashBar")
             let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .semibold)
-            iconView.image = image?.withSymbolConfiguration(config)
-            iconView.contentTintColor = NSColor.labelColor
+            self.iconView.image = image?.withSymbolConfiguration(config)
+            self.iconView.contentTintColor = NSColor.labelColor
         } else {
-            iconView.image = nil
+            self.iconView.image = nil
         }
 
         switch display.mode {
         case .iconOnly:
-            iconView.isHidden = false
-            upLabel.isHidden = true
-            downLabel.isHidden = true
+            self.iconView.isHidden = false
+            self.upLabel.isHidden = true
+            self.downLabel.isHidden = true
         case .iconAndSpeed:
-            iconView.isHidden = false
-            upLabel.isHidden = false
-            downLabel.isHidden = false
+            self.iconView.isHidden = false
+            self.upLabel.isHidden = false
+            self.downLabel.isHidden = false
         case .speedOnly:
-            iconView.isHidden = true
-            upLabel.isHidden = false
-            downLabel.isHidden = false
+            self.iconView.isHidden = true
+            self.upLabel.isHidden = false
+            self.downLabel.isHidden = false
         }
 
         needsLayout = true
@@ -102,26 +103,38 @@ final class StatusItemContentView: NSView {
 
         let totalHeight = bounds.height
         let centerY = totalHeight / 2
-        var cursorX = statusItemHorizontalPadding
+        var cursorX = self.statusItemHorizontalPadding
 
-        if iconView.isHidden == false {
-            iconView.frame = CGRect(x: cursorX, y: centerY - iconSize / 2, width: iconSize, height: iconSize)
-            cursorX += iconSize + iconTextSpacing
+        if self.iconView.isHidden == false {
+            self.iconView.frame = CGRect(
+                x: cursorX,
+                y: centerY - self.iconSize / 2,
+                width: self.iconSize,
+                height: self.iconSize)
+            cursorX += self.iconSize + self.iconTextSpacing
         } else {
-            iconView.frame = .zero
+            self.iconView.frame = .zero
         }
 
-        if upLabel.isHidden || downLabel.isHidden {
-            upLabel.frame = .zero
-            downLabel.frame = .zero
+        if self.upLabel.isHidden || self.downLabel.isHidden {
+            self.upLabel.frame = .zero
+            self.downLabel.frame = .zero
             return
         }
 
-        let stackHeight = textLineHeight * 2
+        let stackHeight = self.textLineHeight * 2
         let stackOriginY = centerY - stackHeight / 2
 
-        upLabel.frame = CGRect(x: cursorX, y: stackOriginY + textLineHeight, width: textContainerWidth, height: textLineHeight)
-        downLabel.frame = CGRect(x: cursorX, y: stackOriginY, width: textContainerWidth, height: textLineHeight)
+        self.upLabel.frame = CGRect(
+            x: cursorX,
+            y: stackOriginY + self.textLineHeight,
+            width: self.textContainerWidth,
+            height: self.textLineHeight)
+        self.downLabel.frame = CGRect(
+            x: cursorX,
+            y: stackOriginY,
+            width: self.textContainerWidth,
+            height: self.textLineHeight)
     }
 
     private static func makeLineLabel(color: NSColor) -> NSTextField {

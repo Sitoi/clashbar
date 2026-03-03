@@ -15,13 +15,13 @@ struct EqualWidthSegmentedTabControl: NSViewRepresentable {
         let container = ContainerView()
         container.control.target = context.coordinator
         container.control.action = #selector(Coordinator.selectionChanged(_:))
-        configure(container.control)
+        self.configure(container.control)
         return container
     }
 
     func updateNSView(_ nsView: ContainerView, context: Context) {
         context.coordinator.parent = self
-        configure(nsView.control)
+        self.configure(nsView.control)
     }
 
     private func configure(_ control: NSSegmentedControl) {
@@ -29,14 +29,14 @@ struct EqualWidthSegmentedTabControl: NSViewRepresentable {
         control.controlSize = .small
         control.segmentDistribution = .fillEqually
 
-        if control.segmentCount != items.count {
-            control.segmentCount = items.count
+        if control.segmentCount != self.items.count {
+            control.segmentCount = self.items.count
         }
 
-        for (index, item) in items.enumerated() {
-            if control.label(forSegment: index) != item.title {
-                control.setLabel(item.title, forSegment: index)
-            }
+        for (index, item) in self.items.enumerated()
+            where control.label(forSegment: index) != item.title
+        {
+            control.setLabel(item.title, forSegment: index)
         }
 
         if let selectedIndex = items.firstIndex(where: { $0.tab == selected }) {
@@ -56,8 +56,8 @@ struct EqualWidthSegmentedTabControl: NSViewRepresentable {
 
         @objc func selectionChanged(_ sender: NSSegmentedControl) {
             let index = sender.selectedSegment
-            guard index >= 0, index < parent.items.count else { return }
-            parent.onSelect(parent.items[index].tab)
+            guard index >= 0, index < self.parent.items.count else { return }
+            self.parent.onSelect(self.parent.items[index].tab)
         }
     }
 
@@ -72,12 +72,12 @@ struct EqualWidthSegmentedTabControl: NSViewRepresentable {
         override init(frame frameRect: NSRect) {
             super.init(frame: frameRect)
             translatesAutoresizingMaskIntoConstraints = false
-            addSubview(control)
+            addSubview(self.control)
             NSLayoutConstraint.activate([
-                control.leadingAnchor.constraint(equalTo: leadingAnchor),
-                control.trailingAnchor.constraint(equalTo: trailingAnchor),
-                control.topAnchor.constraint(equalTo: topAnchor),
-                control.bottomAnchor.constraint(equalTo: bottomAnchor)
+                self.control.leadingAnchor.constraint(equalTo: leadingAnchor),
+                self.control.trailingAnchor.constraint(equalTo: trailingAnchor),
+                self.control.topAnchor.constraint(equalTo: topAnchor),
+                self.control.bottomAnchor.constraint(equalTo: bottomAnchor),
             ])
         }
 

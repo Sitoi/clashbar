@@ -10,15 +10,15 @@ extension MenuBarRoot {
     }
 
     var maxScrollableContentHeight: CGFloat {
-        max(0, popoverLayoutModel.maxPanelHeight - fixedSectionHeight)
+        max(0, popoverLayoutModel.maxPanelHeight - self.fixedSectionHeight)
     }
 
     var tabScrollAreaHeight: CGFloat {
-        min(measuredTabContentHeight, maxScrollableContentHeight)
+        min(self.measuredTabContentHeight, self.maxScrollableContentHeight)
     }
 
     var resolvedPanelHeight: CGFloat {
-        let target = fixedSectionHeight + tabScrollAreaHeight
+        let target = self.fixedSectionHeight + self.tabScrollAreaHeight
         return max(1, min(target, popoverLayoutModel.maxPanelHeight))
     }
 
@@ -65,30 +65,30 @@ extension MenuBarRoot {
     func menuPanelTabHint(for tab: RootTab) -> MenuPanelTabHint {
         switch tab {
         case .proxy:
-            return .proxy
+            .proxy
         case .rules:
-            return .rules
+            .rules
         case .activity:
-            return .activity
+            .activity
         case .logs:
-            return .logs
+            .logs
         case .system:
-            return .system
+            .system
         }
     }
 
     func rootTab(for hint: MenuPanelTabHint) -> RootTab {
         switch hint {
         case .proxy:
-            return .proxy
+            .proxy
         case .rules:
-            return .rules
+            .rules
         case .activity:
-            return .activity
+            .activity
         case .logs:
-            return .logs
+            .logs
         case .system:
-            return .system
+            .system
         }
     }
 }
