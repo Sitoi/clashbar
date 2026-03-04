@@ -236,4 +236,4 @@ sudo xattr -r -d com.apple.quarantine /Applications/ClashBar.app
 
 ## 📄 许可证
 
-本项目采用 MIT License，详见 [LICENSE](LICENSE)。
+本项目采用 `GPL-3.0 license`，详见 [LICENSE](LICENSE)。
