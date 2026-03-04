@@ -204,7 +204,7 @@ jobs:
           ./Scripts/build.sh dmg
 
       - name: Upload dmg artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact_name }}
           path: |
@@ -219,7 +219,7 @@ jobs:
       contents: write
     steps:
       - name: Download dmg artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: dmg-*
           merge-multiple: true
