@@ -81,7 +81,7 @@ extension MenuBarRoot {
         }
         .padding(.horizontal, MenuBarLayoutTokens.hDense)
         .padding(.vertical, MenuBarLayoutTokens.vDense)
-        .background(nativeSectionCard(cornerRadius: 4))
+        .background(nativeSectionCard())
     }
 
     var rulesRefreshButton: some View {

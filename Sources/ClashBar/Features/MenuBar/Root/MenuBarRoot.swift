@@ -177,6 +177,7 @@ struct MenuBarRoot: View {
     @State var modeAndTabSectionHeight: CGFloat = 0
     @State var footerBarHeight: CGFloat = 0
     @State var tabContentHeights: [RootTab: CGFloat] = [:]
+    @AppStorage("clashbar.proxy.group.hide_hidden") var hideHiddenProxyGroups: Bool = true
 
     let panelWidth: CGFloat = 360
     let fallbackTabContentHeight: CGFloat = 380
@@ -215,6 +216,7 @@ struct MenuBarRoot: View {
                 self.tabScrollContent(for: self.currentTab)
             }
             .scrollIndicators(.hidden)
+            .forceHiddenScrollIndicators()
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .frame(height: tabScrollAreaHeight)
 
@@ -227,7 +229,7 @@ struct MenuBarRoot: View {
         .padding(MenuBarLayoutTokens.hPage)
         .frame(width: self.panelWidth, height: resolvedPanelHeight)
         .background(self.panelBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: MenuBarLayoutTokens.panelCornerRadius, style: .continuous))
         .onAppear {
             let restoredTab = rootTab(for: appState.activeMenuTab)
             if self.currentTab != restoredTab {
@@ -285,10 +287,10 @@ struct MenuBarRoot: View {
     }
 
     var panelBackground: some View {
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
+        RoundedRectangle(cornerRadius: MenuBarLayoutTokens.panelCornerRadius, style: .continuous)
             .fill(.regularMaterial)
             .overlay {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: MenuBarLayoutTokens.panelCornerRadius, style: .continuous)
                     .stroke(nativeSeparator, lineWidth: 0.8)
             }
             .shadow(color: Color(nsColor: .shadowColor).opacity(0.28), radius: 18, x: 0, y: 10)

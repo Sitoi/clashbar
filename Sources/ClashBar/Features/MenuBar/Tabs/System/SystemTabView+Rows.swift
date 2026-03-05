@@ -138,9 +138,9 @@ extension MenuBarRoot {
             Spacer(minLength: 0)
         }
         .menuRowPadding(vertical: MenuBarLayoutTokens.vDense + 2)
-        .background(nativeSectionCard(cornerRadius: 8))
+        .background(nativeSectionCard())
         .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: MenuBarLayoutTokens.cardCornerRadius, style: .continuous)
                 .stroke(color.opacity(0.26), lineWidth: 0.7)
         }
     }

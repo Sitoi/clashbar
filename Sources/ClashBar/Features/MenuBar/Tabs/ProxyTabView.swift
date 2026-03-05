@@ -66,7 +66,7 @@ extension MenuBarRoot {
         }
         .frame(height: sparklineHeight)
         .padding(.top, MenuBarLayoutTokens.vDense)
-        .background(nativeSectionCard(cornerRadius: 6))
+        .background(nativeSectionCard())
     }
 
     func cornerIconMetric(
@@ -227,7 +227,7 @@ extension MenuBarRoot {
             .buttonStyle(.plain)
             .onHover { hoveringCopyRow = $0 }
         }
-        .background(nativeSectionCard(cornerRadius: 6))
+        .background(nativeSectionCard())
     }
 
     var quickRowsDivider: some View {
@@ -235,7 +235,7 @@ extension MenuBarRoot {
     }
 
     func quickIcon(symbol: String, foreground: Color, background: Color) -> some View {
-        RoundedRectangle(cornerRadius: 5, style: .continuous)
+        RoundedRectangle(cornerRadius: MenuBarLayoutTokens.iconCornerRadius, style: .continuous)
             .fill(background)
             .frame(width: 20, height: 20)
             .overlay {

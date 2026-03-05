@@ -70,14 +70,15 @@ struct AttachedPopoverMenu<Label: View, Content: View>: View {
                 }
             }
             .scrollIndicators(.hidden)
+            .forceHiddenScrollIndicators()
             .frame(width: self.width, alignment: .leading)
             .frame(maxHeight: self.maxHeight)
             .padding(8)
             .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: MenuBarLayoutTokens.cardCornerRadius, style: .continuous)
                     .fill(.regularMaterial))
             .overlay {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: MenuBarLayoutTokens.cardCornerRadius, style: .continuous)
                     .stroke(Color(nsColor: .separatorColor).opacity(0.46), lineWidth: 0.65)
             }
             .shadow(color: Color(nsColor: .shadowColor).opacity(0.20), radius: 12, x: 0, y: 6))

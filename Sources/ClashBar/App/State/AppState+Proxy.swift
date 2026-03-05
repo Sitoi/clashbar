@@ -78,8 +78,10 @@ extension AppState {
         }
     }
 
-    func refreshAllGroupLatencies() async {
-        let groups = proxyGroups.filter { $0.hidden != true }
+    func refreshAllGroupLatencies(includeHiddenGroups: Bool = false) async {
+        let groups = includeHiddenGroups
+            ? proxyGroups
+            : proxyGroups.filter { $0.hidden != true }
         await withTaskGroup(of: Void.self) { taskGroup in
             for group in groups {
                 taskGroup.addTask { [weak self] in

@@ -238,6 +238,17 @@ extension MenuBarRoot {
                             }
                         }
                     }
+
+                    HStack(spacing: MenuBarLayoutTokens.hDense) {
+                        Button {
+                            appState.showCoreDirectoryInFinder()
+                        } label: {
+                            Label(tr("ui.action.open_core_directory"), systemImage: "folder")
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
                 }
                 .menuRowPadding(vertical: MenuBarLayoutTokens.vDense + 2)
             }

@@ -20,6 +20,8 @@
 "ui.action.stop" = "Stop";
 "ui.action.quit" = "Quit";
 "ui.action.test_latency" = "Test Latency";
+"ui.action.show_hidden_proxy_groups" = "Show hidden proxy groups";
+"ui.action.hide_hidden_proxy_groups" = "Hide hidden proxy groups";
 "ui.action.refresh" = "Refresh";
 "ui.action.close_all" = "Close All";
 "ui.action.close_connection" = "Close Connection";
@@ -37,6 +39,7 @@
 "ui.action.ok" = "OK";
 "ui.action.flush_fakeip_cache" = "Flush FakeIP Cache";
 "ui.action.flush_dns_cache" = "Flush DNS Cache";
+"ui.action.open_core_directory" = "Open Core Directory";
 "ui.action.enable_tun" = "Enable TUN Mode";
 "ui.action.disable_tun" = "Disable TUN Mode";
 "ui.action.update_geo" = "Update GEO Data";
@@ -230,6 +233,7 @@
 "log.config.remote.update_item_failed" = "Subscription update failed (%@): %@";
 "log.config.remote.update_summary" = "Subscription update completed: %d succeeded, %d failed";
 "log.config.show_in_finder.failed" = "Failed to open config directory in Finder: %@";
+"log.core.show_in_finder.failed" = "Failed to open core directory in Finder: %@";
 "log.config.validate_failed" = "Config validation failed (%@): %@";
 "log.system_proxy.toggled" = "System proxy %@";
 "log.system_proxy.enabled" = "enabled";

@@ -12,6 +12,10 @@ enum MenuBarLayoutTokens {
 
     static let hairline: CGFloat = 0.6
     static let opticalNudge: CGFloat = 1
+
+    static let panelCornerRadius: CGFloat = 16
+    static let cardCornerRadius: CGFloat = 8
+    static let iconCornerRadius: CGFloat = 6
 }
 
 extension View {

@@ -50,7 +50,7 @@ extension MenuBarRoot {
             label: {
                 VStack(alignment: .leading, spacing: MenuBarLayoutTokens.vDense + 1) {
                     HStack(spacing: MenuBarLayoutTokens.hDense) {
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        RoundedRectangle(cornerRadius: MenuBarLayoutTokens.iconCornerRadius, style: .continuous)
                             .fill(nativeTeal.opacity(0.14))
                             .frame(width: 16, height: 16)
                             .overlay {
@@ -197,7 +197,9 @@ extension MenuBarRoot {
     }
 
     var proxyGroupsSection: some View {
-        let groups = appState.proxyGroups.filter { $0.hidden != true }
+        let groups = hideHiddenProxyGroups
+            ? appState.proxyGroups.filter { $0.hidden != true }
+            : appState.proxyGroups
 
         return VStack(alignment: .leading, spacing: MenuBarLayoutTokens.sectionGap) {
             self.nodesSectionHeader(
@@ -205,18 +207,32 @@ extension MenuBarRoot {
                 symbol: "point.3.connected.trianglepath.dotted",
                 count: "\(groups.count)")
             {
-                Button {
-                    Task { await appState.refreshAllGroupLatencies() }
-                } label: {
-                    HStack(spacing: MenuBarLayoutTokens.hMicro + 1) {
-                        Image(systemName: "gauge")
-                            .font(.appSystem(size: 10, weight: .semibold))
-                        Text(tr("ui.action.test_latency"))
-                            .font(.appSystem(size: 10, weight: .semibold))
+                HStack(spacing: MenuBarLayoutTokens.hDense) {
+                    self.compactTopIcon(
+                        hideHiddenProxyGroups ? "eye.slash" : "eye",
+                        label: tr(
+                            hideHiddenProxyGroups
+                                ? "ui.action.show_hidden_proxy_groups"
+                                : "ui.action.hide_hidden_proxy_groups"),
+                        toneOverride: nativeIndigo)
+                    {
+                        hideHiddenProxyGroups.toggle()
                     }
+                    .help(
+                        tr(
+                            hideHiddenProxyGroups
+                                ? "ui.action.show_hidden_proxy_groups"
+                                : "ui.action.hide_hidden_proxy_groups"))
+
+                    self.compactTopIcon(
+                        "gauge",
+                        label: tr("ui.action.test_latency"),
+                        toneOverride: nativeTeal)
+                    {
+                        await appState.refreshAllGroupLatencies(includeHiddenGroups: !hideHiddenProxyGroups)
+                    }
+                    .help(tr("ui.action.test_latency"))
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
             }
 
             if groups.isEmpty {

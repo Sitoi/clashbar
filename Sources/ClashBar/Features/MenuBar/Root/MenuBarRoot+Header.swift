@@ -6,10 +6,10 @@ extension MenuBarRoot {
         HStack(alignment: .center, spacing: 10) {
             HStack(alignment: .center, spacing: 10) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    RoundedRectangle(cornerRadius: MenuBarLayoutTokens.iconCornerRadius, style: .continuous)
                         .fill(nativeControlFill.opacity(0.94))
                         .overlay {
-                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            RoundedRectangle(cornerRadius: MenuBarLayoutTokens.iconCornerRadius, style: .continuous)
                                 .stroke(nativeControlBorder.opacity(0.92), lineWidth: 0.7)
                         }
 
@@ -164,9 +164,12 @@ extension MenuBarRoot {
         _ symbol: String,
         label: String,
         warning: Bool = false,
+        toneOverride: Color? = nil,
         action: @escaping () async -> Void) -> some View
     {
-        let tone: Color = if warning {
+        let tone: Color = if let toneOverride {
+            toneOverride
+        } else if warning {
             nativeCritical
         } else if symbol.contains("arrow.clockwise") {
             nativeInfo

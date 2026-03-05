@@ -30,9 +30,11 @@ extension MenuBarRoot {
         }
         .frame(width: contentWidth)
         .padding(2)
-        .background(nativeControlFill, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+        .background(
+            nativeControlFill,
+            in: RoundedRectangle(cornerRadius: MenuBarLayoutTokens.cardCornerRadius, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 7, style: .continuous)
+            RoundedRectangle(cornerRadius: MenuBarLayoutTokens.cardCornerRadius, style: .continuous)
                 .stroke(nativeControlBorder, lineWidth: 0.7)
         }
     }
@@ -68,14 +70,14 @@ extension MenuBarRoot {
             .frame(maxWidth: .infinity)
             .frame(height: 34)
             .background(
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                RoundedRectangle(cornerRadius: MenuBarLayoutTokens.iconCornerRadius, style: .continuous)
                     .fill(
                         selected
                             ? nativeAccent.opacity(0.16)
                             : (hovered ? Color(nsColor: .selectedContentBackgroundColor).opacity(0.20) : .clear)))
             .overlay {
                 if selected || hovered {
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    RoundedRectangle(cornerRadius: MenuBarLayoutTokens.iconCornerRadius, style: .continuous)
                         .stroke(
                             selected ? nativeAccent.opacity(0.30) : nativeControlBorder.opacity(0.82),
                             lineWidth: 0.7)

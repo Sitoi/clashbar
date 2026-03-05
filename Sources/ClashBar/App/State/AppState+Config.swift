@@ -265,6 +265,22 @@ extension AppState {
         }
     }
 
+    func showCoreDirectoryInFinder() {
+        do {
+            try workingDirectoryManager.bootstrapDirectories()
+            let coreDirectory = try workingDirectoryManager.normalizeAndValidateWithinRoot(
+                workingDirectoryManager.coreDirectoryURL,
+                mustBeDirectory: true)
+            if !NSWorkspace.shared.open(coreDirectory) {
+                appendLog(level: "error", message: tr("log.core.show_in_finder.failed", coreDirectory.path))
+            }
+        } catch {
+            appendLog(
+                level: "error",
+                message: tr("log.core.show_in_finder.failed", workingDirectoryManager.coreDirectoryURL.path))
+        }
+    }
+
     func reloadConfigFileList() {
         guard self.ensureConfigDirectoryAvailable() != nil else { return }
         self.refreshConfigStateAfterMutation()

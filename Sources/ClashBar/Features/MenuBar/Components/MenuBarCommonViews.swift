@@ -73,7 +73,7 @@ extension MenuBarRoot {
         Color(nsColor: .quaternaryLabelColor).opacity(0.16)
     }
 
-    func nativeSectionCard(cornerRadius: CGFloat = 10) -> some View {
+    func nativeSectionCard(cornerRadius: CGFloat = MenuBarLayoutTokens.cardCornerRadius) -> some View {
         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
             .fill(self.nativeCardFill)
             .overlay {
@@ -98,7 +98,7 @@ extension MenuBarRoot {
             .foregroundStyle(self.nativeSecondaryLabel)
             .frame(maxWidth: .infinity, alignment: .leading)
             .menuRowPadding()
-            .background(self.nativeSectionCard(cornerRadius: 8))
+            .background(self.nativeSectionCard())
     }
 
     var footerBar: some View {
@@ -128,10 +128,10 @@ extension MenuBarRoot {
     }
 
     var footerSurfaceBackground: some View {
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
+        RoundedRectangle(cornerRadius: MenuBarLayoutTokens.cardCornerRadius, style: .continuous)
             .fill(self.nativeControlFill.opacity(0.86))
             .overlay {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                RoundedRectangle(cornerRadius: MenuBarLayoutTokens.cardCornerRadius, style: .continuous)
                     .stroke(self.nativeControlBorder.opacity(0.9), lineWidth: 0.6)
             }
             .shadow(color: Color(nsColor: .shadowColor).opacity(0.16), radius: 10, x: 0, y: -3)

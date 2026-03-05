@@ -255,7 +255,7 @@ extension MenuBarRoot {
         let symbol = levelInfo.symbol
 
         return HStack(alignment: .top, spacing: MenuBarLayoutTokens.hDense + 1) {
-            RoundedRectangle(cornerRadius: 4, style: .continuous)
+            RoundedRectangle(cornerRadius: MenuBarLayoutTokens.iconCornerRadius, style: .continuous)
                 .fill(tone.opacity(0.14))
                 .frame(width: 16, height: 16)
                 .overlay {

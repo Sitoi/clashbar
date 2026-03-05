@@ -20,6 +20,8 @@
 "ui.action.stop" = "停止";
 "ui.action.quit" = "退出";
 "ui.action.test_latency" = "延迟测试";
+"ui.action.show_hidden_proxy_groups" = "显示 hidden 代理组";
+"ui.action.hide_hidden_proxy_groups" = "隐藏 hidden 代理组";
 "ui.action.refresh" = "刷新";
 "ui.action.close_all" = "关闭全部";
 "ui.action.close_connection" = "关闭连接";
@@ -37,6 +39,7 @@
 "ui.action.ok" = "确定";
 "ui.action.flush_fakeip_cache" = "清理 FakeIP 缓存";
 "ui.action.flush_dns_cache" = "清理 DNS 缓存";
+"ui.action.open_core_directory" = "打开内核目录";
 "ui.action.enable_tun" = "开启 TUN 模式";
 "ui.action.disable_tun" = "关闭 TUN 模式";
 "ui.action.update_geo" = "更新 GEO 数据";
@@ -230,6 +233,7 @@
 "log.config.remote.update_item_failed" = "订阅更新失败（%@）: %@";
 "log.config.remote.update_summary" = "订阅更新完成：成功 %d，失败 %d";
 "log.config.show_in_finder.failed" = "在访达中打开配置目录失败: %@";
+"log.core.show_in_finder.failed" = "在访达中打开内核目录失败: %@";
 "log.config.validate_failed" = "配置校验失败（%@）: %@";
 "log.system_proxy.toggled" = "系统代理%@";
 "log.system_proxy.enabled" = "已开启";
