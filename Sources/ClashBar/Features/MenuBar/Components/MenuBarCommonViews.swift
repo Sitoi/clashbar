@@ -57,29 +57,12 @@ extension MenuBarRoot {
         Color(nsColor: .separatorColor).opacity(0.45)
     }
 
-    var nativeCardFill: Color {
-        Color(nsColor: .controlBackgroundColor).opacity(0.56)
-    }
-
-    var nativeCardBorder: Color {
-        Color(nsColor: .separatorColor).opacity(0.40)
-    }
-
     var nativeHoverFill: Color {
         Color(nsColor: .selectedContentBackgroundColor).opacity(0.20)
     }
 
     var nativeBadgeFill: Color {
         Color(nsColor: .quaternaryLabelColor).opacity(0.16)
-    }
-
-    func nativeSectionCard(cornerRadius: CGFloat = MenuBarLayoutTokens.cardCornerRadius) -> some View {
-        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            .fill(self.nativeCardFill)
-            .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(self.nativeCardBorder, lineWidth: 0.6)
-            }
     }
 
     func nativeHoverRowBackground(_ hovered: Bool, cornerRadius: CGFloat = 6) -> some View {
@@ -98,7 +81,6 @@ extension MenuBarRoot {
             .foregroundStyle(self.nativeSecondaryLabel)
             .frame(maxWidth: .infinity, alignment: .leading)
             .menuRowPadding()
-            .background(self.nativeSectionCard())
     }
 
     var footerBar: some View {
@@ -219,49 +201,6 @@ extension MenuBarRoot {
         }
     }
 
-    func sortedProxyNodeNames(_ names: [String], latencyForName: (String) -> Int?) -> [String] {
-        let deduplicatedNames = self.orderedUniqueNames(names)
-        let orderedNames: [String] = switch self.appState.proxyNodeOrderingType {
-        case .orderNatural:
-            deduplicatedNames
-        case .orderLatencyAscending:
-            deduplicatedNames.sorted { lhs, rhs in
-                let latencyComparison = self.compareLatency(
-                    lhs: latencyForName(lhs),
-                    rhs: latencyForName(rhs),
-                    ascending: true)
-                if latencyComparison != .orderedSame {
-                    return latencyComparison == .orderedAscending
-                }
-                return lhs.localizedStandardCompare(rhs) == .orderedAscending
-            }
-        case .orderLatencyDescending:
-            deduplicatedNames.sorted { lhs, rhs in
-                let latencyComparison = self.compareLatency(
-                    lhs: latencyForName(lhs),
-                    rhs: latencyForName(rhs),
-                    ascending: false)
-                if latencyComparison != .orderedSame {
-                    return latencyComparison == .orderedAscending
-                }
-                return lhs.localizedStandardCompare(rhs) == .orderedAscending
-            }
-        case .orderNameAscending:
-            deduplicatedNames.sorted { lhs, rhs in
-                lhs.localizedStandardCompare(rhs) == .orderedAscending
-            }
-        case .orderNameDescending:
-            deduplicatedNames.sorted { lhs, rhs in
-                lhs.localizedStandardCompare(rhs) == .orderedDescending
-            }
-        }
-
-        guard self.appState.hideUnavailableProxyNodes else { return orderedNames }
-        return orderedNames.filter { name in
-            self.isProxyNodeAvailable(latencyForName(name))
-        }
-    }
-
     func orderedUniqueNames(_ names: [String]) -> [String] {
         var seen: Set<String> = []
         var ordered: [String] = []
@@ -327,145 +266,69 @@ extension MenuBarRoot {
         }
     }
 
-    func groupColor(for group: ProxyGroup) -> Color {
-        let info = self.normalizedProxyGroupInfo(group)
-        let lower = info.lowerName
-        let compactType = info.compactType
-
-        if compactType == "global" || lower.contains("global") { return self.nativeIndigo }
-        if lower.contains("manual") { return self.nativeWarning }
-        if lower.contains("media") { return self.nativePurple }
-        if lower.contains("apple") { return self.nativeSecondaryLabel }
-
-        switch compactType {
-        case "selector", "select":
-            return self.nativeAccent
-        case "fallback":
-            return self.nativeWarning
-        case "urltest":
-            return self.nativeTeal
-        case "loadbalance":
-            return self.nativePurple
-        default:
-            return self.nativeInfo
-        }
-    }
-
-    func groupSymbol(for group: ProxyGroup) -> String {
-        let info = self.normalizedProxyGroupInfo(group)
-        let lower = info.lowerName
-        let compactType = info.compactType
-
-        if compactType == "global" || lower.contains("global") { return "globe.americas.fill" }
-
-        switch compactType {
-        case "selector", "select":
-            return "list.bullet.circle"
-        case "urltest":
-            return "gauge"
-        case "fallback":
-            return "arrow.triangle.branch"
-        case "loadbalance":
-            return "shuffle"
-        default:
-            break
-        }
-
-        if lower.contains("apple") { return "apple.logo" }
-        if lower.contains("media") { return "film.fill" }
-        if lower.contains("manual") { return "hand.raised.fill" }
-        return "point.3.filled.connected.trianglepath.dotted"
-    }
-
-    func normalizedProxyGroupInfo(_ group: ProxyGroup) -> (lowerName: String, compactType: String) {
-        let lowerName = group.name.lowercased()
-        let compactType = group.type?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-            .replacingOccurrences(of: "_", with: "-")
-            .replacingOccurrences(of: "-", with: "") ?? ""
-        return (lowerName, compactType)
-    }
-
-    private struct AsyncBorderedIconStyle {
-        let fontSize: CGFloat
-        let frameSize: CGFloat
-        let controlSize: ControlSize
-        let tint: Color
-    }
-
-    @ViewBuilder
-    func asyncBorderedIconButton(
+    func compactAsyncIconButton(
         symbol: String,
-        label: String? = nil,
-        fontSize: CGFloat = 11,
-        frameSize: CGFloat = 12,
-        controlSize: ControlSize = .small,
-        tint: Color = .accentColor,
+        label: String,
+        tint: Color,
+        role: ButtonRole? = nil,
         isLoading: Bool = false,
+        size: CGFloat = 20,
+        fontSize: CGFloat = 13,
+        hierarchicalSymbol: Bool = false,
         action: @escaping () async -> Void) -> some View
     {
-        let style = AsyncBorderedIconStyle(
-            fontSize: fontSize,
-            frameSize: frameSize,
-            controlSize: controlSize,
-            tint: tint)
-        if let label {
-            self.baseAsyncBorderedIconButton(
-                symbol: symbol,
-                style: style,
-                isLoading: isLoading,
-                action: action)
-                .accessibilityLabel(label)
-        } else {
-            self.baseAsyncBorderedIconButton(
-                symbol: symbol,
-                style: style,
-                isLoading: isLoading,
-                action: action)
-        }
-    }
-
-    func roundedIconActionButton(
-        symbol: String,
-        size: CGFloat,
-        foreground: Color,
-        isLoading: Bool = false,
-        action: @escaping () async -> Void) -> some View
-    {
-        self.asyncBorderedIconButton(
+        CompactAsyncIconButton(
             symbol: symbol,
-            fontSize: 11,
-            frameSize: max(12, size),
-            controlSize: .mini,
-            tint: foreground,
+            tint: tint,
+            role: role,
             isLoading: isLoading,
+            size: size,
+            fontSize: fontSize,
+            hierarchicalSymbol: hierarchicalSymbol,
             action: action)
+            .accessibilityLabel(label)
     }
+}
 
-    private func baseAsyncBorderedIconButton(
-        symbol: String,
-        style: AsyncBorderedIconStyle,
-        isLoading: Bool,
-        action: @escaping () async -> Void) -> some View
-    {
-        Button {
-            Task { await action() }
+private struct CompactAsyncIconButton: View {
+    let symbol: String
+    let tint: Color
+    let role: ButtonRole?
+    let isLoading: Bool
+    let size: CGFloat
+    let fontSize: CGFloat
+    let hierarchicalSymbol: Bool
+    let action: () async -> Void
+
+    @State private var hovered = false
+
+    var body: some View {
+        Button(role: self.role) {
+            Task { await self.action() }
         } label: {
             ZStack {
-                Image(systemName: symbol)
-                    .font(.appSystem(size: style.fontSize, weight: .semibold))
-                    .opacity(isLoading ? 0 : 1)
+                if self.hierarchicalSymbol {
+                    Image(systemName: self.symbol)
+                        .font(.appSystem(size: self.fontSize, weight: .semibold))
+                        .foregroundStyle(self.hovered ? self.tint : Color(nsColor: .secondaryLabelColor))
+                        .symbolRenderingMode(.hierarchical)
+                        .opacity(self.isLoading ? 0 : 1)
+                } else {
+                    Image(systemName: self.symbol)
+                        .font(.appSystem(size: self.fontSize, weight: .semibold))
+                        .foregroundStyle(self.hovered ? self.tint : Color(nsColor: .secondaryLabelColor))
+                        .opacity(self.isLoading ? 0 : 1)
+                }
 
                 ProgressView()
-                    .controlSize(style.controlSize)
-                    .opacity(isLoading ? 1 : 0)
+                    .controlSize(.mini)
+                    .opacity(self.isLoading ? 1 : 0)
             }
-            .frame(width: max(12, style.frameSize), height: max(12, style.frameSize))
+            .frame(width: self.size, height: self.size)
+            .contentShape(Rectangle())
         }
-        .buttonStyle(.bordered)
-        .controlSize(style.controlSize)
-        .tint(style.tint)
-        .disabled(isLoading)
+        .buttonStyle(.borderless)
+        .disabled(self.isLoading)
+        .onHover { self.hovered = $0 }
     }
 }

@@ -50,8 +50,12 @@ extension MenuBarRoot {
             }
 
             if appState.ruleItems.isEmpty {
-                emptyCard(tr("ui.empty.rules"))
-                    .padding(.top, 8)
+                Text(tr("ui.empty.rules"))
+                    .font(.appSystem(size: 12, weight: .regular))
+                    .foregroundStyle(nativeSecondaryLabel)
+                    .padding(.horizontal, MenuBarLayoutTokens.hRow)
+                    .padding(.vertical, MenuBarLayoutTokens.vDense + 6)
+                    .frame(maxWidth: .infinity, minHeight: 52, alignment: .topLeading)
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(visibleRules.enumerated()), id: \.offset) { index, rule in
@@ -81,28 +85,18 @@ extension MenuBarRoot {
         }
         .padding(.horizontal, MenuBarLayoutTokens.hDense)
         .padding(.vertical, MenuBarLayoutTokens.vDense)
-        .background(nativeSectionCard())
     }
 
     var rulesRefreshButton: some View {
-        Button {
-            Task { await appState.refreshRuleProviders() }
-        } label: {
-            Group {
-                if appState.isRuleProvidersRefreshing {
-                    ProgressView()
-                        .controlSize(.small)
-                } else {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.appSystem(size: 11, weight: .semibold))
-                }
-            }
-            .frame(width: 12, height: 12)
+        self.compactTopIcon(
+            "arrow.clockwise",
+            label: tr("ui.action.refresh"),
+            toneOverride: nativeInfo,
+            isLoading: appState.isRuleProvidersRefreshing)
+        {
+            await appState.refreshRuleProviders()
         }
-        .buttonStyle(.bordered)
-        .controlSize(.small)
-        .accessibilityLabel(tr("ui.action.refresh"))
-        .disabled(appState.isRuleProvidersRefreshing)
+        .help(tr("ui.action.refresh"))
         .opacity(appState.isRuleProvidersRefreshing ? 0.6 : 1)
     }
 

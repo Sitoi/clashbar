@@ -64,18 +64,6 @@ enum StatusBarDisplayMode: String, CaseIterable, Identifiable {
     }
 }
 
-enum ProxyNodeOrderingType: String, CaseIterable, Identifiable {
-    case orderNatural
-    case orderLatencyAscending = "orderLatency_asc"
-    case orderLatencyDescending = "orderLatency_desc"
-    case orderNameAscending = "orderName_asc"
-    case orderNameDescending = "orderName_desc"
-
-    var id: String {
-        rawValue
-    }
-}
-
 enum AppAppearanceMode: String, CaseIterable, Identifiable {
     case system
     case light

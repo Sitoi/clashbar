@@ -158,6 +158,7 @@ enum NetworkSortOption: String, CaseIterable, Identifiable {
 struct MenuBarRoot: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var popoverLayoutModel: PopoverLayoutModel
+    @Environment(\.colorScheme) var colorScheme
 
     @State var currentTab: RootTab = .proxy
     @State var switchingMode: CoreMode?

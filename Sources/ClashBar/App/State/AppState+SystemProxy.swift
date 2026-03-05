@@ -15,26 +15,28 @@ extension AppState {
     }
 
     func systemProxyPorts(from config: ConfigSnapshot) -> SystemProxyPorts {
-        if let mixed = normalizedSystemProxyPort(config.mixedPort) {
-            return SystemProxyPorts(httpPort: mixed, httpsPort: mixed, socksPort: mixed)
-        }
-
-        let httpPort = self.normalizedSystemProxyPort(config.port)
-        return SystemProxyPorts(
-            httpPort: httpPort,
-            httpsPort: httpPort,
-            socksPort: self.normalizedSystemProxyPort(config.socksPort))
+        self.resolvedSystemProxyPorts(
+            mixedPort: config.mixedPort,
+            httpPort: config.port,
+            socksPort: config.socksPort)
     }
 
     func currentSystemProxyPortsFromState() -> SystemProxyPorts {
+        self.resolvedSystemProxyPorts(
+            mixedPort: mixedPort,
+            httpPort: port,
+            socksPort: socksPort)
+    }
+
+    private func resolvedSystemProxyPorts(mixedPort: Int?, httpPort: Int?, socksPort: Int?) -> SystemProxyPorts {
         if let mixed = normalizedSystemProxyPort(mixedPort) {
             return SystemProxyPorts(httpPort: mixed, httpsPort: mixed, socksPort: mixed)
         }
 
-        let httpPort = self.normalizedSystemProxyPort(port)
+        let resolvedHTTPPort = self.normalizedSystemProxyPort(httpPort)
         return SystemProxyPorts(
-            httpPort: httpPort,
-            httpsPort: httpPort,
+            httpPort: resolvedHTTPPort,
+            httpsPort: resolvedHTTPPort,
             socksPort: self.normalizedSystemProxyPort(socksPort))
     }
 
@@ -47,7 +49,7 @@ extension AppState {
         return (host: controllerHost(), ports: ports)
     }
 
-    func normalizedSystemProxyPort(_ value: Int?) -> Int? {
+    private func normalizedSystemProxyPort(_ value: Int?) -> Int? {
         guard let value, (1...65535).contains(value) else {
             return nil
         }

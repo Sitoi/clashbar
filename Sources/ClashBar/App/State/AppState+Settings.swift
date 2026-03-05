@@ -371,7 +371,7 @@ extension AppState {
         try self.resolvedTransport(override: settingsPatchTransportOverride)
     }
 
-    func previousSystemProxyPortsForSyncIfNeeded(shouldSync: Bool) async -> SystemProxyPorts? {
+    private func previousSystemProxyPortsForSyncIfNeeded(shouldSync: Bool) async -> SystemProxyPorts? {
         guard shouldSync, isSystemProxyEnabled else { return nil }
         do {
             let client = try clientOrThrow()
@@ -382,7 +382,7 @@ extension AppState {
         }
     }
 
-    func syncSystemProxyPortIfNeeded(shouldSync: Bool, previousPorts: SystemProxyPorts?) async {
+    private func syncSystemProxyPortIfNeeded(shouldSync: Bool, previousPorts: SystemProxyPorts?) async {
         guard shouldSync, isSystemProxyEnabled else { return }
 
         do {
@@ -398,7 +398,7 @@ extension AppState {
         }
     }
 
-    func applyBooleanSetting(
+    private func applyBooleanSetting(
         _ keyPath: ReferenceWritableKeyPath<AppState, Bool>,
         configKey: String,
         value: Bool) async
@@ -407,7 +407,7 @@ extension AppState {
         await self.applySettingBool(key: configKey, value: value)
     }
 
-    func validatedPort(_ textValue: String, key: String, errorMessageKey: String) -> Int? {
+    private func validatedPort(_ textValue: String, key: String, errorMessageKey: String) -> Int? {
         let trimmed = textValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let intValue = Int(trimmed), (0...65535).contains(intValue) else {
             settingsErrorMessage = tr(errorMessageKey, key)
@@ -417,7 +417,7 @@ extension AppState {
         return intValue
     }
 
-    var proxyPortFields: [(key: String, value: String)] {
+    private var proxyPortFields: [(key: String, value: String)] {
         [
             ("port", settingsPort),
             ("socks-port", settingsSocksPort),
@@ -427,7 +427,7 @@ extension AppState {
         ]
     }
 
-    func resolvedOverlayPortFields(
+    private func resolvedOverlayPortFields(
         overlay: EditableSettingsSnapshot,
         fallback: EditableSettingsSnapshot?) -> [(key: String, value: String)]
     {
@@ -440,24 +440,25 @@ extension AppState {
         ]
     }
 
-    func resolvedOverlayPortValue(_ overlayValue: String, fallback: String) -> String {
+    private func resolvedOverlayPortValue(_ overlayValue: String, fallback: String) -> String {
         let overlayTrimmed = overlayValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard overlayTrimmed.isEmpty else { return overlayTrimmed }
         return fallback.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    func validatedPortPatchBody(
+    private func validatedPortPatchBody(
         fields: [(key: String, value: String)],
         errorMessageKey: String,
         skipEmptyValues: Bool) -> [String: ConfigPatchValue]?
     {
         var body: [String: ConfigPatchValue] = [:]
         for field in fields {
-            if skipEmptyValues, field.value.isEmpty {
+            let trimmedValue = field.value.trimmingCharacters(in: .whitespacesAndNewlines)
+            if skipEmptyValues, trimmedValue.isEmpty {
                 continue
             }
             guard let intValue = validatedPort(
-                field.value,
+                trimmedValue,
                 key: field.key,
                 errorMessageKey: errorMessageKey) else { return nil }
             body[field.key] = .int(intValue)
@@ -465,7 +466,7 @@ extension AppState {
         return body
     }
 
-    func syncEditableFields<Value: Equatable>(
+    private func syncEditableFields<Value: Equatable>(
         from previous: EditableSettingsSnapshot,
         to incoming: EditableSettingsSnapshot,
         fields: [(ReferenceWritableKeyPath<AppState, Value>, KeyPath<EditableSettingsSnapshot, Value>)])
@@ -476,7 +477,7 @@ extension AppState {
         }
     }
 
-    func resolvedTransport(override: MihomoAPITransporting?) throws -> MihomoAPITransporting {
+    private func resolvedTransport(override: MihomoAPITransporting?) throws -> MihomoAPITransporting {
         if let override {
             return override
         }

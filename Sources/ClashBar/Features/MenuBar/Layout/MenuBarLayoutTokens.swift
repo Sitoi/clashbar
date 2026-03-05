@@ -2,7 +2,7 @@ import SwiftUI
 
 enum MenuBarLayoutTokens {
     static let hPage: CGFloat = 12
-    static let hRow: CGFloat = 10
+    static let hRow: CGFloat = 4
     static let hDense: CGFloat = 6
     static let hMicro: CGFloat = 3
 
@@ -16,6 +16,9 @@ enum MenuBarLayoutTokens {
     static let panelCornerRadius: CGFloat = 16
     static let cardCornerRadius: CGFloat = 8
     static let iconCornerRadius: CGFloat = 6
+
+    static let rowLeadingIconSize: CGFloat = 16
+    static let rowLeadingIconColumnWidth: CGFloat = 16
 }
 
 extension View {

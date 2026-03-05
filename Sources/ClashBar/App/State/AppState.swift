@@ -185,11 +185,6 @@ final class AppState: ObservableObject {
         }
     }
 
-    var proxyNodeOrderingType: ProxyNodeOrderingType {
-        get { ProxyNodeOrderingType(rawValue: self.proxyNodeOrderingRaw) ?? .orderNatural }
-        set { self.proxyNodeOrderingRaw = newValue.rawValue }
-    }
-
     var menuBarSpeedLines: MenuBarSpeedLines {
         guard self.isRuntimeRunning else { return .zero }
 
@@ -308,6 +303,7 @@ final class AppState: ObservableObject {
     var providerRefreshGeneration: Int = 0
     var lastTrafficSampleAt: Date?
     var modeSwitchInFlight = false
+    var activatedTabRefreshGeneration: Int = 0
     var configFileSignatureSnapshot: [String: String] = [:]
     var pendingConfigChangeRestart = false
 
@@ -316,8 +312,6 @@ final class AppState: ObservableObject {
     @AppStorage("clashbar.auto.core.network.recovery") private var autoCoreControlOnNetworkChange: Bool = true
     @AppStorage("clashbar.statusbar.display.mode") private var statusBarDisplayModeRaw: String = StatusBarDisplayMode
         .iconOnly.rawValue
-    @AppStorage("clashbar.proxy.node.ordering") private var proxyNodeOrderingRaw: String = ProxyNodeOrderingType
-        .orderNatural.rawValue
     @AppStorage("clashbar.proxy.node.hide_unavailable") var hideUnavailableProxyNodes: Bool = false
     let selectedConfigKey = "clashbar.config.selected.filename"
     let legacySelectedConfigKey = "clashbar.config.selected"

@@ -34,7 +34,7 @@ extension AppState {
         }
     }
 
-    func isValidExternalController(_ value: String) -> Bool {
+    private func isValidExternalController(_ value: String) -> Bool {
         guard let components = parsedControllerComponents(from: value),
               let scheme = components.scheme?.lowercased(),
               let host = components.host,
@@ -55,12 +55,12 @@ extension AppState {
         self.parsedControllerComponents(from: value)?.host
     }
 
-    func isLoopbackHost(_ host: String) -> Bool {
+    private func isLoopbackHost(_ host: String) -> Bool {
         let normalized = host.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return normalized == "localhost" || normalized == "127.0.0.1" || normalized == "::1"
     }
 
-    func appendExternalControllerWarningOnce(key: String, message: String) {
+    private func appendExternalControllerWarningOnce(key: String, message: String) {
         if externalControllerWarningKeys.insert(key).inserted {
             appendLog(level: "warning", message: message)
         }
@@ -73,7 +73,7 @@ extension AppState {
         return "http://\(value)"
     }
 
-    func parsedControllerComponents(from value: String) -> URLComponents? {
+    private func parsedControllerComponents(from value: String) -> URLComponents? {
         URLComponents(string: self.normalizedControllerAddress(value))
     }
 
@@ -85,21 +85,14 @@ extension AppState {
         return launchController
     }
 
-    func parseExternalController(fromConfigAt configPath: String) -> String? {
+    private func parseExternalController(fromConfigAt configPath: String) -> String? {
         guard let raw = try? String(contentsOfFile: configPath, encoding: .utf8) else {
             return nil
         }
         return self.parseYAMLScalarValue(forKey: "external-controller", fromConfigContent: raw)
     }
 
-    func parseControllerSecret(fromConfigAt configPath: String) -> String? {
-        guard let raw = try? String(contentsOfFile: configPath, encoding: .utf8) else {
-            return nil
-        }
-        return self.parseYAMLScalarValue(forKey: "secret", fromConfigContent: raw)
-    }
-
-    func applyControllerSecretFromConfig(_ rawValue: String?) {
+    private func applyControllerSecretFromConfig(_ rawValue: String?) {
         let normalizedSecret = self.normalizedControllerSecret(rawValue)
         let currentSecret = self.normalizedControllerSecret(controllerSecret)
         if normalizedSecret != currentSecret {

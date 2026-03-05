@@ -30,16 +30,13 @@ extension AppState {
             let client = try clientOrThrow()
             let summary: ProviderSummary = try await client.request(.ruleProviders)
             let names = summary.providers.keys.sorted()
-
-            for name in names {
-                do {
-                    try await client.requestNoResponse(.updateRuleProvider(name: name))
-                } catch {
-                    appendLog(
-                        level: "error",
-                        message: tr("log.providers.rule_update_failed", name, error.localizedDescription))
-                }
-            }
+            _ = await self.updateProvidersSequential(
+                client: client,
+                names: names,
+                request: { .updateRuleProvider(name: $0) },
+                onError: { name, error in
+                    tr("log.providers.rule_update_failed", name, error.localizedDescription)
+                })
         } catch {
             appendLog(level: "error", message: tr("log.providers.fetch_rule_failed", error.localizedDescription))
         }
@@ -121,15 +118,14 @@ extension AppState {
         return tr("ui.common.latency_ms", value)
     }
 
-    func resolvedProviderHealthcheck(provider: String) -> (url: String, timeout: Int) {
+    private func resolvedProviderHealthcheck(provider: String) -> (url: String, timeout: Int) {
         let providerDetail = proxyProvidersDetail[provider]
-        let trimmedURL = providerDetail?.testUrl?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let resolvedURL = (trimmedURL?.isEmpty == false) ? (trimmedURL ?? defaultHealthcheckURL) : defaultHealthcheckURL
-        let timeout = providerDetail?.timeout ?? defaultHealthcheckTimeoutMilliseconds
-        return (url: resolvedURL, timeout: max(1, timeout))
+        let url = normalizedHealthcheckURL(providerDetail?.testUrl) ?? defaultHealthcheckURL
+        let timeout = normalizedHealthcheckTimeout(providerDetail?.timeout) ?? defaultHealthcheckTimeoutMilliseconds
+        return (url: url, timeout: timeout)
     }
 
-    func applyProviderHealthcheckDelays(provider: String, detail: ProviderDetail) {
+    private func applyProviderHealthcheckDelays(provider: String, detail: ProviderDetail) {
         detail.proxies?
             .compactMap { proxy in
                 self.latestProviderDelay(proxy.history).map { (name: proxy.name, delay: $0) }
@@ -170,7 +166,7 @@ extension AppState {
             proxies: preservedNodes)
     }
 
-    func shouldIncludeProxyProvider(named key: String, detail: ProviderDetail) -> Bool {
+    private func shouldIncludeProxyProvider(named key: String, detail: ProviderDetail) -> Bool {
         let resolvedName = detail.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? key
         if resolvedName.caseInsensitiveCompare("default") == .orderedSame {
             return false
@@ -192,7 +188,7 @@ extension AppState {
         }
     }
 
-    func pruneProviderNodeLatencies(provider: String, allowedNodes: Set<String>) {
+    private func pruneProviderNodeLatencies(provider: String, allowedNodes: Set<String>) {
         guard var existing = providerNodeLatencies[provider] else { return }
         existing = existing.filter { allowedNodes.contains($0.key) }
         providerNodeLatencies[provider] = existing
@@ -202,7 +198,7 @@ extension AppState {
         history?.lazy.reversed().compactMap(\.delay).first
     }
 
-    func applyRefreshedProviderDetail(provider: String, detail: ProviderDetail) {
+    private func applyRefreshedProviderDetail(provider: String, detail: ProviderDetail) {
         proxyProvidersDetail[provider] = self.sanitizedProviderDetail(detail, includeNodes: true)
         self.applyProviderHealthcheckDelays(provider: provider, detail: detail)
         self.pruneProviderNodeLatencies(provider: provider, allowedNodes: Set(detail.proxies?.map(\.name) ?? []))
@@ -232,7 +228,7 @@ extension AppState {
                 generation: providerRefreshGeneration))
     }
 
-    func runProviderRefreshInBackground(trigger: ProviderRefreshTrigger, generation: Int) async {
+    private func runProviderRefreshInBackground(trigger: ProviderRefreshTrigger, generation: Int) async {
         func checkpoint() -> Bool {
             if Task.isCancelled || generation != providerRefreshGeneration {
                 self.updateProviderRefreshStatus(
@@ -296,40 +292,35 @@ extension AppState {
 
             guard checkpoint() else { return }
 
-            func updateProviders(
-                _ names: [String],
-                request: (String) -> Endpoint,
-                onError: (String, Error) -> String) async -> Bool
-            {
-                for name in names {
-                    guard checkpoint() else { return false }
-                    do {
-                        try await client.requestNoResponse(request(name))
-                    } catch {
-                        failed += 1
-                        appendLog(level: "error", message: onError(name, error))
-                    }
-                    done += 1
-                    publishUpdatingProgress()
-                }
-                return true
-            }
-
-            let proxyCompleted = await updateProviders(
-                proxyNames,
+            let proxyResult = await self.updateProvidersSequential(
+                client: client,
+                names: proxyNames,
                 request: { .updateProxyProvider(name: $0) },
                 onError: { name, error in
                     tr("log.providers.proxy_update_failed", name, error.localizedDescription)
+                },
+                shouldContinue: checkpoint,
+                onStep: {
+                    done += 1
+                    publishUpdatingProgress()
                 })
-            guard proxyCompleted else { return }
+            failed += proxyResult.failed
+            guard proxyResult.completed else { return }
 
-            let ruleCompleted = await updateProviders(
-                ruleNames,
+            let ruleResult = await self.updateProvidersSequential(
+                client: client,
+                names: ruleNames,
                 request: { .updateRuleProvider(name: $0) },
                 onError: { name, error in
                     tr("log.providers.rule_update_failed", name, error.localizedDescription)
+                },
+                shouldContinue: checkpoint,
+                onStep: {
+                    done += 1
+                    publishUpdatingProgress()
                 })
-            guard ruleCompleted else { return }
+            failed += ruleResult.failed
+            guard ruleResult.completed else { return }
 
             let resultPhase: ProviderRefreshPhase = failed == 0 ? .succeeded : .failed
             let resultMessage = failed == 0
@@ -419,7 +410,32 @@ extension AppState {
         providerNodeLatencies[provider] = map
     }
 
-    func providerRefreshCancelReason(_ reason: String) -> String {
+    private func updateProvidersSequential(
+        client: MihomoAPIClient,
+        names: [String],
+        request: (String) -> Endpoint,
+        onError: (String, Error) -> String,
+        shouldContinue: (() -> Bool)? = nil,
+        onStep: (() -> Void)? = nil) async -> (completed: Bool, failed: Int)
+    {
+        var failed = 0
+        for name in names {
+            if let shouldContinue, !shouldContinue() {
+                return (completed: false, failed: failed)
+            }
+
+            do {
+                try await client.requestNoResponse(request(name))
+            } catch {
+                failed += 1
+                appendLog(level: "error", message: onError(name, error))
+            }
+            onStep?()
+        }
+        return (completed: true, failed: failed)
+    }
+
+    private func providerRefreshCancelReason(_ reason: String) -> String {
         switch reason {
         case "stop requested":
             tr("app.provider_refresh.reason.stop_requested")
@@ -436,7 +452,7 @@ extension AppState {
         }
     }
 
-    func runSingleProviderUpdate(actionName: String, request: Endpoint) async {
+    private func runSingleProviderUpdate(actionName: String, request: Endpoint) async {
         await runNoResponseAction(actionName) {
             try await self.clientOrThrow().requestNoResponse(request)
             await self.refreshProvidersAndRules()

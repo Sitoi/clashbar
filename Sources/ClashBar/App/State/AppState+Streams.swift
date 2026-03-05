@@ -75,7 +75,7 @@ extension AppState {
         }
     }
 
-    func receiveLoop(
+    private func receiveLoop(
         kind: StreamKind,
         onPayload: @escaping (Data) -> Void,
         restart: @escaping () -> Void) async
@@ -190,7 +190,7 @@ extension AppState {
             })
     }
 
-    func applyConnectionsSnapshot(_ snapshot: ConnectionsSnapshot) {
+    private func applyConnectionsSnapshot(_ snapshot: ConnectionsSnapshot) {
         let totalCount = snapshot.connections.count
         if connectionsCount != totalCount {
             connectionsCount = totalCount
@@ -202,17 +202,17 @@ extension AppState {
         }
     }
 
-    func resetStreamReconnectState(for kind: StreamKind) {
+    private func resetStreamReconnectState(for kind: StreamKind) {
         streamReconnectAttempts.removeValue(forKey: kind.key)
         streamLastDisconnectLogAt.removeValue(forKey: kind.key)
         streamLastDisconnectLogMessage.removeValue(forKey: kind.key)
     }
 
-    func markStreamPayloadReceived(for kind: StreamKind) {
+    private func markStreamPayloadReceived(for kind: StreamKind) {
         streamReconnectAttempts[kind.key] = 0
     }
 
-    func nextReconnectDelayNanoseconds(for kind: StreamKind) -> UInt64 {
+    private func nextReconnectDelayNanoseconds(for kind: StreamKind) -> UInt64 {
         let key = kind.key
         let attempt = max(0, streamReconnectAttempts[key] ?? 0)
         let cappedShift = min(attempt, 3)
@@ -225,7 +225,7 @@ extension AppState {
         return min(streamReconnectMaxDelayNanoseconds, max(streamReconnectBaseDelayNanoseconds, jittered))
     }
 
-    func shouldLogStreamDisconnect(kind: StreamKind, message: String) -> Bool {
+    private func shouldLogStreamDisconnect(kind: StreamKind, message: String) -> Bool {
         let key = kind.key
         let now = Date()
         let lastAt = streamLastDisconnectLogAt[key]

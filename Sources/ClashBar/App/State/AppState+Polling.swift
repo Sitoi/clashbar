@@ -12,7 +12,7 @@ extension AppState {
         self.teardownStreams()
     }
 
-    func teardownStreams() {
+    private func teardownStreams() {
         mediumFrequencyTask?.cancel()
         lowFrequencyTask?.cancel()
         for kind in StreamKind.allCases {
@@ -23,7 +23,7 @@ extension AppState {
         currentConnectionsStreamIntervalMilliseconds = nil
     }
 
-    func startPeriodicTask(
+    private func startPeriodicTask(
         intervalProvider: @escaping (AppState) -> UInt64,
         operation: @escaping (AppState) async -> Void) -> Task<Void, Never>
     {
@@ -41,7 +41,7 @@ extension AppState {
         }
     }
 
-    func ensurePeriodicTasksForCurrentVisibility() {
+    private func ensurePeriodicTasksForCurrentVisibility() {
         if isPanelPresented {
             if mediumFrequencyTask == nil {
                 mediumFrequencyTask = self.startPeriodicTask(intervalProvider: { state in
@@ -75,7 +75,7 @@ extension AppState {
         }
     }
 
-    func refreshHighFrequency() async {
+    private func refreshHighFrequency() async {
         self.updateDataAcquisitionPolicy()
     }
 
@@ -91,9 +91,7 @@ extension AppState {
         self.updateDataAcquisitionPolicy()
 
         guard presented else { return }
-        Task {
-            await self.refreshForActivatedTab(activeMenuTab)
-        }
+        self.scheduleRefreshForActivatedTab(activeMenuTab)
     }
 
     func setActiveMenuTab(_ tab: MenuPanelTabHint) {
@@ -102,12 +100,19 @@ extension AppState {
         self.updateDataAcquisitionPolicy()
 
         guard changed else { return }
-        Task {
-            await self.refreshForActivatedTab(tab)
+        self.scheduleRefreshForActivatedTab(tab)
+    }
+
+    private func scheduleRefreshForActivatedTab(_ tab: MenuPanelTabHint) {
+        activatedTabRefreshGeneration += 1
+        let generation = activatedTabRefreshGeneration
+        Task { [weak self] in
+            guard let self else { return }
+            await self.refreshForActivatedTab(tab, generation: generation)
         }
     }
 
-    func desiredDataAcquisitionPolicy(
+    private func desiredDataAcquisitionPolicy(
         panelPresented: Bool,
         activeTab: MenuPanelTabHint) -> DataAcquisitionPolicy
     {
@@ -143,7 +148,7 @@ extension AppState {
             lowFrequencyIntervalNanoseconds: lowFrequencyInterval)
     }
 
-    func updateDataAcquisitionPolicy() {
+    private func updateDataAcquisitionPolicy() {
         guard processManager.isRunning else {
             self.ensurePeriodicTasksForCurrentVisibility()
             mediumFrequencyIntervalNanoseconds = foregroundMediumFrequencyIntervalNanoseconds
@@ -161,12 +166,20 @@ extension AppState {
         self.applyStreamPolicy(policy)
     }
 
-    func refreshForActivatedTab(_ tab: MenuPanelTabHint) async {
+    func refreshForActivatedTab(_ tab: MenuPanelTabHint, generation: Int? = nil) async {
         guard processManager.isRunning else { return }
+
+        func shouldContinueRefresh() -> Bool {
+            guard let generation else { return true }
+            return generation == activatedTabRefreshGeneration
+        }
+
+        guard shouldContinueRefresh() else { return }
 
         switch tab {
         case .proxy:
             await self.refreshMediumFrequency()
+            guard shouldContinueRefresh() else { return }
             if proxyProvidersDetail.isEmpty || ruleItems.isEmpty {
                 await refreshProvidersAndRules()
             }
@@ -178,28 +191,29 @@ extension AppState {
             break
         case .system:
             await self.refreshMediumFrequency()
+            guard shouldContinueRefresh() else { return }
             await self.refreshSystemProxyStatus()
         }
     }
 
-    func refreshMediumFrequency() async {
+    private func refreshMediumFrequency() async {
         guard isPanelPresented else { return }
         await runRefresh {
             let client = try self.clientOrThrow()
             if self.activeMenuTab == .proxy {
                 async let versionTask: VersionInfo = client.request(.version)
                 async let configTask: ConfigSnapshot = client.request(.getConfigs)
-                async let groupsTask: ProxyGroupsResponse = client.request(.proxies)
-                async let proxyProvidersTask: ProviderSummary? = try? await client.request(.proxyProviders)
+                async let proxyGroupsTask = self.fetchProxyGroupsAndProviders(using: client)
 
-                let (version, config, groupsResponse, proxyProviders) = try await (
+                let (version, config, proxyGroupsPayload) = try await (
                     versionTask,
                     configTask,
-                    groupsTask,
-                    proxyProvidersTask)
+                    proxyGroupsTask)
                 self.version = version.version
                 self.applyRuntimeConfigSnapshot(config)
-                self.applyProxyGroupsResponse(groupsResponse, proxyProviders: proxyProviders?.providers ?? [:])
+                self.applyProxyGroupsResponse(
+                    proxyGroupsPayload.groups,
+                    proxyProviders: proxyGroupsPayload.providers)
             } else {
                 async let versionTask: VersionInfo = client.request(.version)
                 async let configTask: ConfigSnapshot = client.request(.getConfigs)
@@ -218,7 +232,7 @@ extension AppState {
         return config
     }
 
-    func applyRuntimeConfigSnapshot(_ config: ConfigSnapshot) {
+    private func applyRuntimeConfigSnapshot(_ config: ConfigSnapshot) {
         let remoteMode = normalizeMode(config.mode)
         if let remoteMode {
             currentMode = remoteMode
@@ -250,7 +264,7 @@ extension AppState {
         lastTrafficSampleAt = nil
     }
 
-    func releasePanelCachedData() {
+    private func releasePanelCachedData() {
         connectionsCount = 0
         connections.removeAll(keepingCapacity: false)
 
@@ -303,7 +317,7 @@ extension AppState {
         lastTrafficSampleAt = now
     }
 
-    func refreshLowFrequency() async {
+    private func refreshLowFrequency() async {
         guard isPanelPresented else { return }
         switch activeMenuTab {
         case .proxy:
@@ -321,14 +335,25 @@ extension AppState {
     func refreshProxyGroups() async {
         await runRefresh {
             let client = try self.clientOrThrow()
-            async let groupsTask: ProxyGroupsResponse = client.request(.proxies)
-            async let proxyProvidersTask: ProviderSummary? = try? await client.request(.proxyProviders)
-            let (groupsResponse, proxyProviders) = try await (groupsTask, proxyProvidersTask)
-            self.applyProxyGroupsResponse(groupsResponse, proxyProviders: proxyProviders?.providers ?? [:])
+            let payload = try await self.fetchProxyGroupsAndProviders(using: client)
+            self.applyProxyGroupsResponse(payload.groups, proxyProviders: payload.providers)
         }
     }
 
-    func applyProxyGroupsResponse(_ response: ProxyGroupsResponse, proxyProviders: [String: ProviderDetail] = [:]) {
+    private func fetchProxyGroupsAndProviders(using client: MihomoAPIClient) async throws -> (
+        groups: ProxyGroupsResponse,
+        providers: [String: ProviderDetail])
+    {
+        async let groupsTask: ProxyGroupsResponse = client.request(.proxies)
+        async let proxyProvidersTask: ProviderSummary? = try? await client.request(.proxyProviders)
+        let (groupsResponse, proxyProviders) = try await (groupsTask, proxyProvidersTask)
+        return (groupsResponse, proxyProviders?.providers ?? [:])
+    }
+
+    private func applyProxyGroupsResponse(
+        _ response: ProxyGroupsResponse,
+        proxyProviders: [String: ProviderDetail] = [:])
+    {
         let providerLookup = proxyProviders.isEmpty ? proxyProvidersDetail : proxyProviders
         let proxiesWithHealthcheckConfig = response.proxies.values.map { proxy in
             let provider = providerLookup[proxy.name]
@@ -351,10 +376,8 @@ extension AppState {
 
         let sortIndex = (response.proxies["GLOBAL"]?.all ?? []) + ["GLOBAL"]
         var sortIndexMap: [String: Int] = [:]
-        for (index, name) in sortIndex.enumerated() {
-            if sortIndexMap[name] == nil {
-                sortIndexMap[name] = index
-            }
+        for (index, name) in sortIndex.enumerated() where sortIndexMap[name] == nil {
+            sortIndexMap[name] = index
         }
 
         proxyGroups = proxiesWithHealthcheckConfig

@@ -186,7 +186,6 @@ extension MenuBarRoot {
                     }
                 }
             }
-            .background(nativeSectionCard())
 
             VStack(spacing: 0) {
                 settingsCardHeader(
@@ -222,7 +221,6 @@ extension MenuBarRoot {
                 }
                 .menuRowPadding(vertical: MenuBarLayoutTokens.vDense + 2)
             }
-            .background(nativeSectionCard())
 
             VStack(spacing: 0) {
                 settingsCardHeader(
@@ -252,7 +250,6 @@ extension MenuBarRoot {
                 }
                 .menuRowPadding(vertical: MenuBarLayoutTokens.vDense + 2)
             }
-            .background(nativeSectionCard())
         }
     }
 }

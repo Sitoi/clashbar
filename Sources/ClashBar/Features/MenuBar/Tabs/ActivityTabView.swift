@@ -43,7 +43,6 @@ extension MenuBarRoot {
                         }
                     }
                 }
-                .background(nativeSectionCard())
             }
         }
     }
@@ -59,19 +58,23 @@ extension MenuBarRoot {
 
                 Spacer(minLength: 0)
 
-                asyncBorderedIconButton(
-                    symbol: "arrow.clockwise",
-                    label: tr("ui.action.refresh"))
+                self.compactTopIcon(
+                    "arrow.clockwise",
+                    label: tr("ui.action.refresh"),
+                    toneOverride: nativeInfo)
                 {
                     await appState.refreshConnections()
                 }
+                .help(tr("ui.action.refresh"))
 
-                asyncBorderedIconButton(
-                    symbol: "xmark",
-                    label: tr("ui.action.close_all"))
+                self.compactTopIcon(
+                    "xmark",
+                    label: tr("ui.action.close_all"),
+                    warning: true)
                 {
                     await appState.closeAllConnections()
                 }
+                .help(tr("ui.action.close_all"))
             }
 
             TextField(tr("ui.placeholder.filter_connection"), text: $networkFilterText)
@@ -83,13 +86,14 @@ extension MenuBarRoot {
                 self.activityFilterMenu
                 self.activitySortMenu
 
-                self.logsControlIconButton(
+                self.compactTopIcon(
                     "line.3.horizontal.decrease.circle",
-                    helpText: tr("ui.action.reset_network_filters"),
-                    isDisabled: !self.hasActiveNetworkControls)
+                    label: tr("ui.action.reset_network_filters"))
                 {
                     self.resetNetworkControls()
                 }
+                .help(tr("ui.action.reset_network_filters"))
+                .disabled(!self.hasActiveNetworkControls)
 
                 Spacer(minLength: 0)
 
@@ -98,7 +102,6 @@ extension MenuBarRoot {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .menuRowPadding(vertical: MenuBarLayoutTokens.vDense + 2)
-        .background(nativeSectionCard())
     }
 
     var activityFilterMenu: some View {
@@ -254,14 +257,19 @@ extension MenuBarRoot {
         let downText = ValueFormatter.bytesCompactNoSpace(conn.download ?? 0)
         let parsedRule = self.parseConnectionRule(conn.rule)
         let ruleTypeText = self.connectionRuleTypeText(conn.rule, fallback: parsedRule?.type)
-        let rulePayloadText = self.trimmedNonEmpty(conn.rulePayload) ?? self.trimmedNonEmpty(parsedRule?.payload) ?? "--"
+        let rulePayloadText = self.trimmedNonEmpty(conn.rulePayload)
+            ?? self.trimmedNonEmpty(parsedRule?.payload)
+            ?? "--"
         let chainParts = self.connectionChainsParts(conn.chains)
 
-        return HStack(spacing: MenuBarLayoutTokens.hDense) {
+        return HStack(alignment: .center, spacing: MenuBarLayoutTokens.hDense) {
             Image(systemName: visual.symbol)
                 .font(.appSystem(size: 12, weight: .semibold))
                 .foregroundStyle(visual.color)
-                .frame(width: 16, alignment: .center)
+                .frame(
+                    width: MenuBarLayoutTokens.rowLeadingIconColumnWidth,
+                    height: MenuBarLayoutTokens.rowLeadingIconSize,
+                    alignment: .center)
 
             VStack(alignment: .leading, spacing: MenuBarLayoutTokens.vDense) {
                 GeometryReader { proxy in

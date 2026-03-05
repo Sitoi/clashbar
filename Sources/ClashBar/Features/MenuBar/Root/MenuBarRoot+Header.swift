@@ -89,9 +89,6 @@ extension MenuBarRoot {
             }
         }
         .padding(.vertical, 8)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(nativeSeparator).frame(height: MenuBarLayoutTokens.hairline)
-        }
     }
 
     func headerMetaLabel(symbol: String, text: String) -> some View {
@@ -163,8 +160,10 @@ extension MenuBarRoot {
     func compactTopIcon(
         _ symbol: String,
         label: String,
+        role: ButtonRole? = nil,
         warning: Bool = false,
         toneOverride: Color? = nil,
+        isLoading: Bool = false,
         action: @escaping () async -> Void) -> some View
     {
         let tone: Color = if let toneOverride {
@@ -179,31 +178,12 @@ extension MenuBarRoot {
             nativeSecondaryLabel
         }
 
-        return TopHeaderIconActionButton(
+        return self.compactAsyncIconButton(
             symbol: symbol,
-            tone: tone.opacity(0.94),
+            label: label,
+            tint: tone.opacity(0.94),
+            role: role,
+            isLoading: isLoading,
             action: action)
-            .accessibilityLabel(label)
-    }
-}
-
-private struct TopHeaderIconActionButton: View {
-    let symbol: String
-    let tone: Color
-    let action: () async -> Void
-
-    @State private var hovered = false
-
-    var body: some View {
-        Button {
-            Task { await self.action() }
-        } label: {
-            Image(systemName: self.symbol)
-                .font(.appSystem(size: 13, weight: .semibold))
-                .foregroundStyle(self.hovered ? self.tone : Color(nsColor: .secondaryLabelColor))
-                .frame(width: 20, height: 20)
-        }
-        .buttonStyle(.borderless)
-        .onHover { self.hovered = $0 }
     }
 }

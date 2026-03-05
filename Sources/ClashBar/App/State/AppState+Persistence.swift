@@ -4,19 +4,18 @@ import Foundation
 extension AppState {
     func resolveSelectedConfigPath() async -> String? {
         if let selected = configManager.selectedConfig {
-            selectedConfigName = selected.lastPathComponent
-            defaults.set(selected.lastPathComponent, forKey: selectedConfigKey)
+            let selectedPath = self.syncSelectedConfigSelection(selected)
             self.syncConfigDisplayState()
-            return selected.path
+            return selectedPath
         }
 
         if let selectedName = defaults.string(forKey: selectedConfigKey),
            let selected = configManager.availableConfigs.first(where: { $0.lastPathComponent == selectedName })
         {
             configManager.selectConfig(selected)
-            selectedConfigName = selected.lastPathComponent
+            let selectedPath = self.syncSelectedConfigSelection(selected)
             self.syncConfigDisplayState()
-            return selected.path
+            return selectedPath
         }
 
         if let legacySelectedPath = defaults.string(forKey: legacySelectedConfigKey) {
@@ -25,18 +24,17 @@ extension AppState {
             defaults.removeObject(forKey: legacySelectedConfigKey)
             if let selected = configManager.availableConfigs.first(where: { $0.lastPathComponent == legacyName }) {
                 configManager.selectConfig(selected)
-                selectedConfigName = selected.lastPathComponent
+                let selectedPath = self.syncSelectedConfigSelection(selected)
                 self.syncConfigDisplayState()
-                return selected.path
+                return selectedPath
             }
         }
 
         _ = configManager.reloadConfigs()
         if let selected = configManager.selectedConfig {
-            defaults.set(selected.lastPathComponent, forKey: selectedConfigKey)
-            selectedConfigName = selected.lastPathComponent
+            let selectedPath = self.syncSelectedConfigSelection(selected)
             self.syncConfigDisplayState()
-            return selected.path
+            return selectedPath
         }
 
         return nil
@@ -45,8 +43,7 @@ extension AppState {
     func restoreSavedConfigDirectory() {
         configManager.setConfigDirectory(workingDirectoryManager.configDirectoryURL)
         if let selected = configManager.selectedConfig {
-            selectedConfigName = selected.lastPathComponent
-            defaults.set(selected.lastPathComponent, forKey: selectedConfigKey)
+            _ = self.syncSelectedConfigSelection(selected)
         }
         self.syncConfigDisplayState()
     }
@@ -62,8 +59,7 @@ extension AppState {
             return
         }
         configManager.selectConfig(matched)
-        selectedConfigName = matched.lastPathComponent
-        defaults.set(matched.lastPathComponent, forKey: selectedConfigKey)
+        _ = self.syncSelectedConfigSelection(matched)
         self.syncConfigDisplayState()
     }
 

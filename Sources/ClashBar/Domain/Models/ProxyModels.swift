@@ -57,7 +57,7 @@ struct ProxyGroup: Decodable, Equatable {
         self.all = try container.decodeIfPresent([String].self, forKey: .all) ?? []
         self.testUrl = try Self.normalizedText(container.decodeIfPresent(String.self, forKey: .testUrl))
         self.timeout = Self.decodeTimeout(from: container)
-        self.icon = Self.normalizedIcon((try? container.decodeIfPresent(String.self, forKey: .icon)) ?? nil)
+        self.icon = Self.normalizedIcon(try? container.decodeIfPresent(String.self, forKey: .icon))
         self.hidden = try container.decodeIfPresent(Bool.self, forKey: .hidden)
         self.latestDelay = Self.decodeLatestDelay(from: container)
     }

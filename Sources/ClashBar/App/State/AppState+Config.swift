@@ -309,7 +309,7 @@ extension AppState {
         }
     }
 
-    func refreshConfigStateAfterMutation() {
+    private func refreshConfigStateAfterMutation() {
         _ = configManager.reloadConfigs()
         if self.syncSelectedConfigSelection(configManager.selectedConfig) == nil {
             selectedConfigName = "-"
@@ -319,7 +319,7 @@ extension AppState {
     }
 
     @discardableResult
-    private func syncSelectedConfigSelection(_ selected: URL?) -> String? {
+    func syncSelectedConfigSelection(_ selected: URL?) -> String? {
         guard let selected else {
             return nil
         }
@@ -329,17 +329,17 @@ extension AppState {
         return selected.path
     }
 
-    func shouldAutoReloadCurrentConfig(updatedFileNames: Set<String>) -> Bool {
+    private func shouldAutoReloadCurrentConfig(updatedFileNames: Set<String>) -> Bool {
         guard !updatedFileNames.isEmpty else { return false }
         guard isRuntimeRunning else { return false }
         return updatedFileNames.contains(selectedConfigName)
     }
 
-    func writeConfigData(_ data: Data, to targetURL: URL) throws {
+    private func writeConfigData(_ data: Data, to targetURL: URL) throws {
         try configImportService.writeConfigData(data, to: targetURL)
     }
 
-    func confirmOverwriteConfig(named fileName: String) -> Bool {
+    private func confirmOverwriteConfig(named fileName: String) -> Bool {
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = tr("app.config.import.overwrite.title", fileName)
@@ -351,7 +351,7 @@ extension AppState {
         return alert.runModal() == .alertFirstButtonReturn
     }
 
-    func presentRemoteConfigImportResultAlert(success: Bool, message: String) {
+    private func presentRemoteConfigImportResultAlert(success: Bool, message: String) {
         let alert = NSAlert()
         alert.alertStyle = success ? .informational : .warning
         alert.messageText = success
@@ -364,12 +364,12 @@ extension AppState {
         alert.runModal()
     }
 
-    struct RemoteConfigImportInput {
+    private struct RemoteConfigImportInput {
         let urlString: String
         let fileName: String
     }
 
-    func promptRemoteConfigImportInput() -> RemoteConfigImportInput? {
+    private func promptRemoteConfigImportInput() -> RemoteConfigImportInput? {
         let alert = NSAlert()
         alert.alertStyle = .informational
         alert.messageText = tr("ui.quick.import_remote_config")
@@ -421,7 +421,7 @@ extension AppState {
         configImportService.normalizedConfigFileName(fileName, fallback: fallback)
     }
 
-    func inferredRemoteConfigFileName(from remoteURL: URL) -> String {
+    private func inferredRemoteConfigFileName(from remoteURL: URL) -> String {
         configImportService.inferredRemoteConfigFileName(from: remoteURL)
     }
 
@@ -429,11 +429,11 @@ extension AppState {
         configImportService.isSupportedRemoteConfigURL(url)
     }
 
-    func downloadRemoteConfigData(from remoteURL: URL) async throws -> Data {
+    private func downloadRemoteConfigData(from remoteURL: URL) async throws -> Data {
         try await configImportService.downloadRemoteConfigData(from: remoteURL)
     }
 
-    func updateRemoteConfigSource(for fileName: String, urlString: String?) {
+    private func updateRemoteConfigSource(for fileName: String, urlString: String?) {
         if let urlString {
             remoteConfigSources[fileName] = urlString
         } else {

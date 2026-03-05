@@ -43,11 +43,9 @@ extension AppState {
         let ports = currentSystemProxyPortsFromState()
         let httpPort = ports.httpPort ?? ports.socksPort ?? effectiveMixedPort()
         let socksPort = ports.socksPort ?? ports.httpPort ?? httpPort
-        let script = [
-            "export https_proxy=http://127.0.0.1:\(httpPort)",
-            "http_proxy=http://127.0.0.1:\(httpPort)",
-            "all_proxy=socks5://127.0.0.1:\(socksPort)",
-        ].joined(separator: " ")
+        let script = "export https_proxy=http://127.0.0.1:\(httpPort) " +
+            "http_proxy=http://127.0.0.1:\(httpPort) " +
+            "all_proxy=socks5://127.0.0.1:\(socksPort)"
         copyTextToPasteboard(script)
         appendLog(level: "info", message: tr("log.proxy_export.copied"))
     }

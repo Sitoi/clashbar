@@ -25,7 +25,6 @@ extension MenuBarRoot {
                         }
                     }
                 }
-                .background(nativeSectionCard())
             }
         }
     }
@@ -40,7 +39,7 @@ extension MenuBarRoot {
         let remaining = ValueFormatter.subscriptionRemaining(total: total, upload: upload, download: download)
         let remainingRatio = ValueFormatter.subscriptionRemainingRatio(total: total, upload: upload, download: download)
         let quotaTextColumnWidth: CGFloat = 124
-        let rowHorizontalPadding: CGFloat = 4
+        let rowHorizontalPadding = MenuBarLayoutTokens.hRow
         let hovered = hoveredProxyProviderName == name
 
         return AttachedPopoverMenu(
@@ -52,7 +51,9 @@ extension MenuBarRoot {
                     HStack(spacing: MenuBarLayoutTokens.hDense) {
                         RoundedRectangle(cornerRadius: MenuBarLayoutTokens.iconCornerRadius, style: .continuous)
                             .fill(nativeTeal.opacity(0.14))
-                            .frame(width: 16, height: 16)
+                            .frame(
+                                width: MenuBarLayoutTokens.rowLeadingIconSize,
+                                height: MenuBarLayoutTokens.rowLeadingIconSize)
                             .overlay {
                                 Image(systemName: "shippingbox.fill")
                                     .font(.appSystem(size: 9, weight: .semibold))
@@ -188,11 +189,14 @@ extension MenuBarRoot {
             : (symbol == "arrow.clockwise" ? "arrow.triangle.2.circlepath" : symbol)
         let label = symbol == "gauge" ? tr("ui.action.test_latency") : tr("ui.action.refresh")
 
-        return BorderlessAsyncIconActionButton(
+        return self.compactAsyncIconButton(
             symbol: icon,
             label: label,
             tint: tone.opacity(0.96),
             isLoading: isLoading,
+            size: 16,
+            fontSize: 10.5,
+            hierarchicalSymbol: true,
             action: action)
     }
 
@@ -253,7 +257,7 @@ extension MenuBarRoot {
         let nodeCount = group.all.count
         let iconURL = self.proxyGroupIconURL(group)
         let hasLeadingIcon = iconURL != nil
-        let rowHorizontalPadding: CGFloat = 4
+        let rowHorizontalPadding = MenuBarLayoutTokens.hRow
         let rowVerticalPadding: CGFloat = 1
         let hovered = hoveredProxyGroupName == group.name
 
@@ -364,7 +368,7 @@ extension MenuBarRoot {
         totalWidth: CGFloat,
         hasLeadingIcon: Bool) -> (name: CGFloat, current: CGFloat, delay: CGFloat)
     {
-        let iconWidth: CGFloat = hasLeadingIcon ? 16 : 0
+        let iconWidth: CGFloat = hasLeadingIcon ? MenuBarLayoutTokens.rowLeadingIconColumnWidth : 0
         let actionWidth: CGFloat = 16
         let chevronWidth: CGFloat = 8
         let spacingCount: CGFloat = hasLeadingIcon ? 4 : 3
@@ -384,10 +388,15 @@ extension MenuBarRoot {
                     .interpolation(.high)
                     .antialiased(true)
                     .aspectRatio(contentMode: .fit)
-                    .frame(maxWidth: 16, maxHeight: 16)
+                    .frame(
+                        maxWidth: MenuBarLayoutTokens.rowLeadingIconSize,
+                        maxHeight: MenuBarLayoutTokens.rowLeadingIconSize)
             }
         }
-        .frame(width: 16, height: 16)
+        .frame(
+            width: MenuBarLayoutTokens.rowLeadingIconColumnWidth,
+            height: MenuBarLayoutTokens.rowLeadingIconSize,
+            alignment: .center)
     }
 
     func proxyGroupIconURL(_ group: ProxyGroup) -> URL? {
@@ -399,11 +408,14 @@ extension MenuBarRoot {
         isLoading: Bool = false,
         action: @escaping () async -> Void) -> some View
     {
-        BorderlessAsyncIconActionButton(
+        self.compactAsyncIconButton(
             symbol: "gauge.with.dots.needle.50percent",
             label: tr("ui.action.test_latency"),
             tint: nativeTeal.opacity(0.96),
             isLoading: isLoading,
+            size: 16,
+            fontSize: 10.5,
+            hierarchicalSymbol: true,
             action: action)
     }
 
@@ -559,39 +571,5 @@ private struct LatencyLoadingIndicator: View {
             .background(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
                     .fill(Color(nsColor: .quaternaryLabelColor).opacity(0.24)))
-    }
-}
-
-private struct BorderlessAsyncIconActionButton: View {
-    let symbol: String
-    let label: String
-    let tint: Color
-    let isLoading: Bool
-    let action: () async -> Void
-
-    @State private var hovered = false
-
-    var body: some View {
-        Button {
-            Task { await self.action() }
-        } label: {
-            ZStack {
-                Image(systemName: self.symbol)
-                    .font(.appSystem(size: 10.5, weight: .semibold))
-                    .foregroundStyle(self.hovered ? self.tint : Color(nsColor: .secondaryLabelColor))
-                    .symbolRenderingMode(.hierarchical)
-                    .opacity(self.isLoading ? 0 : 1)
-
-                ProgressView()
-                    .controlSize(.mini)
-                    .opacity(self.isLoading ? 1 : 0)
-            }
-            .frame(width: 16, height: 16)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.borderless)
-        .accessibilityLabel(self.label)
-        .disabled(self.isLoading)
-        .onHover { self.hovered = $0 }
     }
 }
