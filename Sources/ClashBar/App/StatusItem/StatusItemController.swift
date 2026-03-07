@@ -56,7 +56,8 @@ final class StatusItemController: NSObject {
     private var scrollIndicatorSuppressionTask: Task<Void, Never>?
 
     private let iconOnlyRefreshInterval: TimeInterval = 0.12
-    private let speedDisplayRefreshInterval: TimeInterval = 0.5
+    // Status-item snapshotting is expensive on macOS when traffic text changes frequently.
+    private let speedDisplayRefreshInterval: TimeInterval = 1.0
     private static let popoverContentWidth: CGFloat = MenuBarLayoutTokens.panelWidth
 
     init(appState: AppState) {

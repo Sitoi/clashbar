@@ -1,6 +1,11 @@
 import AppKit
 
 final class StatusItemContentView: NSView {
+    private enum BrandStatusIconTheme: Hashable {
+        case light
+        case dark
+    }
+
     // Keep a 1pt optical inset to stabilize status-item width across icon/text mode switches.
     private let statusItemHorizontalPadding: CGFloat = MenuBarLayoutTokens.opticalNudge
     private let iconSize: CGFloat = 24
@@ -21,7 +26,9 @@ final class StatusItemContentView: NSView {
     private var currentDisplay: MenuBarDisplay?
     private var cachedUpLine: String = ""
     private var cachedDownLine: String = ""
-    private lazy var brandStatusIconImage: NSImage? = Self.makeBrandStatusIconImage(size: brandIconRenderSize)
+    private lazy var brandStatusIconImages: [BrandStatusIconTheme: NSImage] = Self.makeBrandStatusIconImages(
+        size: brandIconRenderSize)
+    private static let brandIconRenderScales: [CGFloat] = [1, 2, 3]
     private static let speedTextAttributes: [NSAttributedString.Key: Any] = {
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = .right
@@ -34,7 +41,7 @@ final class StatusItemContentView: NSView {
     }()
 
     var usesBrandIcon: Bool {
-        self.brandStatusIconImage != nil
+        self.brandStatusIconImages.isEmpty == false
     }
 
     override init(frame frameRect: NSRect) {
@@ -46,6 +53,16 @@ final class StatusItemContentView: NSView {
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        self.refreshBrandIconForCurrentAppearance()
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        self.refreshBrandIconForCurrentAppearance()
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
@@ -83,11 +100,11 @@ final class StatusItemContentView: NSView {
         self.cachedDownLine = display.speedLines?.down ?? ""
 
         let shouldShowIcon = display.mode != .speedOnly
-        if shouldShowIcon, let brandIcon = brandStatusIconImage {
+        if shouldShowIcon, let brandIcon = self.currentBrandStatusIconImage {
             if self.iconView.image !== brandIcon {
                 self.iconView.image = brandIcon
             }
-            // Avoid per-frame tint recomposition for custom PNG icon snapshots.
+            // Brand icon is pre-rendered into menu-bar monochrome variants.
             self.iconView.contentTintColor = nil
         } else if let symbolName = display.symbolName {
             if self.iconView.image == nil ||
@@ -181,21 +198,124 @@ final class StatusItemContentView: NSView {
             withAttributes: Self.speedTextAttributes)
     }
 
-    private static func makeBrandStatusIconImage(size: CGFloat) -> NSImage? {
-        guard let source = BrandIcon.image else { return nil }
+    private var currentBrandStatusIconImage: NSImage? {
+        let images = self.brandStatusIconImages
+        guard images.isEmpty == false else { return nil }
+        let theme = Self.brandStatusIconTheme(for: self.effectiveAppearance)
+        return images[theme] ?? images.values.first
+    }
+
+    private func refreshBrandIconForCurrentAppearance() {
+        guard self.currentDisplay?.mode != .speedOnly else { return }
+        guard let image = self.currentBrandStatusIconImage else { return }
+        guard self.iconView.image !== image || self.iconView.contentTintColor != nil else { return }
+        self.iconView.image = image
+        self.iconView.contentTintColor = nil
+        self.iconView.needsDisplay = true
+        self.needsDisplay = true
+    }
+
+    private static func makeBrandStatusIconImages(size: CGFloat) -> [BrandStatusIconTheme: NSImage] {
+        guard let source = BrandIcon.image else { return [:] }
         let targetSize = NSSize(width: size, height: size)
-        let rendered = NSImage(size: targetSize)
-        rendered.lockFocus()
-        NSGraphicsContext.current?.imageInterpolation = .high
+        var images: [BrandStatusIconTheme: NSImage] = [:]
+
+        for theme in [BrandStatusIconTheme.light, .dark] {
+            let rendered = NSImage(size: targetSize)
+            let color = self.brandStatusIconColor(for: theme)
+
+            for scale in Self.brandIconRenderScales {
+                guard let representation = self.makeBrandStatusIconRepresentation(
+                    source: source,
+                    pointSize: targetSize,
+                    scale: scale,
+                    color: color)
+                else {
+                    continue
+                }
+                rendered.addRepresentation(representation)
+            }
+
+            guard rendered.representations.isEmpty == false else { continue }
+            rendered.isTemplate = false
+            images[theme] = rendered
+        }
+
+        return images
+    }
+
+    private static func makeBrandStatusIconRepresentation(
+        source: NSImage,
+        pointSize: NSSize,
+        scale: CGFloat,
+        color: NSColor) -> NSBitmapImageRep?
+    {
+        let pixelWidth = max(1, Int((pointSize.width * scale).rounded(.up)))
+        let pixelHeight = max(1, Int((pointSize.height * scale).rounded(.up)))
+
+        guard let representation = NSBitmapImageRep(
+            bitmapDataPlanes: nil,
+            pixelsWide: pixelWidth,
+            pixelsHigh: pixelHeight,
+            bitsPerSample: 8,
+            samplesPerPixel: 4,
+            hasAlpha: true,
+            isPlanar: false,
+            colorSpaceName: .deviceRGB,
+            bytesPerRow: 0,
+            bitsPerPixel: 0)
+        else {
+            return nil
+        }
+
+        representation.size = pointSize
+
+        guard let context = NSGraphicsContext(bitmapImageRep: representation) else {
+            return nil
+        }
+
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = context
+        context.imageInterpolation = .high
         source.draw(
-            in: NSRect(origin: .zero, size: targetSize),
+            in: NSRect(origin: .zero, size: pointSize),
             from: .zero,
             operation: .copy,
             fraction: 1.0,
             respectFlipped: true,
             hints: [.interpolation: NSImageInterpolation.high])
-        rendered.unlockFocus()
-        rendered.isTemplate = false
-        return rendered
+        context.cgContext.setBlendMode(.sourceIn)
+        context.cgContext.setFillColor((color.usingColorSpace(.deviceRGB) ?? color).cgColor)
+        context.cgContext.fill(CGRect(origin: .zero, size: pointSize))
+        NSGraphicsContext.restoreGraphicsState()
+        return representation
+    }
+
+    private static func brandStatusIconTheme(for appearance: NSAppearance) -> BrandStatusIconTheme {
+        let match = appearance.bestMatch(from: [.darkAqua, .vibrantDark, .aqua, .vibrantLight])
+        switch match {
+        case .some(.darkAqua), .some(.vibrantDark):
+            return BrandStatusIconTheme.dark
+        default:
+            return BrandStatusIconTheme.light
+        }
+    }
+
+    private static func brandStatusIconColor(for theme: BrandStatusIconTheme) -> NSColor {
+        let appearanceName: NSAppearance.Name = switch theme {
+        case .light:
+            .aqua
+        case .dark:
+            .darkAqua
+        }
+
+        if let appearance = NSAppearance(named: appearanceName) {
+            var resolved = NSColor.labelColor
+            appearance.performAsCurrentDrawingAppearance {
+                resolved = NSColor.labelColor.usingColorSpace(.deviceRGB) ?? NSColor.labelColor
+            }
+            return resolved
+        }
+        return NSColor.labelColor
     }
 }
