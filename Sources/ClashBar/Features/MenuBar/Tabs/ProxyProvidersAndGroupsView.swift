@@ -1,4 +1,3 @@
-import AppKit
 import SwiftUI
 
 extension MenuBarRoot {
@@ -14,15 +13,9 @@ extension MenuBarRoot {
             if providers.isEmpty {
                 emptyCard(tr("ui.empty.proxy_providers"))
             } else {
-                LazyVStack(spacing: 0) {
-                    ForEach(Array(providers.enumerated()), id: \.element) { index, name in
+                VStack(spacing: 0) {
+                    SeparatedForEach(data: providers, id: \.self, separator: nativeSeparator) { name in
                         self.proxyProviderRow(name: name, detail: appState.proxyProvidersDetail[name])
-
-                        if index < providers.count - 1 {
-                            Rectangle()
-                                .fill(nativeSeparator)
-                                .frame(height: MenuBarLayoutTokens.hairline)
-                        }
                     }
                 }
             }
@@ -81,14 +74,14 @@ extension MenuBarRoot {
                             .foregroundStyle(nativeTertiaryLabel)
 
                         self.providerActionButton(
-                            "gauge",
+                            .healthcheck,
                             isLoading: appState.providerBatchTesting.contains(name))
                         {
                             await appState.testAllProxyProviderNodes(provider: name)
                         }
 
                         self.providerActionButton(
-                            "arrow.clockwise",
+                            .refresh,
                             isLoading: appState.providerUpdating.contains(name))
                         {
                             await appState.updateProxyProvider(name: name)
@@ -129,32 +122,12 @@ extension MenuBarRoot {
                 .animation(.easeInOut(duration: 0.14), value: hovered)
             },
             content: { dismiss in
-                HStack(spacing: MenuBarLayoutTokens.hMicro) {
+                self.popoverHeader(name: name, count: nodeCount) {
                     Image(systemName: "shippingbox.fill")
                         .font(.appSystem(size: 12, weight: .semibold))
                         .foregroundStyle(nativeTeal.opacity(0.92))
                         .frame(width: 16, alignment: .center)
-
-                    Text(name)
-                        .font(.appSystem(size: 12, weight: .semibold))
-                        .foregroundStyle(nativePrimaryLabel)
-                        .lineLimit(1)
-
-                    Spacer(minLength: 0)
-
-                    Text("\(nodeCount)")
-                        .font(.appMonospaced(size: 10, weight: .medium))
-                        .foregroundStyle(nativeSecondaryLabel)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 1)
-                        .background(nativeBadgeCapsule())
                 }
-                .padding(.horizontal, 4)
-                .padding(.bottom, 2)
-
-                Divider()
-                    .overlay(nativeSeparator)
-                    .padding(.bottom, 1)
 
                 let nodes = sortedProviderNodes(provider: name, detail: detail)
                 self.popoverNodesList(nodes) { node in
@@ -172,26 +145,40 @@ extension MenuBarRoot {
                     }
                 }
             })
-            .onHover { hoveredProxyProviderName = self.nextHoveredName(
+            .onHover { hoveredProxyProviderName = self.nextHovered(
                 current: hoveredProxyProviderName,
                 target: name,
                 isHovering: $0) }
     }
 
+    enum ProviderAction {
+        case healthcheck
+        case refresh
+
+        var symbol: String {
+            switch self {
+            case .healthcheck: "gauge.with.dots.needle.50percent"
+            case .refresh: "arrow.triangle.2.circlepath"
+            }
+        }
+
+        var labelKey: String {
+            switch self {
+            case .healthcheck: "ui.action.test_latency"
+            case .refresh: "ui.action.refresh"
+            }
+        }
+    }
+
     func providerActionButton(
-        _ symbol: String,
+        _ kind: ProviderAction,
         isLoading: Bool = false,
         action: @escaping () async -> Void) -> some View
     {
-        let tone = symbol == "gauge" ? nativeTeal : (symbol == "arrow.clockwise" ? nativeInfo : nativeAccent)
-        let icon = symbol == "gauge"
-            ? "gauge.with.dots.needle.50percent"
-            : (symbol == "arrow.clockwise" ? "arrow.triangle.2.circlepath" : symbol)
-        let label = symbol == "gauge" ? tr("ui.action.test_latency") : tr("ui.action.refresh")
-
+        let tone = kind == .healthcheck ? nativeTeal : nativeInfo
         return self.compactAsyncIconButton(
-            symbol: icon,
-            label: label,
+            symbol: kind.symbol,
+            label: tr(kind.labelKey),
             tint: tone.opacity(0.96),
             isLoading: isLoading,
             size: 16,
@@ -242,7 +229,7 @@ extension MenuBarRoot {
             if groups.isEmpty {
                 emptyCard(tr("ui.empty.proxy_groups"))
             } else {
-                LazyVStack(spacing: 2) {
+                VStack(spacing: 2) {
                     ForEach(groups, id: \.name) { group in
                         self.proxyGroupInlineRow(group)
                     }
@@ -304,7 +291,8 @@ extension MenuBarRoot {
                         .minimumScaleFactor(0.85)
                         .frame(width: columns.delay, alignment: .trailing)
 
-                    self.compactGroupAction(
+                    self.providerActionButton(
+                        .healthcheck,
                         isLoading: appState.groupLatencyLoading.contains(group.name))
                     {
                         await appState.refreshGroupLatency(group)
@@ -324,31 +312,11 @@ extension MenuBarRoot {
             .background(nativeHoverRowBackground(hovered))
             .animation(.easeInOut(duration: 0.14), value: hovered)
         } content: { dismiss in
-            HStack(spacing: MenuBarLayoutTokens.hMicro) {
+            self.popoverHeader(name: group.name, count: nodeCount) {
                 if let iconURL {
                     self.proxyGroupLeadingIcon(iconURL)
                 }
-
-                Text(group.name)
-                    .font(.appSystem(size: 12, weight: .semibold))
-                    .foregroundStyle(nativePrimaryLabel)
-                    .lineLimit(1)
-
-                Spacer(minLength: 0)
-
-                Text("\(nodeCount)")
-                    .font(.appMonospaced(size: 10, weight: .medium))
-                    .foregroundStyle(nativeSecondaryLabel)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 1)
-                    .background(nativeBadgeCapsule())
             }
-            .padding(.horizontal, 4)
-            .padding(.bottom, 2)
-
-            Divider()
-                .overlay(nativeSeparator)
-                .padding(.bottom, 1)
 
             let nodes = sortedGroupNodes(group)
             self.popoverNodesList(nodes) { node in
@@ -365,7 +333,7 @@ extension MenuBarRoot {
                 }
             }
         }
-        .onHover { hoveredProxyGroupName = self.nextHoveredName(
+        .onHover { hoveredProxyGroupName = self.nextHovered(
             current: hoveredProxyGroupName,
             target: group.name,
             isHovering: $0) }
@@ -376,9 +344,9 @@ extension MenuBarRoot {
         hasLeadingIcon: Bool) -> (name: CGFloat, current: CGFloat, delay: CGFloat)
     {
         let iconWidth: CGFloat = hasLeadingIcon ? MenuBarLayoutTokens.rowLeadingIconColumnWidth : 0
-        let actionWidth: CGFloat = 16
+        let actionWidth: CGFloat = 18
         let chevronWidth: CGFloat = 8
-        let spacingCount: CGFloat = hasLeadingIcon ? 4 : 3
+        let spacingCount: CGFloat = hasLeadingIcon ? 5 : 4
         let spacing = MenuBarLayoutTokens.hMicro * spacingCount
         let available = max(0, totalWidth - iconWidth - actionWidth - chevronWidth - spacing)
         let name = floor(available * 0.34)
@@ -409,21 +377,6 @@ extension MenuBarRoot {
     func proxyGroupIconURL(_ group: ProxyGroup) -> URL? {
         guard let icon = group.icon else { return nil }
         return URL(string: icon)
-    }
-
-    func compactGroupAction(
-        isLoading: Bool = false,
-        action: @escaping () async -> Void) -> some View
-    {
-        self.compactAsyncIconButton(
-            symbol: "gauge.with.dots.needle.50percent",
-            label: tr("ui.action.test_latency"),
-            tint: nativeTeal.opacity(0.96),
-            isLoading: isLoading,
-            size: 16,
-            fontSize: 10.5,
-            hierarchicalSymbol: true,
-            action: action)
     }
 
     func nodesSectionHeader(
@@ -457,8 +410,40 @@ extension MenuBarRoot {
         }
     }
 
-    func nextHoveredName(current: String?, target: String, isHovering: Bool) -> String? {
+    func nextHovered<T: Equatable>(current: T?, target: T, isHovering: Bool) -> T? {
         isHovering ? target : (current == target ? nil : current)
+    }
+
+    func popoverHeader(
+        name: String,
+        count: Int,
+        @ViewBuilder leading: () -> some View = { EmptyView() }) -> some View
+    {
+        VStack(spacing: 0) {
+            HStack(spacing: MenuBarLayoutTokens.hMicro) {
+                leading()
+
+                Text(name)
+                    .font(.appSystem(size: 12, weight: .semibold))
+                    .foregroundStyle(nativePrimaryLabel)
+                    .lineLimit(1)
+
+                Spacer(minLength: 0)
+
+                Text("\(count)")
+                    .font(.appMonospaced(size: 10, weight: .medium))
+                    .foregroundStyle(nativeSecondaryLabel)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(nativeBadgeCapsule())
+            }
+            .padding(.horizontal, 4)
+            .padding(.bottom, 2)
+
+            Divider()
+                .overlay(nativeSeparator)
+                .padding(.bottom, 1)
+        }
     }
 
     @ViewBuilder

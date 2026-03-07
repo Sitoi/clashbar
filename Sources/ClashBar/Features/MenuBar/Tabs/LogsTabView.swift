@@ -1,4 +1,3 @@
-import Foundation
 import SwiftUI
 
 extension MenuBarRoot {
@@ -12,16 +11,10 @@ extension MenuBarRoot {
                 emptyCard(tr("ui.empty.logs"))
             } else {
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(logs.enumerated()), id: \.element.id) { index, log in
+                    SeparatedForEach(data: logs, id: \.id, separator: nativeSeparator) { log in
                         self.logEntryRow(log)
                             .padding(.horizontal, MenuBarLayoutTokens.hRow)
                             .padding(.vertical, MenuBarLayoutTokens.vDense + 2)
-
-                        if index < logs.count - 1 {
-                            Rectangle()
-                                .fill(nativeSeparator)
-                                .frame(height: MenuBarLayoutTokens.hairline)
-                        }
                     }
                 }
             }
@@ -86,46 +79,53 @@ extension MenuBarRoot {
     }
 
     var logsSourceFilterButtons: some View {
-        HStack(spacing: MenuBarLayoutTokens.hMicro + 1) {
-            Image(systemName: "line.3.horizontal.decrease.circle")
-                .font(.appSystem(size: 10, weight: .semibold))
-                .foregroundStyle(nativeTertiaryLabel)
-
-            self.logFilterToggleButton(
-                title: tr("ui.log_source.all"),
-                selected: selectedLogSources == self.allLogSourceSelection,
-                action: { selectedLogSources = self.allLogSourceSelection })
-                .help(tr("ui.log_source.all"))
-
-            ForEach(AppLogSource.allCases) { source in
-                self.logFilterToggleButton(
-                    title: self.logSourcePresentation(source).label,
-                    selected: selectedLogSources.contains(source),
-                    action: { self.toggleLogSource(source) })
-                    .help(tr("ui.log_source.all"))
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        self.logFilterGroup(
+            symbol: "line.3.horizontal.decrease.circle",
+            allTitle: tr("ui.log_source.all"),
+            allSelected: selectedLogSources == self.allLogSourceSelection,
+            selectAll: { selectedLogSources = self.allLogSourceSelection },
+            items: AppLogSource.allCases,
+            itemTitle: { self.logSourcePresentation($0).label },
+            itemSelected: { selectedLogSources.contains($0) },
+            toggleItem: { self.toggleLogSource($0) })
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     var logsLevelFilterButtons: some View {
+        self.logFilterGroup(
+            symbol: "slider.horizontal.3",
+            allTitle: tr("ui.log_filter.all"),
+            allSelected: selectedLogLevels == self.allLogLevelSelection,
+            selectAll: { selectedLogLevels = self.allLogLevelSelection },
+            items: LogLevelFilter.allCases,
+            itemTitle: { tr($0.titleKey) },
+            itemSelected: { selectedLogLevels.contains($0) },
+            toggleItem: { self.toggleLogLevel($0) })
+    }
+
+    // swiftlint:disable:next function_parameter_count
+    private func logFilterGroup<T: Hashable>(
+        symbol: String,
+        allTitle: String,
+        allSelected: Bool,
+        selectAll: @escaping () -> Void,
+        items: [T],
+        itemTitle: @escaping (T) -> String,
+        itemSelected: @escaping (T) -> Bool,
+        toggleItem: @escaping (T) -> Void) -> some View
+    {
         HStack(spacing: MenuBarLayoutTokens.hMicro + 1) {
-            Image(systemName: "slider.horizontal.3")
+            Image(systemName: symbol)
                 .font(.appSystem(size: 10, weight: .semibold))
                 .foregroundStyle(nativeTertiaryLabel)
 
-            self.logFilterToggleButton(
-                title: tr("ui.log_filter.all"),
-                selected: selectedLogLevels == self.allLogLevelSelection,
-                action: { selectedLogLevels = self.allLogLevelSelection })
-                .help(tr("ui.log_filter.all"))
+            self.logFilterToggleButton(title: allTitle, selected: allSelected, action: selectAll)
 
-            ForEach(self.logSelectableLevels, id: \.self) { level in
+            ForEach(items, id: \.self) { item in
                 self.logFilterToggleButton(
-                    title: tr(level.titleKey),
-                    selected: selectedLogLevels.contains(level),
-                    action: { self.toggleLogLevel(level) })
-                    .help(tr("ui.settings.log_level"))
+                    title: itemTitle(item),
+                    selected: itemSelected(item),
+                    action: { toggleItem(item) })
             }
         }
     }
@@ -137,26 +137,19 @@ extension MenuBarRoot {
         action: @escaping () -> Void) -> some View
     {
         if selected {
-            Button(action: action) {
-                Text(title)
-                    .font(.appSystem(size: 11, weight: .medium))
-                    .lineLimit(1)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.small)
+            self.logFilterButtonLabel(title, action: action).buttonStyle(.borderedProminent)
         } else {
-            Button(action: action) {
-                Text(title)
-                    .font(.appSystem(size: 11, weight: .medium))
-                    .lineLimit(1)
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
+            self.logFilterButtonLabel(title, action: action).buttonStyle(.bordered)
         }
     }
 
-    var logSelectableLevels: [LogLevelFilter] {
-        [.info, .warning, .error]
+    private func logFilterButtonLabel(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.appSystem(size: 11, weight: .medium))
+                .lineLimit(1)
+        }
+        .controlSize(.small)
     }
 
     var allLogSourceSelection: Set<AppLogSource> {
@@ -164,22 +157,11 @@ extension MenuBarRoot {
     }
 
     var allLogLevelSelection: Set<LogLevelFilter> {
-        Set(self.logSelectableLevels)
+        Set(LogLevelFilter.allCases)
     }
 
     func logsCountSummaryBadge(filteredCount: Int) -> some View {
-        HStack(spacing: MenuBarLayoutTokens.hMicro) {
-            Text("\(filteredCount)")
-                .font(.appMonospaced(size: 11, weight: .bold))
-            Text("/")
-                .font(.appMonospaced(size: 10, weight: .medium))
-            Text("\(appState.errorLogs.count)")
-                .font(.appMonospaced(size: 11, weight: .medium))
-        }
-        .foregroundStyle(nativeSecondaryLabel)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 2)
-        .background(nativeBadgeCapsule())
+        self.fractionSummaryBadge(current: filteredCount, total: appState.errorLogs.count)
     }
 
     func toggleLogSource(_ source: AppLogSource) {
@@ -196,7 +178,7 @@ extension MenuBarRoot {
     }
 
     var trimmedLogKeyword: String {
-        logSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        logSearchText.trimmed
     }
 
     func resetLogFilters() {
@@ -309,7 +291,7 @@ extension MenuBarRoot {
     }
 
     func normalizedLogLevel(_ raw: String) -> String {
-        let lower = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let lower = raw.trimmed.lowercased()
         if lower.contains("error") || lower.contains("err") {
             return "ERROR"
         }
@@ -345,7 +327,7 @@ extension MenuBarRoot {
                 tr("ui.log_filter.warning"),
                 nativeWarning.opacity(0.92),
                 "exclamationmark.triangle.fill")
-        case .all, .info:
+        case .info:
             return (
                 LogLevelFilter.info,
                 tr("ui.log_filter.info"),
@@ -367,7 +349,7 @@ extension MenuBarRoot {
 
     func parseLogMessage(_ raw: String)
     -> (protocolTag: String?, protocolColor: Color, mainText: String, detailText: String?) {
-        var message = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        var message = raw.trimmed
         if message.isEmpty {
             return (nil, nativeSecondaryLabel, tr("ui.common.na"), nil)
         }
@@ -379,15 +361,14 @@ extension MenuBarRoot {
         var detailText: String?
         if let trailingBracket = firstRegexCapture(in: message, regex: CachedLogRegex.trailingBracket) {
             detailText = trailingBracket
-            message = message.replacingOccurrences(of: trailingBracket, with: "")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
+            message = message.replacingOccurrences(of: trailingBracket, with: "").trimmed
         }
 
         var protocolTag: String?
         var protocolColor = nativeAccent.opacity(0.90)
         if let tag = firstRegexCapture(in: message, regex: CachedLogRegex.protocolTag) {
             protocolTag = tag
-            message = message.replacingOccurrences(of: tag, with: "").trimmingCharacters(in: .whitespacesAndNewlines)
+            message = message.replacingOccurrences(of: tag, with: "").trimmed
 
             let upper = tag.uppercased()
             if upper.contains("UDP") { protocolColor = nativeWarning.opacity(0.90) }
@@ -396,7 +377,7 @@ extension MenuBarRoot {
         }
 
         if message.isEmpty {
-            message = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            message = raw.trimmed
         }
         return (protocolTag, protocolColor, message, detailText)
     }

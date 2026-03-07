@@ -13,6 +13,7 @@ extension AppState {
     }
 
     func copyAllLogs() {
+        self.flushPendingMihomoLogsIfNeeded()
         let content = errorLogs
             .map(formattedLogEntry)
             .joined(separator: "\n")

@@ -1,8 +1,40 @@
 import SwiftUI
 
 extension MenuBarRoot {
+    var panelVerticalPadding: CGFloat {
+        0
+    }
+
+    var clampedPreferredPanelHeight: CGFloat {
+        max(1, min(popoverLayoutModel.preferredPanelHeight, popoverLayoutModel.maxPanelHeight))
+    }
+
+    var maxPanelContentHeight: CGFloat {
+        max(0, popoverLayoutModel.maxPanelHeight - self.panelVerticalPadding)
+    }
+
+    var currentPanelContentHeight: CGFloat {
+        max(0, self.clampedPreferredPanelHeight - self.panelVerticalPadding)
+    }
+
+    var hasMeasuredFixedSections: Bool {
+        topHeaderHeight > 0 && modeAndTabSectionHeight > 0 && footerBarHeight > 0
+    }
+
+    var hasMeasuredCurrentTabContent: Bool {
+        tabContentHeights[currentTab] != nil
+    }
+
+    var hasMeasuredLayoutForCurrentTab: Bool {
+        self.hasMeasuredFixedSections && self.hasMeasuredCurrentTabContent
+    }
+
+    var unresolvedTabScrollAreaHeight: CGFloat {
+        max(0, self.currentPanelContentHeight - self.fixedSectionHeight)
+    }
+
     var measuredTabContentHeight: CGFloat {
-        max(1, tabContentHeights[currentTab] ?? fallbackTabContentHeight)
+        max(1, tabContentHeights[currentTab] ?? self.unresolvedTabScrollAreaHeight)
     }
 
     var fixedSectionHeight: CGFloat {
@@ -10,15 +42,17 @@ extension MenuBarRoot {
     }
 
     var maxScrollableContentHeight: CGFloat {
-        max(0, popoverLayoutModel.maxPanelHeight - self.fixedSectionHeight)
+        max(0, self.maxPanelContentHeight - self.fixedSectionHeight)
     }
 
     var tabScrollAreaHeight: CGFloat {
-        min(self.measuredTabContentHeight, self.maxScrollableContentHeight)
+        guard self.hasMeasuredLayoutForCurrentTab else { return self.unresolvedTabScrollAreaHeight }
+        return min(self.measuredTabContentHeight, self.maxScrollableContentHeight)
     }
 
     var resolvedPanelHeight: CGFloat {
-        let target = self.fixedSectionHeight + self.tabScrollAreaHeight
+        guard self.hasMeasuredLayoutForCurrentTab else { return self.clampedPreferredPanelHeight }
+        let target = self.fixedSectionHeight + self.tabScrollAreaHeight + self.panelVerticalPadding
         return max(1, min(target, popoverLayoutModel.maxPanelHeight))
     }
 
@@ -56,39 +90,10 @@ extension MenuBarRoot {
     }
 
     func publishPreferredPanelHeight() {
-        let clampedHeight = max(1, min(resolvedPanelHeight, popoverLayoutModel.maxPanelHeight)).rounded(.down)
+        guard self.hasMeasuredLayoutForCurrentTab else { return }
+        let clampedHeight = max(1, min(resolvedPanelHeight, popoverLayoutModel.maxPanelHeight)).rounded(.up)
         guard abs(popoverLayoutModel.preferredPanelHeight - clampedHeight) > 0.5 else { return }
 
         popoverLayoutModel.preferredPanelHeight = clampedHeight
-    }
-
-    func menuPanelTabHint(for tab: RootTab) -> MenuPanelTabHint {
-        switch tab {
-        case .proxy:
-            .proxy
-        case .rules:
-            .rules
-        case .activity:
-            .activity
-        case .logs:
-            .logs
-        case .system:
-            .system
-        }
-    }
-
-    func rootTab(for hint: MenuPanelTabHint) -> RootTab {
-        switch hint {
-        case .proxy:
-            .proxy
-        case .rules:
-            .rules
-        case .activity:
-            .activity
-        case .logs:
-            .logs
-        case .system:
-            .system
-        }
     }
 }

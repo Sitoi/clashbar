@@ -86,25 +86,16 @@ struct ConnectionMetadata: Codable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let dynamic = try decoder.container(keyedBy: ConnectionAnyCodingKey.self)
 
-        self.network = try ConnectionAnyCodingKey.nonEmpty(
-            container.decodeIfPresent(String.self, forKey: .network)) ?? ConnectionAnyCodingKey.decodeString(
-            in: dynamic,
-            keys: ["networkType", "type"])
-
-        self.sourceIP = try ConnectionAnyCodingKey.nonEmpty(
-            container.decodeIfPresent(String.self, forKey: .sourceIP)) ?? ConnectionAnyCodingKey.decodeString(
-            in: dynamic,
-            keys: ["source_ip", "source", "clientIP"])
-
-        self.destinationIP = try ConnectionAnyCodingKey.nonEmpty(
-            container.decodeIfPresent(String.self, forKey: .destinationIP)) ?? ConnectionAnyCodingKey.decodeString(
-            in: dynamic,
-            keys: ["destination_ip", "destination", "remoteIP", "remoteAddress"])
-
-        self.host = try ConnectionAnyCodingKey.nonEmpty(
-            container.decodeIfPresent(String.self, forKey: .host)) ?? ConnectionAnyCodingKey.decodeString(
-            in: dynamic,
-            keys: ["destinationHost", "remoteHost", "addr"])
+        self.network = try container.decodeIfPresent(String.self, forKey: .network).trimmedNonEmpty
+            ?? ConnectionAnyCodingKey.decodeString(in: dynamic, keys: ["networkType", "type"])
+        self.sourceIP = try container.decodeIfPresent(String.self, forKey: .sourceIP).trimmedNonEmpty
+            ?? ConnectionAnyCodingKey.decodeString(in: dynamic, keys: ["source_ip", "source", "clientIP"])
+        self.destinationIP = try container.decodeIfPresent(String.self, forKey: .destinationIP).trimmedNonEmpty
+            ?? ConnectionAnyCodingKey.decodeString(
+                in: dynamic,
+                keys: ["destination_ip", "destination", "remoteIP", "remoteAddress"])
+        self.host = try container.decodeIfPresent(String.self, forKey: .host).trimmedNonEmpty
+            ?? ConnectionAnyCodingKey.decodeString(in: dynamic, keys: ["destinationHost", "remoteHost", "addr"])
     }
 }
 
@@ -122,35 +113,15 @@ private struct ConnectionAnyCodingKey: CodingKey {
         self.intValue = intValue
     }
 
-    static func nonEmpty(_ value: String?) -> String? {
-        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines)
-        return (trimmed?.isEmpty == false) ? trimmed : nil
-    }
-
     static func decodeString(
         in container: KeyedDecodingContainer<ConnectionAnyCodingKey>,
         keys: [String]) -> String?
     {
         for keyName in keys {
-            guard let key = ConnectionAnyCodingKey(stringValue: keyName) else { continue }
-
-            if let raw = try? container.decodeIfPresent(String.self, forKey: key),
-               let value = nonEmpty(raw)
-            {
-                return value
-            }
-
-            if let value = try? container.decodeIfPresent(Int.self, forKey: key) {
-                return "\(value)"
-            }
-
-            if let value = try? container.decodeIfPresent(Int64.self, forKey: key) {
-                return "\(value)"
-            }
-
-            if let value = try? container.decodeIfPresent(Double.self, forKey: key) {
-                return "\(value)"
-            }
+            guard let key = ConnectionAnyCodingKey(stringValue: keyName),
+                  let value = container.decodeFlexibleString(forKey: key)
+            else { continue }
+            return value
         }
         return nil
     }
@@ -163,14 +134,14 @@ private struct ConnectionAnyCodingKey: CodingKey {
             guard let key = ConnectionAnyCodingKey(stringValue: keyName) else { continue }
 
             if let rawValues = try? container.decodeIfPresent([String].self, forKey: key) {
-                let values = rawValues.compactMap(self.nonEmpty)
+                let values = rawValues.compactMap(\.trimmedNonEmpty)
                 if !values.isEmpty {
                     return values
                 }
             }
 
             if let rawValue = try? container.decodeIfPresent(String.self, forKey: key),
-               let value = nonEmpty(rawValue)
+               let value = rawValue.trimmedNonEmpty
             {
                 return [value]
             }

@@ -33,14 +33,8 @@ extension MenuBarRoot {
                 emptyCard(tr("ui.empty.connections"))
             } else {
                 LazyVStack(spacing: 0) {
-                    ForEach(Array(connections.enumerated()), id: \.element.id) { index, conn in
+                    SeparatedForEach(data: connections, id: \.id, separator: nativeSeparator) { conn in
                         self.connectionRow(conn)
-
-                        if index < connections.count - 1 {
-                            Rectangle()
-                                .fill(nativeSeparator)
-                                .frame(height: MenuBarLayoutTokens.hairline)
-                        }
                     }
                 }
             }
@@ -105,68 +99,33 @@ extension MenuBarRoot {
     }
 
     var activityFilterMenu: some View {
-        Menu {
-            ForEach(NetworkTransportFilter.allCases) { filter in
-                Button {
-                    self.networkTransportFilter = filter
-                } label: {
-                    if self.networkTransportFilter == filter {
-                        Label(self.tr(filter.titleKey), systemImage: "checkmark")
-                    } else {
-                        Text(self.tr(filter.titleKey))
-                    }
-                }
-            }
-        } label: {
-            Label(self.tr(self.networkTransportFilter.titleKey), systemImage: "line.3.horizontal.decrease.circle")
-                .font(.appSystem(size: 11, weight: .medium))
-                .lineLimit(1)
-        }
-        .buttonStyle(.bordered)
-        .controlSize(.small)
-        .help(tr("ui.network.filter.transport"))
+        self.compactSelectionMenu(
+            selection: self.networkTransportFilter,
+            options: NetworkTransportFilter.allCases,
+            symbol: "line.3.horizontal.decrease.circle",
+            helpText: tr("ui.network.filter.transport"),
+            optionTitle: { self.tr($0.titleKey) },
+            onSelect: { self.networkTransportFilter = $0 })
     }
 
     var activitySortMenu: some View {
-        Menu {
-            ForEach(NetworkSortOption.allCases) { option in
-                Button {
-                    self.networkSortOption = option
-                } label: {
-                    if self.networkSortOption == option {
-                        Label(self.tr(option.titleKey), systemImage: "checkmark")
-                    } else {
-                        Text(self.tr(option.titleKey))
-                    }
-                }
-            }
-        } label: {
-            Label(self.tr(self.networkSortOption.titleKey), systemImage: "arrow.up.arrow.down")
-                .font(.appSystem(size: 11, weight: .medium))
-                .lineLimit(1)
-        }
-        .buttonStyle(.bordered)
-        .controlSize(.small)
-        .help(tr("ui.network.sort.label"))
+        self.compactSelectionMenu(
+            selection: self.networkSortOption,
+            options: NetworkSortOption.allCases,
+            symbol: "arrow.up.arrow.down",
+            helpText: tr("ui.network.sort.label"),
+            optionTitle: { self.tr($0.titleKey) },
+            onSelect: { self.networkSortOption = $0 })
     }
 
     var networkCountSummaryBadge: some View {
-        HStack(spacing: MenuBarLayoutTokens.hMicro) {
-            Text("\(self.filteredConnections.count)")
-                .font(.appMonospaced(size: 11, weight: .bold))
-            Text("/")
-                .font(.appMonospaced(size: 10, weight: .medium))
-            Text("\(self.networkSourceConnections.count)")
-                .font(.appMonospaced(size: 11, weight: .medium))
-        }
-        .foregroundStyle(nativeSecondaryLabel)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 2)
-        .background(nativeBadgeCapsule())
+        self.fractionSummaryBadge(
+            current: self.filteredConnections.count,
+            total: self.networkSourceConnections.count)
     }
 
     var trimmedNetworkKeyword: String {
-        self.networkFilterText.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.networkFilterText.trimmed
     }
 
     var hasActiveNetworkControls: Bool {
@@ -214,31 +173,28 @@ extension MenuBarRoot {
                 return lhs.id.localizedStandardCompare(rhs.id) == .orderedAscending
             }
         case .uploadDesc:
-            source.sorted { lhs, rhs in
-                let left = lhs.upload ?? 0
-                let right = rhs.upload ?? 0
-                if left != right { return left > right }
-                return (self.connectionSortTimestamp(lhs.start) ?? -1) > (self.connectionSortTimestamp(rhs.start) ?? -1)
-            }
+            self.connectionsSortedByTraffic(source) { $0.upload ?? 0 }
         case .downloadDesc:
-            source.sorted { lhs, rhs in
-                let left = lhs.download ?? 0
-                let right = rhs.download ?? 0
-                if left != right { return left > right }
-                return (self.connectionSortTimestamp(lhs.start) ?? -1) > (self.connectionSortTimestamp(rhs.start) ?? -1)
-            }
+            self.connectionsSortedByTraffic(source) { $0.download ?? 0 }
         case .totalDesc:
-            source.sorted { lhs, rhs in
-                let left = (lhs.upload ?? 0) + (lhs.download ?? 0)
-                let right = (rhs.upload ?? 0) + (rhs.download ?? 0)
-                if left != right { return left > right }
-                return (self.connectionSortTimestamp(lhs.start) ?? -1) > (self.connectionSortTimestamp(rhs.start) ?? -1)
-            }
+            self.connectionsSortedByTraffic(source) { ($0.upload ?? 0) + ($0.download ?? 0) }
+        }
+    }
+
+    private func connectionsSortedByTraffic(
+        _ source: [ConnectionSummary],
+        _ metric: (ConnectionSummary) -> Int64) -> [ConnectionSummary]
+    {
+        source.sorted { lhs, rhs in
+            let left = metric(lhs)
+            let right = metric(rhs)
+            if left != right { return left > right }
+            return (self.connectionSortTimestamp(lhs.start) ?? -1) > (self.connectionSortTimestamp(rhs.start) ?? -1)
         }
     }
 
     func connectionSortTimestamp(_ start: String?) -> TimeInterval? {
-        guard let value = self.trimmedNonEmpty(start) else { return nil }
+        guard let value = start.trimmedNonEmpty else { return nil }
         if let date = Self.activityISO8601WithFractional.date(from: value) {
             return date.timeIntervalSince1970
         }
@@ -248,19 +204,18 @@ extension MenuBarRoot {
     func connectionRow(_ conn: ConnectionSummary) -> some View {
         let visual = self.connectionVisual(for: conn)
         let hovered = hoveredConnectionID == conn.id
-        let host = conn.metadata?.host?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let destinationIP = conn.metadata?.destinationIP?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let hostText = self.trimmedNonEmpty(host) ?? self.trimmedNonEmpty(destinationIP) ?? tr("ui.common.na")
-        let networkType = self.trimmedNonEmpty(conn.metadata?.network)?.uppercased() ?? "--"
+        let hostText = conn.metadata?.host.trimmedNonEmpty
+            ?? conn.metadata?.destinationIP.trimmedNonEmpty
+            ?? tr("ui.common.na")
+        let networkType = conn.metadata?.network.trimmedNonEmpty?.uppercased() ?? "--"
         let timeText = self.connectionTimeOnly(conn.start)
         let upText = ValueFormatter.bytesCompactNoSpace(conn.upload ?? 0)
         let downText = ValueFormatter.bytesCompactNoSpace(conn.download ?? 0)
         let parsedRule = self.parseConnectionRule(conn.rule)
         let ruleTypeText = self.connectionRuleTypeText(conn.rule, fallback: parsedRule?.type)
-        let rulePayloadText = self.trimmedNonEmpty(conn.rulePayload)
-            ?? self.trimmedNonEmpty(parsedRule?.payload)
+        let rulePayloadText = conn.rulePayload.trimmedNonEmpty
+            ?? parsedRule?.payload.trimmedNonEmpty
             ?? "--"
-        let chainParts = self.connectionChainsParts(conn.chains)
 
         return HStack(alignment: .center, spacing: MenuBarLayoutTokens.hDense) {
             Image(systemName: visual.symbol)
@@ -272,112 +227,117 @@ extension MenuBarRoot {
                     alignment: .center)
 
             VStack(alignment: .leading, spacing: MenuBarLayoutTokens.vDense) {
-                GeometryReader { proxy in
-                    let layout = self.activityTopLineLayout(
-                        totalWidth: max(proxy.size.width, 0),
-                        ruleText: ruleTypeText,
-                        payloadText: rulePayloadText)
-
-                    HStack(spacing: ActivityLayout.topLineSpacing) {
-                        Text(hostText)
-                            .font(.appSystem(size: 12, weight: .semibold))
-                            .foregroundStyle(nativePrimaryLabel)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                            .frame(width: layout.hostWidth, alignment: .leading)
-
-                        HStack(spacing: ActivityLayout.topMetaSpacing) {
-                            self.activityTopBadge(text: ruleTypeText)
-                                .frame(width: layout.ruleWidth, alignment: .trailing)
-                            self.activityTopPayload(text: rulePayloadText)
-                                .frame(width: layout.payloadWidth, alignment: .trailing)
-                        }
-                        .frame(
-                            width: layout.ruleWidth + ActivityLayout.topMetaSpacing + layout.payloadWidth,
-                            alignment: .trailing)
-                    }
-                }
-                .frame(height: ActivityLayout.rowLineHeight)
-
-                GeometryReader { proxy in
-                    let totalWidth = max(proxy.size.width, 0)
-                    let columnWidth = max((totalWidth - (ActivityLayout.secondLineSpacing * 3)) / 4, 0)
-
-                    HStack(spacing: ActivityLayout.secondLineSpacing) {
-                        self.activityMetricColumn(
-                            symbol: "clock",
-                            text: timeText,
-                            fallback: tr("ui.common.na"),
-                            width: columnWidth)
-
-                        self.activityMetricColumn(
-                            symbol: "network",
-                            text: networkType,
-                            fallback: tr("ui.common.na"),
-                            width: columnWidth)
-
-                        self.activityMetricColumn(
-                            symbol: "arrow.up",
-                            text: upText,
-                            symbolColor: nativeInfo.opacity(0.9),
-                            spacing: 0,
-                            truncation: .tail,
-                            width: columnWidth)
-
-                        self.activityMetricColumn(
-                            symbol: "arrow.down",
-                            text: downText,
-                            symbolColor: nativePositive.opacity(0.9),
-                            spacing: 0,
-                            truncation: .tail,
-                            width: columnWidth)
-                    }
-                }
-                .frame(height: ActivityLayout.rowLineHeight)
-
-                self.activityChainsLine(parts: chainParts)
+                self.connectionRowTopLine(host: hostText, ruleType: ruleTypeText, rulePayload: rulePayloadText)
+                self.connectionRowMetrics(time: timeText, network: networkType, up: upText, down: downText)
+                self.activityChainsLine(parts: self.connectionChainsParts(conn.chains))
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            Button {
-                Task { await appState.closeConnection(id: conn.id) }
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.appSystem(size: 8, weight: .semibold))
-                    .frame(width: 10, height: 10)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(hovered ? nativeSecondaryLabel : nativeTertiaryLabel)
-            .frame(width: 12, height: 12)
-            .opacity(hovered ? 1 : 0)
-            .animation(.easeInOut(duration: 0.14), value: hovered)
+            self.connectionRowCloseButton(id: conn.id, hovered: hovered)
         }
         .padding(.horizontal, MenuBarLayoutTokens.hRow)
         .padding(.vertical, MenuBarLayoutTokens.vDense + 1)
         .background(nativeHoverRowBackground(hovered))
-        .onHover { isHovering in
-            hoveredConnectionID = isHovering ? conn.id : (hoveredConnectionID == conn.id ? nil : hoveredConnectionID)
-        }
-        .contextMenu {
-            Button(role: .destructive) {
-                Task { await appState.closeConnection(id: conn.id) }
-            } label: {
-                Label(tr("ui.action.close_connection"), systemImage: "xmark.circle")
-            }
+        .onHover { hoveredConnectionID = self.nextHovered(
+            current: hoveredConnectionID, target: conn.id, isHovering: $0) }
+        .contextMenu { self.connectionRowContextMenu(conn) }
+    }
 
-            if let host = appState.resolvedConnectionHost(for: conn) {
-                Button {
-                    appState.copyConnectionHost(host)
-                } label: {
-                    Label(tr("ui.action.copy_host"), systemImage: "doc.on.doc")
+    private func connectionRowTopLine(host: String, ruleType: String, rulePayload: String) -> some View {
+        GeometryReader { proxy in
+            let layout = self.activityTopLineLayout(
+                totalWidth: max(proxy.size.width, 0),
+                ruleText: ruleType,
+                payloadText: rulePayload)
+
+            HStack(spacing: ActivityLayout.topLineSpacing) {
+                Text(host)
+                    .font(.appSystem(size: 12, weight: .semibold))
+                    .foregroundStyle(nativePrimaryLabel)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(width: layout.hostWidth, alignment: .leading)
+
+                HStack(spacing: ActivityLayout.topMetaSpacing) {
+                    self.activityTopBadge(text: ruleType)
+                        .frame(width: layout.ruleWidth, alignment: .trailing)
+                    self.activityTopPayload(text: rulePayload)
+                        .frame(width: layout.payloadWidth, alignment: .trailing)
                 }
+                .frame(
+                    width: layout.ruleWidth + ActivityLayout.topMetaSpacing + layout.payloadWidth,
+                    alignment: .trailing)
             }
+        }
+        .frame(height: ActivityLayout.rowLineHeight)
+    }
 
-            Button {
-                appState.copyConnectionID(conn.id)
-            } label: {
-                Label(tr("ui.action.copy_connection_id"), systemImage: "number")
+    private func connectionRowMetrics(time: String, network: String, up: String, down: String) -> some View {
+        GeometryReader { proxy in
+            let totalWidth = max(proxy.size.width, 0)
+            let columnWidth = max((totalWidth - (ActivityLayout.secondLineSpacing * 3)) / 4, 0)
+
+            HStack(spacing: ActivityLayout.secondLineSpacing) {
+                self.activityMetricColumn(symbol: "clock", text: time, fallback: tr("ui.common.na"), width: columnWidth)
+                self.activityMetricColumn(
+                    symbol: "network",
+                    text: network,
+                    fallback: tr("ui.common.na"),
+                    width: columnWidth)
+                self.activityMetricColumn(
+                    symbol: "arrow.up",
+                    text: up,
+                    symbolColor: nativeInfo.opacity(0.9),
+                    spacing: 0,
+                    truncation: .tail,
+                    width: columnWidth)
+                self.activityMetricColumn(
+                    symbol: "arrow.down",
+                    text: down,
+                    symbolColor: nativePositive.opacity(0.9),
+                    spacing: 0,
+                    truncation: .tail,
+                    width: columnWidth)
             }
+        }
+        .frame(height: ActivityLayout.rowLineHeight)
+    }
+
+    private func connectionRowCloseButton(id: String, hovered: Bool) -> some View {
+        Button {
+            Task { await appState.closeConnection(id: id) }
+        } label: {
+            Image(systemName: "xmark")
+                .font(.appSystem(size: 8, weight: .semibold))
+                .frame(width: 10, height: 10)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(hovered ? nativeSecondaryLabel : nativeTertiaryLabel)
+        .frame(width: 12, height: 12)
+        .opacity(hovered ? 1 : 0)
+        .animation(.easeInOut(duration: 0.14), value: hovered)
+    }
+
+    @ViewBuilder
+    private func connectionRowContextMenu(_ conn: ConnectionSummary) -> some View {
+        Button(role: .destructive) {
+            Task { await appState.closeConnection(id: conn.id) }
+        } label: {
+            Label(tr("ui.action.close_connection"), systemImage: "xmark.circle")
+        }
+
+        if let host = appState.resolvedConnectionHost(for: conn) {
+            Button {
+                appState.copyConnectionHost(host)
+            } label: {
+                Label(tr("ui.action.copy_host"), systemImage: "doc.on.doc")
+            }
+        }
+
+        Button {
+            appState.copyConnectionID(conn.id)
+        } label: {
+            Label(tr("ui.action.copy_connection_id"), systemImage: "number")
         }
     }
 
@@ -510,7 +470,7 @@ extension MenuBarRoot {
     }
 
     func connectionRuleTypeText(_ raw: String?, fallback: String?) -> String {
-        let candidate = self.trimmedNonEmpty(fallback) ?? self.trimmedNonEmpty(raw) ?? ""
+        let candidate = fallback.trimmedNonEmpty ?? raw.trimmedNonEmpty ?? ""
         guard !candidate.isEmpty else { return "--" }
 
         let normalized = candidate.uppercased()
@@ -519,37 +479,32 @@ extension MenuBarRoot {
     }
 
     func connectionChainsParts(_ chains: [String]?) -> [String] {
-        Array((chains ?? []).compactMap(self.trimmedNonEmpty).reversed())
+        Array((chains ?? []).compactMap(\.trimmedNonEmpty).reversed())
     }
 
     func parseConnectionRule(_ raw: String?) -> (type: String, payload: String?)? {
-        guard let raw = trimmedNonEmpty(raw) else {
+        guard let raw = raw.trimmedNonEmpty else {
             return nil
         }
 
         if let open = raw.firstIndex(of: "("), let close = raw.lastIndex(of: ")"), open < close {
-            let type = raw[..<open].trimmingCharacters(in: .whitespacesAndNewlines)
-            let payload = raw[raw.index(after: open)..<close].trimmingCharacters(in: .whitespacesAndNewlines)
-            if !type.isEmpty {
-                return (String(type), payload.isEmpty ? nil : String(payload))
+            let type = raw[..<open].trimmed
+            let payload = raw[raw.index(after: open)..<close].trimmed
+            if let type = type.nonEmpty {
+                return (type, payload.nonEmpty)
             }
         }
 
         let commaParts = raw.split(separator: ",", maxSplits: 1, omittingEmptySubsequences: false)
         if commaParts.count == 2 {
-            let type = commaParts[0].trimmingCharacters(in: .whitespacesAndNewlines)
-            let payload = commaParts[1].trimmingCharacters(in: .whitespacesAndNewlines)
-            if !type.isEmpty {
-                return (String(type), payload.isEmpty ? nil : String(payload))
+            let type = commaParts[0].trimmed
+            let payload = commaParts[1].trimmed
+            if let type = type.nonEmpty {
+                return (type, payload.nonEmpty)
             }
         }
 
         return (raw, nil)
-    }
-
-    func trimmedNonEmpty(_ value: String?) -> String? {
-        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return trimmed.isEmpty ? nil : trimmed
     }
 
     func connectionTimeOnly(_ input: String?) -> String {
@@ -561,43 +516,29 @@ extension MenuBarRoot {
     func connectionVisual(for conn: ConnectionSummary) -> (symbol: String, color: Color) {
         let host = conn.metadata?.host?.lowercased() ?? ""
         let network = conn.metadata?.network?.lowercased() ?? ""
-        let symbol = if host.contains("google") || host.contains("gstatic") {
-            "shield.fill"
-        } else if host.contains("icloud") || host.contains("apple") {
-            "icloud.fill"
-        } else if host.contains("github") {
-            "terminal.fill"
-        } else if host.contains("twitter") || host.contains("x.com") {
-            "lock.fill"
-        } else if host.contains("amazon") {
-            "cart.fill"
-        } else if network.contains("udp") {
-            "dot.radiowaves.left.and.right"
-        } else if network.contains("tcp") {
-            "network"
-        } else {
-            "globe"
-        }
 
-        let iconColor: Color = switch symbol {
-        case "shield.fill":
-            nativePurple.opacity(0.92)
-        case "icloud.fill":
-            nativeInfo.opacity(0.92)
-        case "terminal.fill":
-            nativeIndigo.opacity(0.9)
-        case "lock.fill":
-            nativePositive.opacity(0.92)
-        case "cart.fill":
-            nativeWarning.opacity(0.92)
-        case "dot.radiowaves.left.and.right":
-            nativeTeal.opacity(0.92)
-        case "network":
-            nativeInfo.opacity(0.92)
-        default:
-            nativeSecondaryLabel
+        if host.contains("google") || host.contains("gstatic") {
+            return ("shield.fill", nativePurple.opacity(0.92))
         }
-        return (symbol, iconColor)
+        if host.contains("icloud") || host.contains("apple") {
+            return ("icloud.fill", nativeInfo.opacity(0.92))
+        }
+        if host.contains("github") {
+            return ("terminal.fill", nativeIndigo.opacity(0.9))
+        }
+        if host.contains("twitter") || host.contains("x.com") {
+            return ("lock.fill", nativePositive.opacity(0.92))
+        }
+        if host.contains("amazon") {
+            return ("cart.fill", nativeWarning.opacity(0.92))
+        }
+        if network.contains("udp") {
+            return ("dot.radiowaves.left.and.right", nativeTeal.opacity(0.92))
+        }
+        if network.contains("tcp") {
+            return ("network", nativeInfo.opacity(0.92))
+        }
+        return ("globe", nativeSecondaryLabel)
     }
 
     func connectionSearchText(for conn: ConnectionSummary) -> String {

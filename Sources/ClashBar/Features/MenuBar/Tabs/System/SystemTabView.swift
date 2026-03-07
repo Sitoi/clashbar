@@ -18,21 +18,15 @@ extension MenuBarRoot {
     }
 
     var settingsFeedbackState: (message: String, color: Color, symbol: String)? {
-        if let error = appState.settingsErrorMessage?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !error.isEmpty
-        {
+        if let error = appState.settingsErrorMessage.trimmedNonEmpty {
             return (error, nativeCritical.opacity(0.92), "exclamationmark.triangle.fill")
         }
 
-        if let launchError = appState.launchAtLoginErrorMessage?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !launchError.isEmpty
-        {
+        if let launchError = appState.launchAtLoginErrorMessage.trimmedNonEmpty {
             return (launchError, nativeWarning.opacity(0.92), "exclamationmark.circle.fill")
         }
 
-        if let saved = appState.settingsSavedMessage?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !saved.isEmpty
-        {
+        if let saved = appState.settingsSavedMessage.trimmedNonEmpty {
             return (saved, nativePositive.opacity(0.92), "checkmark.circle.fill")
         }
 
@@ -55,11 +49,43 @@ extension MenuBarRoot {
             ("ui.settings.port.redir", "arrowshape.turn.up.right", $appState.settingsRedirPort),
             ("ui.settings.port.tproxy", "shield.lefthalf.filled", $appState.settingsTProxyPort),
         ]
-        let editableCoreToggleItems: [(setting: AppState.EditableCoreSetting, titleKey: String, symbol: String)] = [
-            (.allowLan, "ui.settings.allow_lan", "network"),
-            (.ipv6, "ui.settings.ipv6", "globe"),
-            (.unifiedDelay, "ui.settings.unified_delay", "gauge.with.dots.needle.50percent"),
-            (.tcpConcurrent, "ui.settings.tcp_concurrent", "point.3.connected.trianglepath.dotted"),
+        let toggleItems: [(id: String, title: String, symbol: String, isOn: Binding<Bool>)] = [
+            (
+                "launch-at-login",
+                tr("ui.settings.launch_at_login"),
+                "person.crop.circle.badge.checkmark",
+                Binding(
+                    get: { appState.launchAtLoginEnabled },
+                    set: { appState.applyLaunchAtLogin($0) })),
+            (
+                "auto-start-core",
+                tr("ui.settings.auto_start_core"),
+                "power.circle",
+                Binding(
+                    get: { appState.autoStartCoreEnabled },
+                    set: { appState.autoStartCoreEnabled = $0 })),
+            (
+                "auto-core-network-recovery",
+                tr("ui.settings.auto_core_network_recovery"),
+                "network.badge.shield.half.filled",
+                Binding(
+                    get: { appState.autoManageCoreOnNetworkChangeEnabled },
+                    set: { appState.autoManageCoreOnNetworkChangeEnabled = $0 })),
+            (
+                AppState.EditableCoreSetting.allowLan.id,
+                tr("ui.settings.allow_lan"),
+                "network",
+                self.editableCoreSettingBinding(.allowLan)),
+            (
+                AppState.EditableCoreSetting.ipv6.id,
+                tr("ui.settings.ipv6"),
+                "globe",
+                self.editableCoreSettingBinding(.ipv6)),
+            (
+                AppState.EditableCoreSetting.tcpConcurrent.id,
+                tr("ui.settings.tcp_concurrent"),
+                "point.3.connected.trianglepath.dotted",
+                self.editableCoreSettingBinding(.tcpConcurrent)),
         ]
         let maintenanceActions: [(titleKey: String, symbol: String, action: @MainActor () async -> Void)] = [
             ("ui.action.flush_fakeip_cache", "externaldrive.badge.minus", { await appState.flushFakeIPCache() }),
@@ -79,111 +105,49 @@ extension MenuBarRoot {
                 settingsCardHeader(
                     tr("ui.section.basic_settings"),
                     symbol: "slider.horizontal.3")
-                settingsDivider
-                settingsToggleRow(
-                    tr("ui.settings.launch_at_login"),
-                    symbol: "person.crop.circle.badge.checkmark",
-                    isOn: Binding(
-                        get: { appState.launchAtLoginEnabled },
-                        set: { appState.applyLaunchAtLogin($0) }))
-                settingsDivider
-                settingsToggleRow(
-                    tr("ui.settings.auto_start_core"),
-                    symbol: "power.circle",
-                    isOn: Binding(
-                        get: { appState.autoStartCoreEnabled },
-                        set: { appState.autoStartCoreEnabled = $0 }))
-                settingsDivider
-                settingsToggleRow(
-                    tr("ui.settings.auto_core_network_recovery"),
-                    symbol: "network.badge.shield.half.filled",
-                    isOn: Binding(
-                        get: { appState.autoManageCoreOnNetworkChangeEnabled },
-                        set: { appState.autoManageCoreOnNetworkChangeEnabled = $0 }))
-                settingsDivider
-                ForEach(editableCoreToggleItems, id: \.setting.id) { item in
-                    settingsToggleRow(
-                        tr(item.titleKey),
-                        symbol: item.symbol,
-                        isOn: self.editableCoreSettingBinding(item.setting))
-                    settingsDivider
+                ForEach(toggleItems, id: \.id) { item in
+                    settingsToggleRow(item.title, symbol: item.symbol, isOn: item.isOn)
                 }
-                settingsMenuRow(
+                settingsSelectionRow(
                     tr("ui.settings.menu_bar_style"),
                     symbol: "menubar.rectangle",
-                    valueText: statusBarModeLabel(appState.statusBarDisplayMode))
-                { dismiss in
-                    ForEach(StatusBarDisplayMode.allCases) { mode in
-                        AttachedPopoverMenuItem(
-                            title: statusBarModeLabel(mode),
-                            selected: appState.statusBarDisplayMode == mode)
-                        {
-                            appState.statusBarDisplayMode = mode
-                            dismiss()
-                        }
-                    }
-                }
-                settingsDivider
-                settingsMenuRow(
+                    valueText: statusBarModeLabel(appState.statusBarDisplayMode),
+                    options: StatusBarDisplayMode.allCases,
+                    optionTitle: self.statusBarModeLabel,
+                    isSelected: { appState.statusBarDisplayMode == $0 },
+                    onSelect: { appState.statusBarDisplayMode = $0 })
+                settingsSelectionRow(
                     tr("ui.settings.language"),
                     symbol: "character.book.closed",
-                    valueText: appState.uiLanguage == .zhHans ? tr("ui.language.zh_hans") : tr(
-                        "ui.language.en"))
-                { dismiss in
-                    AttachedPopoverMenuItem(
-                        title: tr("ui.language.zh_hans"),
-                        selected: appState.uiLanguage == .zhHans)
-                    {
-                        appState.setUILanguage(.zhHans)
-                        dismiss()
-                    }
-                    AttachedPopoverMenuItem(
-                        title: tr("ui.language.en"),
-                        selected: appState.uiLanguage == .en)
-                    {
-                        appState.setUILanguage(.en)
-                        dismiss()
-                    }
-                }
-                settingsDivider
-                settingsMenuRow(
+                    valueText: appState.uiLanguage == .zhHans ? tr("ui.language.zh_hans") : tr("ui.language.en"),
+                    options: AppLanguage.allCases,
+                    optionTitle: { $0 == .zhHans ? tr("ui.language.zh_hans") : tr("ui.language.en") },
+                    isSelected: { appState.uiLanguage == $0 },
+                    onSelect: appState.setUILanguage)
+                settingsSelectionRow(
                     tr("ui.settings.appearance"),
                     symbol: "circle.lefthalf.filled",
-                    valueText: appearanceModeLabel(appState.appearanceMode))
-                { dismiss in
-                    ForEach(AppAppearanceMode.allCases) { mode in
-                        AttachedPopoverMenuItem(
-                            title: appearanceModeLabel(mode),
-                            selected: appState.appearanceMode == mode)
-                        {
-                            appState.setAppearanceMode(mode)
-                            dismiss()
-                        }
-                    }
-                }
-                settingsDivider
-                settingsMenuRow(
+                    valueText: appearanceModeLabel(appState.appearanceMode),
+                    options: AppAppearanceMode.allCases,
+                    optionTitle: self.appearanceModeLabel,
+                    isSelected: { appState.appearanceMode == $0 },
+                    onSelect: appState.setAppearanceMode)
+                settingsSelectionRow(
                     tr("ui.settings.log_level"),
                     symbol: "text.alignleft",
-                    valueText: selectedLogLevel)
-                { dismiss in
-                    ForEach(ConfigLogLevel.allCases, id: \.rawValue) { level in
-                        AttachedPopoverMenuItem(
-                            title: level.rawValue,
-                            selected: selectedLogLevel.caseInsensitiveCompare(level.rawValue) == .orderedSame)
-                        {
-                            dismiss()
-                            Task { await appState.applyEditableCoreSetting(.logLevel, to: level.rawValue) }
-                        }
-                    }
-                }
+                    valueText: selectedLogLevel,
+                    options: ConfigLogLevel.allCases,
+                    optionTitle: \.rawValue,
+                    isSelected: { selectedLogLevel.caseInsensitiveCompare($0.rawValue) == .orderedSame },
+                    onSelect: { level in
+                        Task { await appState.applyEditableCoreSetting(.logLevel, to: level.rawValue) }
+                    })
             }
 
             VStack(spacing: 0) {
                 settingsCardHeader(
                     tr("ui.section.proxy_ports"),
                     symbol: "point.3.connected.trianglepath.dotted")
-                settingsDivider
 
                 VStack(alignment: .leading, spacing: MenuBarLayoutTokens.vDense + 2) {
                     HStack(spacing: MenuBarLayoutTokens.hDense) {
@@ -218,7 +182,6 @@ extension MenuBarRoot {
                 settingsCardHeader(
                     tr("ui.section.maintenance"),
                     symbol: "wrench.and.screwdriver")
-                settingsDivider
 
                 VStack(alignment: .leading, spacing: MenuBarLayoutTokens.vDense + 2) {
                     HStack(spacing: MenuBarLayoutTokens.hDense) {

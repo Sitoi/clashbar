@@ -1,13 +1,10 @@
 import Foundation
 
 enum TunModeError: LocalizedError {
-    case configNotSelected
     case runtimeStateMismatch(expected: Bool)
 
     var errorDescription: String? {
         switch self {
-        case .configNotSelected:
-            "No config file selected."
         case let .runtimeStateMismatch(expected):
             "TUN runtime state mismatch. expected=\(expected)"
         }
@@ -31,7 +28,6 @@ extension AppState {
 
             isTunEnabled = enabled
             persistEditableSettingsSnapshot()
-            try await self.persistTunConfigToSelectedFile(enabled: enabled, ensureDNSEnabled: enabled)
             try await self.applyTunRuntimeChange(enabled: enabled)
 
             appendLog(
@@ -45,10 +41,7 @@ extension AppState {
         }
     }
 
-    func prepareTunOverlayForCoreStartup(
-        configPath: String,
-        overlay: EditableSettingsSnapshot) async throws -> EditableSettingsSnapshot
-    {
+    func prepareTunOverlayForCoreStartup(_ overlay: EditableSettingsSnapshot) async throws -> EditableSettingsSnapshot {
         guard overlay.tunEnabled else { return overlay }
 
         do {
@@ -57,10 +50,6 @@ extension AppState {
             try await self.ensureTunPermissions(requestIfMissing: true)
             return overlay
         } catch {
-            try tunConfigFileService.patchConfig(
-                at: configPath,
-                tunEnabled: false,
-                ensureDNSEnabledWhenTunOn: false)
             isTunEnabled = false
             persistEditableSettingsSnapshot()
             appendLog(level: "warning", message: tr("log.tun.startup_disabled"))
@@ -74,7 +63,6 @@ extension AppState {
             try await self.ensureTunPermissions(requestIfMissing: false)
         } catch {
             do {
-                try? await self.persistTunConfigToSelectedFile(enabled: false, ensureDNSEnabled: false)
                 if isRuntimeRunning {
                     try await self.patchTunConfig(enable: false)
                 }
@@ -103,19 +91,8 @@ extension AppState {
             }
         }
 
-        if let fileError = error as? TunConfigFileServiceError {
-            switch fileError {
-            case .configPathEmpty, .configNotFound, .unableToReadConfig:
-                return tr("app.tun.error.config_unavailable")
-            case let .unableToWriteConfig(message):
-                return tr("app.tun.error.config_write_failed", message)
-            }
-        }
-
         if let tunModeError = error as? TunModeError {
             switch tunModeError {
-            case .configNotSelected:
-                return tr("app.tun.error.config_not_selected")
             case .runtimeStateMismatch:
                 return tr("app.tun.error.runtime_state_mismatch")
             }
@@ -161,29 +138,43 @@ extension AppState {
         }
     }
 
-    func persistTunConfigToSelectedFile(enabled: Bool, ensureDNSEnabled: Bool) async throws {
-        guard let configPath = await resolveSelectedConfigPath() else {
-            throw TunModeError.configNotSelected
+    func verifyTunAfterOverlayIfNeeded(overlay: EditableSettingsSnapshot) async {
+        guard overlay.tunEnabled, isRuntimeRunning else { return }
+        guard pendingCoreFeatureRecoveryState == nil else { return }
+
+        do {
+            let config = try await fetchRuntimeConfigSnapshot()
+            if config.tunEnabled == true {
+                isTunEnabled = true
+                persistEditableSettingsSnapshot()
+                return
+            }
+
+            try await self.patchTunConfig(enable: true)
+            try await self.verifyTunRuntimeState(expectedEnabled: true)
+            persistEditableSettingsSnapshot()
+            appendLog(level: "info", message: tr("log.tun.toggled", tr("log.tun.enabled")))
+        } catch {
+            appendLog(level: "error", message: tr("log.tun.toggle_failed", self.tunErrorMessage(error)))
         }
-        try tunConfigFileService.patchConfig(
-            at: configPath,
-            tunEnabled: enabled,
-            ensureDNSEnabledWhenTunOn: ensureDNSEnabled)
     }
 
     func applyTunRuntimeChange(enabled: Bool) async throws {
         guard isRuntimeRunning else { return }
-        await restartCore(trigger: .restart)
+        try await self.patchTunConfig(enable: enabled)
         try await self.verifyTunRuntimeState(expectedEnabled: enabled)
     }
 
     func verifyTunRuntimeState(expectedEnabled: Bool) async throws {
-        let maxAttempts = 15
+        let maxAttempts = 32
         for _ in 0..<maxAttempts {
             do {
                 let config = try await fetchRuntimeConfigSnapshot()
                 let current = config.tunEnabled ?? false
-                isTunEnabled = current
+                if isTunEnabled != current {
+                    isTunEnabled = current
+                    persistEditableSettingsSnapshot()
+                }
                 if current == expectedEnabled {
                     return
                 }
@@ -197,20 +188,108 @@ extension AppState {
 
     func patchTunConfig(enable: Bool) async throws {
         let client = try clientOrThrow()
-        var body: [String: JSONValue] = [
-            "tun": .object(["enable": .bool(enable)]),
-        ]
+        var tunBody: [String: JSONValue] = ["enable": .bool(enable)]
+
+        if enable, await !self.selectedConfigDeclaresTunStack() {
+            tunBody["stack"] = .string("mixed")
+        }
+
+        var body: [String: JSONValue] = ["tun": .object(tunBody)]
         if enable {
             body["dns"] = .object(["enable": .bool(true)])
         }
         try await client.requestNoResponse(.patchConfigs(body: body))
     }
 
+    func ensureTunMixedStackOnStartupIfNeeded() async {
+        guard self.isRuntimeRunning else { return }
+
+        do {
+            let config = try await fetchRuntimeConfigSnapshot()
+            guard config.tunEnabled == true else { return }
+            let hasConfiguredStack = await self.selectedConfigDeclaresTunStack()
+
+            let client = try clientOrThrow()
+            var body: [String: JSONValue] = [
+                "dns": .object(["enable": .bool(true)]),
+            ]
+            if !hasConfiguredStack {
+                body["tun"] = .object(["stack": .string("mixed")])
+            }
+            try await client.requestNoResponse(.patchConfigs(body: body))
+            if !hasConfiguredStack {
+                _ = try await fetchRuntimeConfigSnapshot()
+            }
+        } catch {
+            appendLog(level: "error", message: tr("log.tun.startup_check_failed", self.tunErrorMessage(error)))
+        }
+    }
+
+    func selectedConfigDeclaresTunStack() async -> Bool {
+        guard
+            let configPath = await resolveSelectedConfigPath(),
+            let raw = try? String(contentsOfFile: configPath, encoding: .utf8)
+        else {
+            return false
+        }
+
+        let lines = raw.replacingOccurrences(of: "\r\n", with: "\n").components(separatedBy: "\n")
+        guard let tunRange = self.topLevelBlockRange(for: "tun", lines: lines) else { return false }
+        return self.childLineExists(for: "stack", lines: lines, range: tunRange)
+    }
+
+    private func childLineExists(for key: String, lines: [String], range: Range<Int>) -> Bool {
+        for index in (range.lowerBound + 1)..<range.upperBound {
+            let line = lines[index]
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, !trimmed.hasPrefix("#") else { continue }
+
+            let leadingSpaces = line.prefix { $0 == " " || $0 == "\t" }.count
+            guard leadingSpaces > 0 else { continue }
+
+            let content = String(line.dropFirst(leadingSpaces)).trimmingCharacters(in: .whitespaces)
+            if content == "\(key):" || content.hasPrefix("\(key): ") {
+                return true
+            }
+        }
+        return false
+    }
+
+    private func topLevelBlockRange(for key: String, lines: [String]) -> Range<Int>? {
+        guard let start = lines.firstIndex(where: { self.isTopLevelKeyLine($0, key: key) }) else {
+            return nil
+        }
+
+        var end = lines.count
+        if start + 1 < lines.count {
+            for index in (start + 1)..<lines.count where self.isTopLevelMappingLine(lines[index]) {
+                end = index
+                break
+            }
+        }
+        return start..<end
+    }
+
+    private func isTopLevelKeyLine(_ line: String, key: String) -> Bool {
+        guard line.prefix(while: { $0 == " " || $0 == "\t" }).isEmpty else { return false }
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !trimmed.hasPrefix("#") else { return false }
+        return trimmed == "\(key):" || trimmed.hasPrefix("\(key): ")
+    }
+
+    private func isTopLevelMappingLine(_ line: String) -> Bool {
+        guard line.prefix(while: { $0 == " " || $0 == "\t" }).isEmpty else { return false }
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !trimmed.hasPrefix("#") else { return false }
+        return trimmed.contains(":")
+    }
+
     func refreshTunStatusFromRuntimeConfig() async {
         do {
             let config = try await fetchRuntimeConfigSnapshot()
-            if let tunEnabled = config.tunEnabled {
+            if let tunEnabled = config.tunEnabled, isTunEnabled != tunEnabled {
                 isTunEnabled = tunEnabled
+                persistEditableSettingsSnapshot()
             }
         } catch {
             // Keep current UI state when runtime config refresh is unavailable.

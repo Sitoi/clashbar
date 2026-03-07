@@ -3,18 +3,42 @@ import Foundation
 
 enum MihomoConfigValidationError: LocalizedError {
     case launchFailed(String)
+    case timedOut(seconds: Int, details: String)
     case failed(exitCode: Int32, details: String)
 
     var errorDescription: String? {
         switch self {
         case let .launchFailed(message):
             return message
+        case let .timedOut(seconds, details):
+            let normalizedDetails = details.trimmingCharacters(in: .whitespacesAndNewlines)
+            if normalizedDetails.isEmpty {
+                return "mihomo -t timed out after \(seconds) seconds."
+            }
+            return "mihomo -t timed out after \(seconds) seconds.\n\(normalizedDetails)"
         case let .failed(exitCode, details):
             let normalizedDetails = details.trimmingCharacters(in: .whitespacesAndNewlines)
             if normalizedDetails.isEmpty {
                 return "mihomo -t exited with code \(exitCode)."
             }
             return normalizedDetails
+        }
+    }
+}
+
+private final class ProcessOutputBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var data = Data()
+
+    func store(_ data: Data) {
+        self.lock.withLock {
+            self.data = data
+        }
+    }
+
+    func load() -> Data {
+        self.lock.withLock {
+            self.data
         }
     }
 }
@@ -30,6 +54,9 @@ final class MihomoProcessManager: MihomoControlling, @unchecked Sendable {
     private let stateActor = ProcessStateActor()
     private let fileManager: FileManager
     private let workingDirectoryManager: WorkingDirectoryManager
+    private let lifecycleQueue: DispatchQueue
+    private let validationQueue: DispatchQueue
+    private let configValidationTimeout: TimeInterval
 
     var onLog: ((String) -> Void)?
     var onTermination: ((Int32) -> Void)?
@@ -46,10 +73,18 @@ final class MihomoProcessManager: MihomoControlling, @unchecked Sendable {
 
     init(
         workingDirectoryManager: WorkingDirectoryManager = WorkingDirectoryManager(),
-        fileManager: FileManager = .default)
+        fileManager: FileManager = .default,
+        configValidationTimeout: TimeInterval = 10,
+        lifecycleQueue: DispatchQueue? = nil,
+        validationQueue: DispatchQueue? = nil)
     {
         self.workingDirectoryManager = workingDirectoryManager
         self.fileManager = fileManager
+        self.configValidationTimeout = configValidationTimeout
+        self.lifecycleQueue = lifecycleQueue
+            ?? DispatchQueue(label: "com.clashbar.mihomo-process.operations", qos: .userInitiated)
+        self.validationQueue = validationQueue
+            ?? DispatchQueue(label: "com.clashbar.mihomo-process.validation", qos: .userInitiated)
     }
 
     deinit {
@@ -75,6 +110,14 @@ final class MihomoProcessManager: MihomoControlling, @unchecked Sendable {
         let outputPipe = Pipe()
         proc.standardOutput = outputPipe
         proc.standardError = outputPipe
+        let outputBox = ProcessOutputBox()
+        let outputDrainGroup = DispatchGroup()
+        outputDrainGroup.enter()
+        DispatchQueue.global(qos: .userInitiated).async {
+            let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+            outputBox.store(outputData)
+            outputDrainGroup.leave()
+        }
 
         do {
             try proc.run()
@@ -82,10 +125,26 @@ final class MihomoProcessManager: MihomoControlling, @unchecked Sendable {
             throw MihomoConfigValidationError.launchFailed("Failed to run mihomo -t: \(error.localizedDescription)")
         }
 
-        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        proc.waitUntilExit()
+        let didExit = self.waitForProcessExit(proc, timeout: self.configValidationTimeout)
+        if !didExit {
+            self.onLog?("[mihomo config test] timeout after \(self.normalizedValidationTimeoutSeconds())s")
+            proc.terminate()
+            if !self.waitForProcessExit(proc, timeout: 1.0) {
+                _ = Darwin.kill(proc.processIdentifier, SIGKILL)
+                _ = self.waitForProcessExit(proc, timeout: 0.5)
+            }
+        }
+
+        _ = outputDrainGroup.wait(timeout: .now() + 1.0)
+        let outputData = outputBox.load()
         let outputText = String(data: outputData, encoding: .utf8)?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        guard didExit else {
+            throw MihomoConfigValidationError.timedOut(
+                seconds: self.normalizedValidationTimeoutSeconds(),
+                details: outputText)
+        }
 
         guard proc.terminationStatus == 0 else {
             throw MihomoConfigValidationError.failed(exitCode: proc.terminationStatus, details: outputText)
@@ -93,6 +152,12 @@ final class MihomoProcessManager: MihomoControlling, @unchecked Sendable {
 
         if !outputText.isEmpty {
             self.onLog?("[mihomo config test] \(outputText)")
+        }
+    }
+
+    func validateConfigAsync(configPath: String) async throws {
+        try await self.runBlockingOperation(on: self.validationQueue) {
+            try self.validateConfig(configPath: configPath)
         }
     }
 
@@ -177,6 +242,13 @@ final class MihomoProcessManager: MihomoControlling, @unchecked Sendable {
         }
     }
 
+    @discardableResult
+    func startAsync(configPath: String, controller: String) async throws -> CoreLifecycleStatus {
+        try await self.runBlockingOperation(on: self.lifecycleQueue) {
+            try self.start(configPath: configPath, controller: controller)
+        }
+    }
+
     func stop() {
         let running: Process? = self.lock.withLock {
             self.intentionalStop = true
@@ -218,10 +290,23 @@ final class MihomoProcessManager: MihomoControlling, @unchecked Sendable {
         self.handleProcessTermination(running, code: running.terminationStatus)
     }
 
+    func stopAsync() async {
+        await self.runBlockingOperation(on: self.lifecycleQueue) {
+            self.stop()
+        }
+    }
+
     @discardableResult
     func restart(configPath: String, controller: String) throws -> CoreLifecycleStatus {
         self.stop()
         return try self.start(configPath: configPath, controller: controller)
+    }
+
+    @discardableResult
+    func restartAsync(configPath: String, controller: String) async throws -> CoreLifecycleStatus {
+        try await self.runBlockingOperation(on: self.lifecycleQueue) {
+            try self.restart(configPath: configPath, controller: controller)
+        }
     }
 
     private func handleProcessTermination(_ terminatedProcess: Process, code: Int32) {
@@ -258,6 +343,37 @@ final class MihomoProcessManager: MihomoControlling, @unchecked Sendable {
             usleep(50000)
         }
         return !process.isRunning
+    }
+
+    private func runBlockingOperation<Value: Sendable>(
+        on queue: DispatchQueue,
+        _ operation: @escaping @Sendable () throws -> Value) async throws -> Value
+    {
+        try await withCheckedThrowingContinuation { continuation in
+            queue.async {
+                do {
+                    try continuation.resume(returning: operation())
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    private func runBlockingOperation(
+        on queue: DispatchQueue,
+        _ operation: @escaping @Sendable () -> Void) async
+    {
+        await withCheckedContinuation { continuation in
+            queue.async {
+                operation()
+                continuation.resume()
+            }
+        }
+    }
+
+    private func normalizedValidationTimeoutSeconds() -> Int {
+        max(1, Int(self.configValidationTimeout.rounded(.awayFromZero)))
     }
 
     private func resolveMihomoBinary() throws -> String {

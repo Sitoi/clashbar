@@ -30,9 +30,9 @@ struct ProxyGroup: Decodable, Equatable {
         self.type = type
         self.now = now
         self.all = all
-        self.testUrl = Self.normalizedText(testUrl)
-        self.timeout = Self.normalizedTimeout(timeout)
-        self.icon = Self.normalizedIcon(icon)
+        self.testUrl = testUrl.trimmedNonEmpty
+        self.timeout = timeout.positiveOrNil
+        self.icon = icon.trimmedNonEmpty
         self.hidden = hidden
         self.latestDelay = latestDelay
     }
@@ -55,9 +55,9 @@ struct ProxyGroup: Decodable, Equatable {
         self.type = try container.decodeIfPresent(String.self, forKey: .type)
         self.now = try container.decodeIfPresent(String.self, forKey: .now)
         self.all = try container.decodeIfPresent([String].self, forKey: .all) ?? []
-        self.testUrl = try Self.normalizedText(container.decodeIfPresent(String.self, forKey: .testUrl))
-        self.timeout = Self.decodeTimeout(from: container)
-        self.icon = Self.normalizedIcon(try? container.decodeIfPresent(String.self, forKey: .icon))
+        self.testUrl = try container.decodeIfPresent(String.self, forKey: .testUrl).trimmedNonEmpty
+        self.timeout = container.decodeFlexibleInt(forKey: .timeout).positiveOrNil
+        self.icon = try container.decodeIfPresent(String.self, forKey: .icon).trimmedNonEmpty
         self.hidden = try container.decodeIfPresent(Bool.self, forKey: .hidden)
         self.latestDelay = Self.decodeLatestDelay(from: container)
     }
@@ -78,76 +78,36 @@ struct ProxyGroup: Decodable, Equatable {
         }
         return latest
     }
-
-    private static func normalizedIcon(_ value: String?) -> String? {
-        self.normalizedText(value)
-    }
-
-    private static func normalizedText(_ value: String?) -> String? {
-        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else {
-            return nil
-        }
-        return trimmed
-    }
-
-    private static func decodeTimeout(from container: KeyedDecodingContainer<CodingKeys>) -> Int? {
-        if let timeout = try? container.decodeIfPresent(Int.self, forKey: .timeout) {
-            return self.normalizedTimeout(timeout)
-        }
-        if let timeout64 = try? container.decodeIfPresent(Int64.self, forKey: .timeout) {
-            return Self.normalizedTimeout(Int(timeout64))
-        }
-        if let timeoutText = try? container.decodeIfPresent(String.self, forKey: .timeout),
-           let timeout = Int(timeoutText)
-        {
-            return Self.normalizedTimeout(timeout)
-        }
-        return nil
-    }
-
-    private static func normalizedTimeout(_ timeout: Int?) -> Int? {
-        guard let timeout, timeout > 0 else { return nil }
-        return timeout
-    }
 }
 
-private struct ProxyDelayHistoryEntry: Decodable, Equatable {
-    let delay: Int?
-
-    private enum CodingKeys: String, CodingKey {
-        case delay
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        if let value = try container.decodeIfPresent(Int.self, forKey: .delay) {
-            self.delay = value
-            return
-        }
-        if let value = try container.decodeIfPresent(Int64.self, forKey: .delay) {
-            self.delay = Int(value)
-            return
-        }
-        if let value = try container.decodeIfPresent(String.self, forKey: .delay),
-           let intValue = Int(value)
-        {
-            self.delay = intValue
-            return
-        }
-        self.delay = nil
-    }
-}
+private typealias ProxyDelayHistoryEntry = FlexibleDelayHistoryEntry
 
 struct ConfigSnapshot: Codable, Equatable {
     struct TunConfig: Codable, Equatable {
         let enable: Bool?
+        let stack: String?
+
+        private enum CodingKeys: String, CodingKey {
+            case enable
+            case stack
+        }
+
+        init(enable: Bool?, stack: String?) {
+            self.enable = enable
+            self.stack = stack
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.enable = container.decodeFlexibleBool(forKey: .enable)
+            self.stack = container.decodeFlexibleString(forKey: .stack)
+        }
     }
 
     let allowLan: Bool?
     let mode: String?
     let logLevel: String?
     let ipv6: Bool?
-    let unifiedDelay: Bool?
     let tcpConcurrent: Bool?
     let port: Int?
     let socksPort: Int?
@@ -166,7 +126,6 @@ struct ConfigSnapshot: Codable, Equatable {
         case mode
         case logLevel = "log-level"
         case ipv6
-        case unifiedDelay = "unified-delay"
         case tcpConcurrent = "tcp-concurrent"
         case port
         case socksPort = "socks-port"

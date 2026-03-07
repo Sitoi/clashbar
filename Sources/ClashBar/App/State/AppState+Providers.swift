@@ -134,45 +134,25 @@ extension AppState {
     }
 
     private func sanitizedProviderDetail(_ detail: ProviderDetail, includeNodes: Bool) -> ProviderDetail {
-        let proxies = includeNodes ? detail.proxies?.map { ProviderProxyNode(name: $0.name, history: nil) } : nil
-        // DRY: one detail sanitizer controls whether nodes are kept.
-        return ProviderDetail(
-            name: detail.name,
-            vehicleType: detail.vehicleType,
-            testUrl: detail.testUrl,
-            timeout: detail.timeout,
-            updatedAt: detail.updatedAt,
-            ruleCount: detail.ruleCount,
-            subscriptionInfo: detail.subscriptionInfo,
-            proxies: proxies)
+        let proxies = includeNodes ? detail.proxies?.map { ProviderProxyNode(name: $0.name) } : nil
+        return detail.with(proxies: proxies)
     }
 
     private func mergedProviderDetailPreservingNodes(
         previous: ProviderDetail?,
         incoming: ProviderDetail) -> ProviderDetail
     {
-        let summary = self.sanitizedProviderDetail(incoming, includeNodes: false)
-        let fallbackNodes = incoming.proxies?.map { ProviderProxyNode(name: $0.name, history: nil) }
-        let preservedNodes = previous?.proxies ?? fallbackNodes
-
-        return ProviderDetail(
-            name: summary.name,
-            vehicleType: summary.vehicleType,
-            testUrl: summary.testUrl,
-            timeout: summary.timeout,
-            updatedAt: summary.updatedAt,
-            ruleCount: summary.ruleCount,
-            subscriptionInfo: summary.subscriptionInfo,
-            proxies: preservedNodes)
+        let fallbackNodes = incoming.proxies?.map { ProviderProxyNode(name: $0.name) }
+        return incoming.with(proxies: previous?.proxies ?? fallbackNodes)
     }
 
     private func shouldIncludeProxyProvider(named key: String, detail: ProviderDetail) -> Bool {
-        let resolvedName = detail.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? key
+        let resolvedName = detail.name.trimmedNonEmpty ?? key
         if resolvedName.caseInsensitiveCompare("default") == .orderedSame {
             return false
         }
 
-        let vehicleType = detail.vehicleType?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let vehicleType = detail.vehicleType.trimmedOrEmpty
         return vehicleType.caseInsensitiveCompare("Compatible") != .orderedSame
     }
 

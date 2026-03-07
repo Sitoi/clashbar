@@ -57,15 +57,21 @@ extension AppState {
 
         if processManager.isRunning,
            let nextSelectedURL,
-           previousCanonicalPath != nextCanonicalPath,
-           !self.validateConfigBeforeCoreLaunch(configPath: nextSelectedURL.path)
+           previousCanonicalPath != nextCanonicalPath
         {
-            if let previousSelectedURL {
-                configManager.selectConfig(previousSelectedURL)
+            let validationFailure = await self.configValidationFailureDetails(configPath: nextSelectedURL.path)
+            let currentCanonicalPath = self.configManager.selectedConfig?.standardizedFileURL
+                .resolvingSymlinksInPath().path
+            guard currentCanonicalPath == nextCanonicalPath else { return }
+            if let validationFailure {
+                self.handleConfigValidationFailure(configPath: nextSelectedURL.path, details: validationFailure)
+                if let previousSelectedURL {
+                    configManager.selectConfig(previousSelectedURL)
+                }
+                _ = self.syncSelectedConfigSelection(configManager.selectedConfig)
+                syncConfigDisplayState()
+                return
             }
-            _ = self.syncSelectedConfigSelection(configManager.selectedConfig)
-            syncConfigDisplayState()
-            return
         }
 
         let nextSelectedPath = self.syncSelectedConfigSelection(configManager.selectedConfig)
@@ -87,15 +93,22 @@ extension AppState {
         let targetCanonicalPath = matched.standardizedFileURL.resolvingSymlinksInPath().path
 
         if processManager.isRunning,
-           previousCanonicalPath != targetCanonicalPath,
-           !self.validateConfigBeforeCoreLaunch(configPath: matched.path)
+           previousCanonicalPath != targetCanonicalPath
         {
-            if let previousSelectedURL {
-                configManager.selectConfig(previousSelectedURL)
+            let validationFailure = await self.configValidationFailureDetails(configPath: matched.path)
+            let currentCanonicalPath = self.configManager.selectedConfig?.standardizedFileURL
+                .resolvingSymlinksInPath().path
+            // Validation runs before selecting `matched`, so stale-check against the original selection.
+            guard currentCanonicalPath == previousCanonicalPath else { return }
+            if let validationFailure {
+                self.handleConfigValidationFailure(configPath: matched.path, details: validationFailure)
+                if let previousSelectedURL {
+                    configManager.selectConfig(previousSelectedURL)
+                }
+                _ = self.syncSelectedConfigSelection(configManager.selectedConfig)
+                syncConfigDisplayState()
+                return
             }
-            _ = self.syncSelectedConfigSelection(configManager.selectedConfig)
-            syncConfigDisplayState()
-            return
         }
 
         configManager.selectConfig(matched)
@@ -290,8 +303,16 @@ extension AppState {
     }
 
     func reloadConfig() async {
-        await runNoResponseAction(tr("log.action_name.reload_config")) {
+        let actionName = tr("log.action_name.reload_config")
+        let expectedTunEnabled = isTunEnabled
+
+        do {
+            ensureAPIClient()
             try await self.clientOrThrow().requestNoResponse(.putConfigs(force: false))
+            try await self.restoreTunAfterConfigReloadIfNeeded(expectedEnabled: expectedTunEnabled)
+            appendLog(level: "info", message: tr("log.action.success", actionName))
+        } catch {
+            appendLog(level: "error", message: tr("log.action.failed", actionName, error.localizedDescription))
         }
     }
 
@@ -464,6 +485,12 @@ extension AppState {
         let trimmed = rawVersion.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed != "-" else { return nil }
         return trimmed
+    }
+
+    private func restoreTunAfterConfigReloadIfNeeded(expectedEnabled: Bool) async throws {
+        guard isRuntimeRunning else { return }
+        try await self.patchTunConfig(enable: expectedEnabled)
+        try await self.verifyTunRuntimeState(expectedEnabled: expectedEnabled)
     }
 
     private func updateRemoteConfigSource(for fileName: String, urlString: String?) {

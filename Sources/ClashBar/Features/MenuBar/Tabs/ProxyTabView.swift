@@ -1,17 +1,12 @@
-import AppKit
 import SwiftUI
 
 extension MenuBarRoot {
-    var proxyModuleSpacing: CGFloat {
-        MenuBarLayoutTokens.sectionGap
-    }
-
     var quickRowTrailingColumnWidth: CGFloat {
         min(170, max(126, contentWidth * 0.44))
     }
 
     var proxyTabBody: some View {
-        VStack(alignment: .leading, spacing: self.proxyModuleSpacing) {
+        VStack(alignment: .leading, spacing: MenuBarLayoutTokens.sectionGap) {
             self.trafficOverview
             self.proxyQuickRows
             if !appState.sortedProxyProviderNames.isEmpty {
@@ -19,6 +14,7 @@ extension MenuBarRoot {
             }
             proxyGroupsSection
         }
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     var trafficOverview: some View {
@@ -34,36 +30,38 @@ extension MenuBarRoot {
 
             VStack(spacing: 0) {
                 HStack(spacing: MenuBarLayoutTokens.hDense) {
-                    self.cornerIconMetric(
+                    self.cornerMetric(
                         symbol: "link",
                         value: "\(appState.connectionsCount)",
                         color: nativeIndigo)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                    self.cornerTrafficMetric(
+                    self.cornerMetric(
                         symbol: "arrow.up.circle",
-                        color: nativeInfo,
                         value: ValueFormatter.speedAndTotal(
                             rate: appState.traffic.up,
-                            total: appState.displayUpTotal))
+                            total: appState.displayUpTotal),
+                        color: nativeInfo,
+                        iconTrailing: true)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
 
                 Spacer(minLength: 0)
 
                 HStack(spacing: MenuBarLayoutTokens.hDense) {
-                    self.cornerIconMetric(
+                    self.cornerMetric(
                         symbol: "memorychip",
                         value: ValueFormatter.bytesInteger(appState.memory.inuse),
                         color: nativeTeal)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                    self.cornerTrafficMetric(
+                    self.cornerMetric(
                         symbol: "arrow.down.circle",
-                        color: nativePositive.opacity(0.92),
                         value: ValueFormatter.speedAndTotal(
                             rate: appState.traffic.down,
-                            total: appState.displayDownTotal))
+                            total: appState.displayDownTotal),
+                        color: nativePositive.opacity(0.92),
+                        iconTrailing: true)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
             }
@@ -74,53 +72,35 @@ extension MenuBarRoot {
         .padding(.top, MenuBarLayoutTokens.vDense)
     }
 
-    func cornerIconMetric(
+    func cornerMetric(
         symbol: String,
         value: String,
-        color: Color) -> some View
-    {
-        HStack(spacing: MenuBarLayoutTokens.hMicro + 1) {
-            Image(systemName: symbol)
-                .font(.appSystem(size: 11, weight: .semibold))
-                .foregroundStyle(color)
-            Text(value)
-                .font(.appMonospaced(size: 12, weight: .regular))
-                .foregroundStyle(nativeSecondaryLabel)
-                .lineLimit(1)
-                .minimumScaleFactor(0.80)
-        }
-    }
-
-    func cornerTrafficMetric(
-        symbol: String,
         color: Color,
-        value: String) -> some View
+        iconTrailing: Bool = false) -> some View
     {
-        HStack(spacing: MenuBarLayoutTokens.hMicro) {
-            Text(value)
-                .font(.appMonospaced(size: 12, weight: .regular))
-                .foregroundStyle(nativeSecondaryLabel)
-                .lineLimit(1)
-                .minimumScaleFactor(0.80)
-            Image(systemName: symbol)
-                .font(.appSystem(size: 11, weight: .semibold))
-                .foregroundStyle(color)
+        let icon = Image(systemName: symbol)
+            .font(.appSystem(size: 11, weight: .semibold))
+            .foregroundStyle(color)
+        let text = Text(value)
+            .font(.appMonospaced(size: 12, weight: .regular))
+            .foregroundStyle(nativeSecondaryLabel)
+            .lineLimit(1)
+            .minimumScaleFactor(0.80)
+
+        return HStack(spacing: iconTrailing ? MenuBarLayoutTokens.hMicro : MenuBarLayoutTokens.hMicro + 1) {
+            if iconTrailing { text; icon } else { icon; text }
         }
     }
 
     var proxyQuickRows: some View {
-        let rowHorizontalPadding = MenuBarLayoutTokens.hRow
-        let rowVerticalPadding: CGFloat = MenuBarLayoutTokens.vDense + 1
-        let trailingColumnWidth = self.quickRowTrailingColumnWidth
-
-        return VStack(spacing: 0) {
+        VStack(spacing: 0) {
             AttachedPopoverMenu {
-                HStack(spacing: MenuBarLayoutTokens.hDense) {
-                    self.quickIcon(symbol: "doc.text", foreground: nativePurple, background: nativePurple.opacity(0.14))
-                    Text(tr("ui.quick.switch_config"))
-                        .font(.appSystem(size: 12, weight: .medium))
-                        .foregroundStyle(nativePrimaryLabel)
-                    Spacer(minLength: 0)
+                self.quickRowContent(
+                    title: tr("ui.quick.switch_config"),
+                    symbol: "doc.text",
+                    foreground: nativePurple,
+                    background: nativePurple.opacity(0.14))
+                {
                     HStack(spacing: MenuBarLayoutTokens.hMicro + 1) {
                         Text(appState.selectedConfigName)
                             .font(.appSystem(size: 11, weight: .regular))
@@ -131,11 +111,7 @@ extension MenuBarRoot {
                             .font(.appSystem(size: 10, weight: .medium))
                             .foregroundStyle(nativeTertiaryLabel)
                     }
-                    .frame(width: trailingColumnWidth, alignment: .trailing)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, rowHorizontalPadding)
-                .padding(.vertical, rowVerticalPadding)
             } content: { dismiss in
                 ForEach(appState.availableConfigFileNames, id: \.self) { name in
                     AttachedPopoverMenuItem(
@@ -170,89 +146,91 @@ extension MenuBarRoot {
             }
             .buttonStyle(.plain)
 
-            self.quickRowsDivider
+            self.quickToggleRow(
+                title: tr("ui.quick.system_proxy"),
+                symbol: "network",
+                foreground: nativeInfo,
+                background: nativeInfo.opacity(0.14),
+                isDisabled: appState.isProxySyncing,
+                isOn: Binding(
+                    get: { appState.isSystemProxyEnabled },
+                    set: { value in
+                        Task { await appState.toggleSystemProxy(value) }
+                    }))
 
-            HStack(spacing: MenuBarLayoutTokens.hDense) {
-                self.quickIcon(symbol: "network", foreground: nativeInfo, background: nativeInfo.opacity(0.14))
-                Text(tr("ui.quick.system_proxy"))
-                    .font(.appSystem(size: 12, weight: .medium))
-                    .foregroundStyle(nativePrimaryLabel)
-                Spacer(minLength: 0)
-                Toggle(
-                    "",
-                    isOn: Binding(
-                        get: { appState.isSystemProxyEnabled },
-                        set: { value in
-                            Task { await appState.toggleSystemProxy(value) }
-                        }))
-                        .labelsHidden()
-                        .toggleStyle(.switch)
-                        .controlSize(.small)
-                        .disabled(appState.isProxySyncing)
-                        .frame(width: trailingColumnWidth, alignment: .trailing)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, rowHorizontalPadding)
-            .padding(.vertical, rowVerticalPadding)
-
-            self.quickRowsDivider
-
-            HStack(spacing: MenuBarLayoutTokens.hDense) {
-                self.quickIcon(
-                    symbol: "shield.lefthalf.filled",
-                    foreground: nativePositive,
-                    background: nativePositive.opacity(0.14))
-                Text(tr("ui.quick.tun_mode"))
-                    .font(.appSystem(size: 12, weight: .medium))
-                    .foregroundStyle(nativePrimaryLabel)
-                Spacer(minLength: 0)
-                Toggle(
-                    "",
-                    isOn: Binding(
-                        get: { appState.isTunEnabled },
-                        set: { value in
-                            Task { await appState.toggleTunMode(value) }
-                        }))
-                        .labelsHidden()
-                        .toggleStyle(.switch)
-                        .controlSize(.small)
-                        .disabled(!appState.isTunToggleEnabled)
-                        .frame(width: trailingColumnWidth, alignment: .trailing)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, rowHorizontalPadding)
-            .padding(.vertical, rowVerticalPadding)
-
-            self.quickRowsDivider
+            self.quickToggleRow(
+                title: tr("ui.quick.tun_mode"),
+                symbol: "shield.lefthalf.filled",
+                foreground: nativePositive,
+                background: nativePositive.opacity(0.14),
+                isDisabled: !appState.isTunToggleEnabled,
+                isOn: Binding(
+                    get: { appState.isTunEnabled },
+                    set: { value in
+                        Task { await appState.toggleTunMode(value) }
+                    }))
 
             Button {
                 appState.copyProxyCommand()
             } label: {
-                HStack(spacing: MenuBarLayoutTokens.hDense) {
-                    self.quickIcon(
-                        symbol: "terminal",
-                        foreground: nativeWarning,
-                        background: nativeWarning.opacity(0.14))
-                    Text(tr("ui.quick.copy_terminal"))
-                        .font(.appSystem(size: 12, weight: .medium))
-                        .foregroundStyle(nativePrimaryLabel)
-                    Spacer(minLength: 0)
+                self.quickRowContent(
+                    title: tr("ui.quick.copy_terminal"),
+                    symbol: "terminal",
+                    foreground: nativeWarning,
+                    background: nativeWarning.opacity(0.14))
+                {
                     Image(systemName: "doc.on.doc")
                         .font(.appSystem(size: 12, weight: .medium))
                         .foregroundStyle(hoveringCopyRow ? nativeSecondaryLabel : nativeTertiaryLabel.opacity(0.6))
-                        .frame(width: trailingColumnWidth, alignment: .trailing)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, rowHorizontalPadding)
-                .padding(.vertical, rowVerticalPadding)
             }
             .buttonStyle(.plain)
             .onHover { hoveringCopyRow = $0 }
         }
     }
 
-    var quickRowsDivider: some View {
-        EmptyView()
+    func quickRowContent(
+        title: String,
+        symbol: String,
+        foreground: Color,
+        background: Color,
+        @ViewBuilder trailing: () -> some View) -> some View
+    {
+        HStack(spacing: MenuBarLayoutTokens.hDense) {
+            self.quickIcon(symbol: symbol, foreground: foreground, background: background)
+            Text(title)
+                .font(.appSystem(size: 12, weight: .medium))
+                .foregroundStyle(nativePrimaryLabel)
+            Spacer(minLength: 0)
+            trailing()
+                .frame(width: self.quickRowTrailingColumnWidth, alignment: .trailing)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, MenuBarLayoutTokens.hRow)
+        .padding(.vertical, MenuBarLayoutTokens.vDense + 1)
+    }
+
+    // swiftlint:disable:next function_parameter_count
+    func quickToggleRow(
+        title: String,
+        symbol: String,
+        foreground: Color,
+        background: Color,
+        isDisabled: Bool,
+        isOn: Binding<Bool>) -> some View
+    {
+        self.quickRowContent(
+            title: title,
+            symbol: symbol,
+            foreground: foreground,
+            background: background)
+        {
+            Toggle("", isOn: isOn)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                .disabled(isDisabled)
+        }
     }
 
     func quickIcon(symbol: String, foreground: Color, background: Color) -> some View {

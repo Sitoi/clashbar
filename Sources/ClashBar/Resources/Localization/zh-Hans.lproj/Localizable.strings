@@ -114,7 +114,6 @@
 "ui.settings.appearance.dark" = "深色";
 "ui.settings.allow_lan" = "允许局域网";
 "ui.settings.ipv6" = "IPv6";
-"ui.settings.unified_delay" = "统一延迟";
 "ui.settings.tcp_concurrent" = "TCP 并发";
 "ui.settings.tun_mode" = "TUN 模式";
 "ui.settings.log_level" = "日志级别";

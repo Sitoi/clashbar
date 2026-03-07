@@ -70,6 +70,9 @@ extension AppState {
         if kind == .connections {
             currentConnectionsStreamIntervalMilliseconds = nil
         }
+        if kind == .traffic {
+            self.resetPendingTrafficSnapshotState()
+        }
         if resetReconnectState {
             self.resetStreamReconnectState(for: kind)
         }
@@ -138,23 +141,23 @@ extension AppState {
     }
 
     func startTrafficStream() {
-        startDecodableStream(
+        self.startStream(
             kind: .traffic,
             makeWebSocket: { try $0.makeTrafficWebSocketTask() },
-            onDecoded: { [weak self] (snapshot: TrafficSnapshot) in
+            onPayload: { [weak self] payload in
                 guard let self else { return }
-                traffic = snapshot
-                guard isPanelPresented else {
-                    if !trafficHistoryUp.isEmpty || !trafficHistoryDown
-                        .isEmpty || displayUpTotal != 0 || displayDownTotal != 0 || lastTrafficSampleAt != nil
-                    {
-                        clearTrafficPresentationHistory()
-                    }
-                    return
-                }
-                appendTrafficHistory(up: snapshot.up, down: snapshot.down)
-                updateTrafficTotals(from: snapshot)
+                self.pendingTrafficPayload = payload
+                self.flushPendingTrafficSnapshotIfNeeded()
             })
+    }
+
+    func flushPendingTrafficSnapshotIfNeeded(immediately: Bool = false) {
+        guard self.pendingTrafficPayload != nil else { return }
+        if immediately {
+            self.publishPendingTrafficSnapshot()
+            return
+        }
+        self.schedulePendingTrafficSnapshotPublishIfNeeded()
     }
 
     func startMemoryStream() {
@@ -188,6 +191,68 @@ extension AppState {
                     appendMihomoLog(level: line.level, message: line.message)
                 }
             })
+    }
+
+    private func schedulePendingTrafficSnapshotPublishIfNeeded() {
+        guard self.trafficDecodeTask == nil else { return }
+
+        let elapsed = Date().timeIntervalSince(self.lastTrafficDecodeAt)
+        let publishInterval = Double(self.trafficPublishIntervalNanoseconds) / 1_000_000_000
+        if elapsed >= publishInterval {
+            self.publishPendingTrafficSnapshot()
+            return
+        }
+
+        let remainingDelay = max(0.01, publishInterval - elapsed)
+        let remainingNanoseconds = UInt64(remainingDelay * 1_000_000_000)
+        self.trafficDecodeTask = Task { [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: remainingNanoseconds)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            self?.publishPendingTrafficSnapshot()
+        }
+    }
+
+    private func publishPendingTrafficSnapshot() {
+        self.trafficDecodeTask?.cancel()
+        self.trafficDecodeTask = nil
+
+        guard let payload = self.pendingTrafficPayload else { return }
+        self.pendingTrafficPayload = nil
+
+        guard let snapshot = try? self.streamJSONDecoder.decode(TrafficSnapshot.self, from: payload) else {
+            return
+        }
+        self.lastTrafficDecodeAt = Date()
+        self.applyTrafficSnapshot(snapshot)
+
+        if self.pendingTrafficPayload != nil {
+            self.schedulePendingTrafficSnapshotPublishIfNeeded()
+        }
+    }
+
+    private func applyTrafficSnapshot(_ snapshot: TrafficSnapshot) {
+        self.traffic = snapshot
+        guard self.isPanelPresented else {
+            if !self.trafficHistoryUp.isEmpty || !self.trafficHistoryDown
+                .isEmpty || self.displayUpTotal != 0 || self.displayDownTotal != 0 || self.lastTrafficSampleAt != nil
+            {
+                self.clearTrafficPresentationHistory()
+            }
+            return
+        }
+        self.appendTrafficHistory(up: snapshot.up, down: snapshot.down)
+        self.updateTrafficTotals(from: snapshot)
+    }
+
+    private func resetPendingTrafficSnapshotState() {
+        self.trafficDecodeTask?.cancel()
+        self.trafficDecodeTask = nil
+        self.pendingTrafficPayload = nil
+        self.lastTrafficDecodeAt = .distantPast
     }
 
     private func applyConnectionsSnapshot(_ snapshot: ConnectionsSnapshot) {

@@ -17,6 +17,10 @@ extension AppState {
             return
         }
 
+        if externalControllerDisplay != trimmed {
+            externalControllerDisplay = trimmed
+        }
+
         if let host = controllerHost(from: trimmed), !isLoopbackHost(host) {
             self.appendExternalControllerWarningOnce(
                 key: "risk:\(host.lowercased())",

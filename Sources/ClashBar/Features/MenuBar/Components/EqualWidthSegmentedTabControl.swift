@@ -66,12 +66,12 @@ struct EqualWidthSegmentedTabControl: NSViewRepresentable {
         let control: NSSegmentedControl = {
             let control = NSSegmentedControl()
             control.translatesAutoresizingMaskIntoConstraints = false
+            control.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             return control
         }()
 
         override init(frame frameRect: NSRect) {
             super.init(frame: frameRect)
-            translatesAutoresizingMaskIntoConstraints = false
             addSubview(self.control)
             NSLayoutConstraint.activate([
                 self.control.leadingAnchor.constraint(equalTo: leadingAnchor),

@@ -114,7 +114,6 @@
 "ui.settings.appearance.dark" = "Dark";
 "ui.settings.allow_lan" = "Allow LAN";
 "ui.settings.ipv6" = "IPv6";
-"ui.settings.unified_delay" = "Unified Delay";
 "ui.settings.tcp_concurrent" = "TCP Concurrent";
 "ui.settings.tun_mode" = "TUN Mode";
 "ui.settings.log_level" = "Log Level";

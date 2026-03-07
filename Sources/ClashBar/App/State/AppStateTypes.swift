@@ -74,14 +74,6 @@ enum AppAppearanceMode: String, CaseIterable, Identifiable {
     }
 }
 
-enum MenuPanelTabHint: Equatable {
-    case proxy
-    case rules
-    case activity
-    case logs
-    case system
-}
-
 struct DataAcquisitionPolicy: Equatable {
     let enableTrafficStream: Bool
     let enableMemoryStream: Bool
@@ -153,7 +145,6 @@ struct CoreFeatureRecoveryState {
 struct EditableSettingsSnapshot: Equatable, Codable {
     let allowLan: Bool
     let ipv6: Bool
-    let unifiedDelay: Bool
     let tcpConcurrent: Bool
     let tunEnabled: Bool
     let logLevel: String
@@ -166,7 +157,6 @@ struct EditableSettingsSnapshot: Equatable, Codable {
     private enum CodingKeys: String, CodingKey {
         case allowLan
         case ipv6
-        case unifiedDelay
         case tcpConcurrent
         case tunEnabled
         case logLevel
@@ -180,7 +170,6 @@ struct EditableSettingsSnapshot: Equatable, Codable {
     init(config: ConfigSnapshot) {
         self.allowLan = config.allowLan ?? false
         self.ipv6 = config.ipv6 ?? false
-        self.unifiedDelay = config.unifiedDelay ?? false
         self.tcpConcurrent = config.tcpConcurrent ?? false
         self.tunEnabled = config.tunEnabled ?? false
         self.logLevel = ConfigLogLevel(rawValue: config.logLevel ?? "")?.rawValue ?? ConfigLogLevel.info.rawValue
@@ -194,7 +183,6 @@ struct EditableSettingsSnapshot: Equatable, Codable {
     init(
         allowLan: Bool,
         ipv6: Bool,
-        unifiedDelay: Bool,
         tcpConcurrent: Bool,
         tunEnabled: Bool,
         logLevel: String,
@@ -206,7 +194,6 @@ struct EditableSettingsSnapshot: Equatable, Codable {
     {
         self.allowLan = allowLan
         self.ipv6 = ipv6
-        self.unifiedDelay = unifiedDelay
         self.tcpConcurrent = tcpConcurrent
         self.tunEnabled = tunEnabled
         self.logLevel = logLevel
@@ -221,7 +208,6 @@ struct EditableSettingsSnapshot: Equatable, Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.allowLan = try container.decode(Bool.self, forKey: .allowLan)
         self.ipv6 = try container.decode(Bool.self, forKey: .ipv6)
-        self.unifiedDelay = try container.decode(Bool.self, forKey: .unifiedDelay)
         self.tcpConcurrent = try container.decodeIfPresent(Bool.self, forKey: .tcpConcurrent) ?? false
         self.tunEnabled = try container.decodeIfPresent(Bool.self, forKey: .tunEnabled) ?? false
         self.logLevel = try container.decode(String.self, forKey: .logLevel)
@@ -238,7 +224,6 @@ extension EditableSettingsSnapshot {
         EditableSettingsSnapshot(
             allowLan: self.allowLan,
             ipv6: self.ipv6,
-            unifiedDelay: self.unifiedDelay,
             tcpConcurrent: self.tcpConcurrent,
             tunEnabled: enabled,
             logLevel: self.logLevel,

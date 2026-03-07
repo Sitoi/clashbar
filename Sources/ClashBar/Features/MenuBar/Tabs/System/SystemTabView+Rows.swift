@@ -16,10 +16,6 @@ extension MenuBarRoot {
         .menuRowPadding(vertical: MenuBarLayoutTokens.vDense + 1)
     }
 
-    var settingsDivider: some View {
-        EmptyView()
-    }
-
     func settingsRowLabel(symbol: String, title: String) -> some View {
         HStack(spacing: MenuBarLayoutTokens.hDense) {
             Image(systemName: symbol)
@@ -81,6 +77,29 @@ extension MenuBarRoot {
             .controlSize(.small)
         }
         .menuRowPadding(vertical: MenuBarLayoutTokens.vDense + 2)
+    }
+
+    // swiftlint:disable:next function_parameter_count
+    func settingsSelectionRow<Option: Hashable>(
+        _ title: String,
+        symbol: String,
+        valueText: String,
+        options: [Option],
+        optionTitle: @escaping (Option) -> String,
+        isSelected: @escaping (Option) -> Bool,
+        onSelect: @escaping (Option) -> Void) -> some View
+    {
+        self.settingsMenuRow(title, symbol: symbol, valueText: valueText) { dismiss in
+            ForEach(options, id: \.self) { option in
+                AttachedPopoverMenuItem(
+                    title: optionTitle(option),
+                    selected: isSelected(option))
+                {
+                    onSelect(option)
+                    dismiss()
+                }
+            }
+        }
     }
 
     func settingsPortFieldRow(_ title: String, symbol: String, text: Binding<String>) -> some View {

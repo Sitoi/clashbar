@@ -1,11 +1,40 @@
 import Foundation
 
+private final class TimestampCacheBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [Int64: String] = [:]
+    private var orderedKeys: [Int64] = []
+    private let maxCount = 512
+
+    func value(for second: Int64) -> String? {
+        self.lock.withLock {
+            self.values[second]
+        }
+    }
+
+    func store(_ value: String, for second: Int64) {
+        self.lock.withLock {
+            if self.values[second] != nil {
+                self.values[second] = value
+                return
+            }
+
+            self.values[second] = value
+            self.orderedKeys.append(second)
+
+            if self.orderedKeys.count > self.maxCount,
+               let expired = self.orderedKeys.first
+            {
+                self.orderedKeys.removeFirst()
+                self.values.removeValue(forKey: expired)
+            }
+        }
+    }
+}
+
 enum ValueFormatter {
-    private static let timestampFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        return formatter
-    }()
+    private static let timestampFormatterKey = "clashbar.formatter.timestamp"
+    private static let timestampCache = TimestampCacheBox()
 
     private static let iso8601WithFractionalKey = "clashbar.formatter.iso8601.fractional"
     private static let iso8601BasicKey = "clashbar.formatter.iso8601.basic"
@@ -96,7 +125,14 @@ enum ValueFormatter {
     }
 
     static func dateTime(_ date: Date) -> String {
-        self.timestampFormatter.string(from: date)
+        let second = Int64(date.timeIntervalSince1970.rounded(.down))
+        if let cached = self.timestampCache.value(for: second) {
+            return cached
+        }
+
+        let formatted = self.threadLocalTimestampFormatter().string(from: date)
+        self.timestampCache.store(formatted, for: second)
+        return formatted
     }
 
     static func relativeTime(from input: String?, language: AppLanguage, now: Date = Date()) -> String {
@@ -127,7 +163,7 @@ enum ValueFormatter {
             return "--"
         }
         guard let date = parseISO8601Date(input) else { return "--" }
-        return self.timestampFormatter.string(from: date)
+        return self.dateTime(date)
     }
 
     static func daysUntilExpiryShort(from unixSeconds: Int64?, language: AppLanguage, now: Date = Date()) -> String {
@@ -170,6 +206,18 @@ enum ValueFormatter {
             return date
         }
         return self.threadLocalISO8601Formatter(withFractionalSeconds: false).date(from: input)
+    }
+
+    private static func threadLocalTimestampFormatter() -> DateFormatter {
+        if let formatter = Thread.current.threadDictionary[self.timestampFormatterKey] as? DateFormatter {
+            return formatter
+        }
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        Thread.current.threadDictionary[self.timestampFormatterKey] = formatter
+        return formatter
     }
 
     private static func threadLocalISO8601Formatter(withFractionalSeconds: Bool) -> ISO8601DateFormatter {

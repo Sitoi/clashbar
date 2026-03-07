@@ -1,7 +1,6 @@
-import AppKit
 import SwiftUI
 
-enum RootTab: CaseIterable, Hashable {
+enum RootTab: String, CaseIterable, Hashable {
     case proxy
     case rules
     case activity
@@ -19,67 +18,16 @@ enum RootTab: CaseIterable, Hashable {
     }
 }
 
-enum LogLevelFilter: String, CaseIterable, Identifiable {
-    case all = "ALL"
-    case info = "INFO"
-    case warning = "WARNING"
-    case error = "ERROR"
-
-    var id: String {
-        rawValue
-    }
+enum LogLevelFilter: Hashable, CaseIterable {
+    case info
+    case warning
+    case error
 
     var titleKey: String {
         switch self {
-        case .all: "ui.log_filter.all"
         case .info: "ui.log_filter.info"
         case .warning: "ui.log_filter.warning"
         case .error: "ui.log_filter.error"
-        }
-    }
-
-    func matches(level: String) -> Bool {
-        switch self {
-        case .all:
-            true
-        case .info:
-            level == "INFO"
-        case .warning:
-            level == "WARNING"
-        case .error:
-            level == "ERROR"
-        }
-    }
-}
-
-enum LogSourceFilter: String, CaseIterable, Identifiable {
-    case all
-    case clashbar
-    case mihomo
-
-    var id: String {
-        rawValue
-    }
-
-    var titleKey: String {
-        switch self {
-        case .all:
-            "ui.log_source.all"
-        case .clashbar:
-            "ui.log_source.clashbar"
-        case .mihomo:
-            "ui.log_source.mihomo"
-        }
-    }
-
-    func matches(source: AppLogSource) -> Bool {
-        switch self {
-        case .all:
-            true
-        case .clashbar:
-            source == .clashbar
-        case .mihomo:
-            source == .mihomo
         }
     }
 }
@@ -108,9 +56,7 @@ enum NetworkTransportFilter: String, CaseIterable, Identifiable {
     }
 
     func matches(_ network: String?) -> Bool {
-        let normalized = (network ?? "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
+        let normalized = network.trimmedOrEmpty.lowercased()
 
         switch self {
         case .all:
@@ -180,11 +126,8 @@ struct MenuBarRoot: View {
     @State var tabContentHeights: [RootTab: CGFloat] = [:]
     @AppStorage("clashbar.proxy.group.hide_hidden") var hideHiddenProxyGroups: Bool = true
 
-    let panelWidth: CGFloat = 360
-    let fallbackTabContentHeight: CGFloat = 380
-
     var contentWidth: CGFloat {
-        self.panelWidth - (MenuBarLayoutTokens.hPage * 2)
+        MenuBarLayoutTokens.panelWidth - (MenuBarLayoutTokens.hPage * 2)
     }
 
     var language: AppLanguage {
@@ -213,7 +156,7 @@ struct MenuBarRoot: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .reportHeight { updateSectionHeight($0, target: .modeAndTab) }
 
-            ScrollView(.vertical, showsIndicators: false) {
+            ScrollView(.vertical) {
                 self.tabScrollContent(for: self.currentTab)
             }
             .scrollIndicators(.hidden)
@@ -227,12 +170,12 @@ struct MenuBarRoot: View {
                 .reportHeight { updateSectionHeight($0, target: .footer) }
         }
         .frame(width: self.contentWidth, alignment: .leading)
-        .padding(MenuBarLayoutTokens.hPage)
-        .frame(width: self.panelWidth, height: resolvedPanelHeight)
+        .padding(.horizontal, MenuBarLayoutTokens.hPage)
+        .frame(width: MenuBarLayoutTokens.panelWidth, height: resolvedPanelHeight)
         .background(self.panelBackground)
         .clipShape(RoundedRectangle(cornerRadius: MenuBarLayoutTokens.panelCornerRadius, style: .continuous))
         .onAppear {
-            let restoredTab = rootTab(for: appState.activeMenuTab)
+            let restoredTab = self.appState.activeMenuTab
             if self.currentTab != restoredTab {
                 var transaction = Transaction(animation: nil)
                 transaction.disablesAnimations = true
@@ -240,14 +183,13 @@ struct MenuBarRoot: View {
                     self.currentTab = restoredTab
                 }
             }
-            self.appState.setActiveMenuTab(menuPanelTabHint(for: self.currentTab))
+            self.appState.setActiveMenuTab(self.currentTab)
             publishPreferredPanelHeight()
         }
         .onChange(of: self.currentTab) { tab in
-            self.appState.setActiveMenuTab(menuPanelTabHint(for: tab))
+            self.appState.setActiveMenuTab(tab)
         }
-        .onChange(of: self.appState.activeMenuTab) { hint in
-            let tab = rootTab(for: hint)
+        .onChange(of: self.appState.activeMenuTab) { tab in
             guard self.currentTab != tab else { return }
 
             var transaction = Transaction(animation: nil)
@@ -283,6 +225,7 @@ struct MenuBarRoot: View {
     func tabScrollContent(for tab: RootTab) -> some View {
         self.tabBody(for: tab)
             .padding(.top, self.tabContentTopInset)
+            .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
             .reportHeight { updateTabContentHeight($0, for: tab) }
     }

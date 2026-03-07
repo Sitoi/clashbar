@@ -2,6 +2,12 @@ import AppKit
 import Combine
 import SwiftUI
 
+private struct StatusItemRenderKey: Equatable {
+    let mode: StatusBarDisplayMode
+    let symbolName: String?
+    let speedLines: MenuBarSpeedLines?
+}
+
 @MainActor
 final class PopoverLayoutModel: ObservableObject {
     @Published var maxPanelHeight: CGFloat
@@ -30,7 +36,6 @@ final class StatusItemController: NSObject {
     private let panel: FloatingPanel
     private let statusContentView: StatusItemContentView
     private let popoverLayoutModel = PopoverLayoutModel()
-    private let popoverContentWidth: CGFloat = 340
     private let popoverFallbackMaxHeight: CGFloat = 640
     private let popoverMinimumHeight: CGFloat = 280
     private let popoverScreenPadding: CGFloat = 10
@@ -40,11 +45,20 @@ final class StatusItemController: NSObject {
     private var changeCancellable: AnyCancellable?
     private var layoutCancellable: AnyCancellable?
     private var refreshWorkItem: DispatchWorkItem?
-    private var lastRenderedDisplay: MenuBarDisplay?
+    private var pendingDisplay: MenuBarDisplay?
+    private var pendingRenderKey: StatusItemRenderKey?
+    private var lastDisplayRefreshAt: Date = .distantPast
+    private var lastRenderedKey: StatusItemRenderKey?
     private var globalEventMonitor: Any?
     private var screenParametersObserver: Any?
     private var lockedPanelOriginX: CGFloat?
     private var popoverHostingController: NSHostingController<AnyView>?
+    private var scrollIndicatorSuppressionTask: Task<Void, Never>?
+
+    private let iconOnlyRefreshInterval: TimeInterval = 0.12
+    // Status-item snapshotting is expensive on macOS when traffic text changes frequently.
+    private let speedDisplayRefreshInterval: TimeInterval = 1.0
+    private static let popoverContentWidth: CGFloat = MenuBarLayoutTokens.panelWidth
 
     init(appState: AppState) {
         self.appState = appState
@@ -53,7 +67,7 @@ final class StatusItemController: NSObject {
             contentRect: NSRect(
                 x: 0,
                 y: 0,
-                width: self.popoverContentWidth,
+                width: Self.popoverContentWidth,
                 height: self.popoverLayoutModel.preferredPanelHeight),
             styleMask: [.borderless],
             backing: .buffered,
@@ -73,6 +87,10 @@ final class StatusItemController: NSObject {
 
     func shutdown() {
         self.refreshWorkItem?.cancel()
+        self.pendingDisplay = nil
+        self.pendingRenderKey = nil
+        self.scrollIndicatorSuppressionTask?.cancel()
+        self.scrollIndicatorSuppressionTask = nil
         self.changeCancellable?.cancel()
         self.layoutCancellable?.cancel()
         self.stopGlobalMonitor()
@@ -99,6 +117,7 @@ final class StatusItemController: NSObject {
         self.placePanelRelativeToStatusButton(button, preserveHorizontalPosition: false)
         NSApp.activate(ignoringOtherApps: true)
         self.panel.makeKeyAndOrderFront(nil)
+        self.scheduleScrollIndicatorSuppressionPasses()
         self.startGlobalMonitor()
         self.appState.setPanelVisibility(true)
     }
@@ -107,6 +126,8 @@ final class StatusItemController: NSObject {
     private func closePopover(_ sender: Any?) {
         self.panel.orderOut(sender)
         self.lockedPanelOriginX = nil
+        self.scrollIndicatorSuppressionTask?.cancel()
+        self.scrollIndicatorSuppressionTask = nil
         self.stopGlobalMonitor()
         self.unloadPopoverContent()
         self.appState.setPanelVisibility(false)
@@ -132,6 +153,7 @@ final class StatusItemController: NSObject {
             self.popoverHostingController?.rootView = self.makePopoverRootView()
         }
         self.panel.contentViewController = self.popoverHostingController
+        self.suppressPanelScrollIndicators()
     }
 
     private func unloadPopoverContent() {
@@ -178,25 +200,88 @@ final class StatusItemController: NSObject {
     }
 
     private func scheduleRefresh(display: MenuBarDisplay) {
-        self.refreshWorkItem?.cancel()
-
-        let work = DispatchWorkItem { [weak self] in
-            self?.refreshDisplay(display)
-        }
-        self.refreshWorkItem = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.10, execute: work)
+        let renderKey = self.renderKey(for: display)
+        guard renderKey != self.lastRenderedKey else { return }
+        self.pendingDisplay = display
+        self.pendingRenderKey = renderKey
+        self.flushScheduledRefreshIfNeeded()
     }
 
     private func refreshDisplayNow() {
-        self.refreshDisplay(self.appState.menuBarDisplaySnapshot)
+        self.refreshWorkItem?.cancel()
+        self.refreshWorkItem = nil
+        self.pendingDisplay = nil
+        self.pendingRenderKey = nil
+        let display = self.appState.menuBarDisplaySnapshot
+        self.refreshDisplay(display, renderKey: self.renderKey(for: display))
+        self.lastDisplayRefreshAt = Date()
     }
 
-    private func refreshDisplay(_ display: MenuBarDisplay) {
-        guard display != self.lastRenderedDisplay else { return }
+    private func refreshDisplay(_ display: MenuBarDisplay, renderKey: StatusItemRenderKey) {
+        guard renderKey != self.lastRenderedKey else { return }
 
         self.statusContentView.apply(display: display)
-        self.statusItem.length = self.statusContentView.requiredWidth
-        self.lastRenderedDisplay = display
+        let requiredWidth = self.statusContentView.requiredWidth
+        if abs(self.statusItem.length - requiredWidth) > 0.5 {
+            self.statusItem.length = requiredWidth
+        }
+        self.lastRenderedKey = renderKey
+    }
+
+    private func flushScheduledRefreshIfNeeded() {
+        guard let pendingDisplay, let pendingRenderKey else { return }
+
+        let refreshInterval = self.refreshInterval(for: pendingDisplay)
+        let elapsed = Date().timeIntervalSince(self.lastDisplayRefreshAt)
+
+        if elapsed >= refreshInterval {
+            self.refreshWorkItem?.cancel()
+            self.refreshWorkItem = nil
+            self.pendingDisplay = nil
+            self.pendingRenderKey = nil
+            self.refreshDisplay(pendingDisplay, renderKey: pendingRenderKey)
+            self.lastDisplayRefreshAt = Date()
+            return
+        }
+
+        guard self.refreshWorkItem == nil else { return }
+        let remainingDelay = max(0.01, refreshInterval - elapsed)
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.refreshWorkItem = nil
+            guard let nextDisplay = self.pendingDisplay, let nextRenderKey = self.pendingRenderKey else { return }
+            self.pendingDisplay = nil
+            self.pendingRenderKey = nil
+            self.refreshDisplay(nextDisplay, renderKey: nextRenderKey)
+            self.lastDisplayRefreshAt = Date()
+            self.flushScheduledRefreshIfNeeded()
+        }
+        self.refreshWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + remainingDelay, execute: work)
+    }
+
+    private func refreshInterval(for display: MenuBarDisplay) -> TimeInterval {
+        switch display.mode {
+        case .iconOnly:
+            self.iconOnlyRefreshInterval
+        case .iconAndSpeed, .speedOnly:
+            self.speedDisplayRefreshInterval
+        }
+    }
+
+    private func renderKey(for display: MenuBarDisplay) -> StatusItemRenderKey {
+        let shouldTrackSymbol = !self.statusContentView.usesBrandIcon
+        let symbolName = shouldTrackSymbol ? display.symbolName : nil
+        switch display.mode {
+        case .iconOnly:
+            // Keep icon-only status item visually stable regardless of runtime state symbol changes.
+            return StatusItemRenderKey(mode: .iconOnly, symbolName: symbolName, speedLines: nil)
+        case .iconAndSpeed:
+            // In icon+speed mode, icon stays fixed; only speed text drives refresh.
+            return StatusItemRenderKey(mode: .iconAndSpeed, symbolName: symbolName, speedLines: display.speedLines)
+        case .speedOnly:
+            return StatusItemRenderKey(mode: .speedOnly, symbolName: nil, speedLines: display.speedLines)
+        }
     }
 
     private func startGlobalMonitor() {
@@ -268,8 +353,10 @@ final class StatusItemController: NSObject {
     private func applyPopoverSize(preferredHeight: CGFloat, preserveHorizontalPosition: Bool) {
         let maximumHeight = max(1, popoverLayoutModel.maxPanelHeight)
         let minimumHeight = min(popoverMinimumHeight, maximumHeight)
-        let clampedHeight = max(minimumHeight, min(preferredHeight, maximumHeight)).rounded(.down)
-        let targetSize = NSSize(width: popoverContentWidth, height: clampedHeight)
+        let clampedHeight = min(
+            maximumHeight,
+            max(minimumHeight, min(preferredHeight, maximumHeight)).rounded(.up))
+        let targetSize = NSSize(width: Self.popoverContentWidth, height: clampedHeight)
 
         let widthChanged = abs(panel.frame.width - targetSize.width) > 0.5
         let heightChanged = abs(panel.frame.height - targetSize.height) > 0.5
@@ -283,12 +370,29 @@ final class StatusItemController: NSObject {
         {
             let frame = NSRect(origin: origin, size: targetSize)
             self.panel.setFrame(frame, display: true, animate: false)
+            self.suppressPanelScrollIndicators()
             return
         }
 
         var newFrame = self.panel.frame
         newFrame.size = targetSize
         self.panel.setFrame(newFrame, display: true, animate: false)
+        self.suppressPanelScrollIndicators()
+    }
+
+    private func scheduleScrollIndicatorSuppressionPasses() {
+        self.scrollIndicatorSuppressionTask?.cancel()
+        self.scrollIndicatorSuppressionTask = Task { @MainActor [weak self] in
+            for _ in 0..<12 {
+                guard let self else { return }
+                self.suppressPanelScrollIndicators()
+                try? await Task.sleep(nanoseconds: 40_000_000)
+            }
+        }
+    }
+
+    private func suppressPanelScrollIndicators() {
+        ScrollIndicatorPolicy.suppressRecursively(in: self.panel.contentView)
     }
 
     private func placePanelRelativeToStatusButton(_ button: NSStatusBarButton?, preserveHorizontalPosition: Bool) {

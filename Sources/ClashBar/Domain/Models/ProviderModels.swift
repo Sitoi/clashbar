@@ -39,8 +39,8 @@ struct ProviderDetail: Decodable, Equatable {
     {
         self.name = name
         self.vehicleType = vehicleType
-        self.testUrl = Self.normalizedText(testUrl)
-        self.timeout = Self.normalizedTimeout(timeout)
+        self.testUrl = testUrl.trimmedNonEmpty
+        self.timeout = timeout.positiveOrNil
         self.updatedAt = updatedAt
         self.ruleCount = ruleCount
         self.subscriptionInfo = subscriptionInfo
@@ -51,8 +51,8 @@ struct ProviderDetail: Decodable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.name = try container.decodeIfPresent(String.self, forKey: .name)
         self.vehicleType = try container.decodeIfPresent(String.self, forKey: .vehicleType)
-        self.testUrl = try Self.normalizedText(container.decodeIfPresent(String.self, forKey: .testUrl))
-        self.timeout = Self.decodeTimeout(from: container)
+        self.testUrl = try container.decodeIfPresent(String.self, forKey: .testUrl).trimmedNonEmpty
+        self.timeout = container.decodeFlexibleInt(forKey: .timeout).positiveOrNil
         self.updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt)
         self.ruleCount = try container.decodeIfPresent(Int.self, forKey: .ruleCount)
             ?? container.decodeIfPresent(Int.self, forKey: .rulesCount)
@@ -61,31 +61,16 @@ struct ProviderDetail: Decodable, Equatable {
         self.proxies = try container.decodeIfPresent([ProviderProxyNode].self, forKey: .proxies)
     }
 
-    private static func normalizedText(_ value: String?) -> String? {
-        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else {
-            return nil
-        }
-        return trimmed
-    }
-
-    private static func decodeTimeout(from container: KeyedDecodingContainer<CodingKeys>) -> Int? {
-        if let timeout = try? container.decodeIfPresent(Int.self, forKey: .timeout) {
-            return self.normalizedTimeout(timeout)
-        }
-        if let timeout64 = try? container.decodeIfPresent(Int64.self, forKey: .timeout) {
-            return Self.normalizedTimeout(Int(timeout64))
-        }
-        if let timeoutText = try? container.decodeIfPresent(String.self, forKey: .timeout),
-           let timeout = Int(timeoutText)
-        {
-            return Self.normalizedTimeout(timeout)
-        }
-        return nil
-    }
-
-    private static func normalizedTimeout(_ timeout: Int?) -> Int? {
-        guard let timeout, timeout > 0 else { return nil }
-        return timeout
+    func with(proxies: [ProviderProxyNode]?) -> ProviderDetail {
+        ProviderDetail(
+            name: self.name,
+            vehicleType: self.vehicleType,
+            testUrl: self.testUrl,
+            timeout: self.timeout,
+            updatedAt: self.updatedAt,
+            ruleCount: self.ruleCount,
+            subscriptionInfo: self.subscriptionInfo,
+            proxies: proxies)
     }
 }
 
@@ -107,15 +92,11 @@ struct ProviderSubscriptionInfo: Decodable, Equatable {
     }
 
     init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.upload = try container.decodeIfPresent(Int64.self, forKey: .upload)
-            ?? container.decodeIfPresent(Int64.self, forKey: .uploadUpper)
-        self.download = try container.decodeIfPresent(Int64.self, forKey: .download)
-            ?? container.decodeIfPresent(Int64.self, forKey: .downloadUpper)
-        self.total = try container.decodeIfPresent(Int64.self, forKey: .total)
-            ?? container.decodeIfPresent(Int64.self, forKey: .totalUpper)
-        self.expire = try container.decodeIfPresent(Int64.self, forKey: .expire)
-            ?? container.decodeIfPresent(Int64.self, forKey: .expireUpper)
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.upload = c.decodeInt64WithFallback(primary: .upload, fallback: .uploadUpper)
+        self.download = c.decodeInt64WithFallback(primary: .download, fallback: .downloadUpper)
+        self.total = c.decodeInt64WithFallback(primary: .total, fallback: .totalUpper)
+        self.expire = c.decodeInt64WithFallback(primary: .expire, fallback: .expireUpper)
     }
 }
 
@@ -140,7 +121,9 @@ struct ProviderProxyNode: Decodable, Equatable {
     }
 }
 
-struct ProviderProxyDelayHistoryEntry: Decodable, Equatable {
+typealias ProviderProxyDelayHistoryEntry = FlexibleDelayHistoryEntry
+
+struct FlexibleDelayHistoryEntry: Decodable, Equatable {
     let delay: Int?
 
     private enum CodingKeys: String, CodingKey {
@@ -149,21 +132,6 @@ struct ProviderProxyDelayHistoryEntry: Decodable, Equatable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-
-        if let value = try container.decodeIfPresent(Int.self, forKey: .delay) {
-            self.delay = value
-            return
-        }
-        if let value = try container.decodeIfPresent(Int64.self, forKey: .delay) {
-            self.delay = Int(value)
-            return
-        }
-        if let value = try container.decodeIfPresent(String.self, forKey: .delay),
-           let intValue = Int(value)
-        {
-            self.delay = intValue
-            return
-        }
-        self.delay = nil
+        self.delay = container.decodeFlexibleInt(forKey: .delay)
     }
 }

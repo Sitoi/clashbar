@@ -1,6 +1,89 @@
 import SwiftUI
 
+struct SeparatedForEach<Element: Equatable, ID: Hashable, RowContent: View>: View {
+    private struct Item: Identifiable {
+        let id: ID
+        let element: Element
+        let isLast: Bool
+    }
+
+    private let items: [Item]
+    private let separator: Color
+    private let content: (Element) -> RowContent
+
+    init<Data: RandomAccessCollection>(
+        data: Data,
+        id idPath: KeyPath<Element, ID>,
+        separator: Color,
+        @ViewBuilder content: @escaping (Element) -> RowContent) where Data.Element == Element
+    {
+        let array = Array(data)
+        self.items = array.enumerated().map { index, el in
+            Item(id: el[keyPath: idPath], element: el, isLast: index == array.count - 1)
+        }
+        self.separator = separator
+        self.content = content
+    }
+
+    var body: some View {
+        ForEach(self.items) { item in
+            self.content(item.element)
+            if !item.isLast {
+                Rectangle()
+                    .fill(self.separator)
+                    .frame(height: MenuBarLayoutTokens.hairline)
+            }
+        }
+    }
+}
+
 extension MenuBarRoot {
+    func fractionSummaryBadge(current: Int, total: Int) -> some View {
+        HStack(spacing: MenuBarLayoutTokens.hMicro) {
+            Text("\(current)")
+                .font(.appMonospaced(size: 11, weight: .bold))
+            Text("/")
+                .font(.appMonospaced(size: 10, weight: .medium))
+            Text("\(total)")
+                .font(.appMonospaced(size: 11, weight: .medium))
+        }
+        .foregroundStyle(self.nativeSecondaryLabel)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 2)
+        .background(self.nativeBadgeCapsule())
+    }
+
+    // swiftlint:disable:next function_parameter_count
+    func compactSelectionMenu<Option: Hashable & Identifiable>(
+        selection: Option,
+        options: [Option],
+        symbol: String,
+        helpText: String,
+        optionTitle: @escaping (Option) -> String,
+        onSelect: @escaping (Option) -> Void) -> some View
+    {
+        Menu {
+            ForEach(options) { option in
+                Button {
+                    onSelect(option)
+                } label: {
+                    if selection == option {
+                        Label(optionTitle(option), systemImage: "checkmark")
+                    } else {
+                        Text(optionTitle(option))
+                    }
+                }
+            }
+        } label: {
+            Label(optionTitle(selection), systemImage: symbol)
+                .font(.appSystem(size: 11, weight: .medium))
+                .lineLimit(1)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+        .help(helpText)
+    }
+
     var isDarkAppearance: Bool {
         self.colorScheme == .dark
     }
@@ -42,19 +125,11 @@ extension MenuBarRoot {
     }
 
     var nativeSecondaryLabel: Color {
-        if self.isDarkAppearance {
-            Color(nsColor: .labelColor).opacity(0.88)
-        } else {
-            Color(nsColor: .labelColor).opacity(0.80)
-        }
+        Color(nsColor: .labelColor).opacity(self.isDarkAppearance ? 0.88 : 0.80)
     }
 
     var nativeTertiaryLabel: Color {
-        if self.isDarkAppearance {
-            Color(nsColor: .labelColor).opacity(0.72)
-        } else {
-            Color(nsColor: .labelColor).opacity(0.64)
-        }
+        Color(nsColor: .labelColor).opacity(self.isDarkAppearance ? 0.72 : 0.64)
     }
 
     var nativeSeparator: Color {
@@ -62,11 +137,8 @@ extension MenuBarRoot {
     }
 
     var nativeControlFill: Color {
-        if self.isDarkAppearance {
-            Color(nsColor: .controlBackgroundColor).opacity(0.78)
-        } else {
-            Color(nsColor: .windowBackgroundColor).opacity(0.92)
-        }
+        Color(nsColor: self.isDarkAppearance ? .controlBackgroundColor : .windowBackgroundColor)
+            .opacity(self.isDarkAppearance ? 0.78 : 0.92)
     }
 
     var nativeControlBorder: Color {
@@ -199,22 +271,9 @@ extension MenuBarRoot {
 
     func sortedProviderNodes(provider: String, detail: ProviderDetail?) -> [String] {
         guard let proxies = detail?.proxies else { return [] }
-        let names = self.orderedUniqueNames(proxies.map(\.name))
-        let sorted = names.sorted { lhs, rhs in
-            let latencyComparison = self.compareLatency(
-                lhs: self.appState.providerNodeLatencies[provider]?[lhs],
-                rhs: self.appState.providerNodeLatencies[provider]?[rhs],
-                ascending: true)
-            if latencyComparison != .orderedSame {
-                return latencyComparison == .orderedAscending
-            }
-            return lhs.localizedStandardCompare(rhs) == .orderedAscending
-        }
-
-        guard self.appState.hideUnavailableProxyNodes else { return sorted }
-        return sorted.filter { name in
-            self.isProxyNodeAvailable(self.appState.providerNodeLatencies[provider]?[name])
-        }
+        return self.sortedNodes(
+            names: proxies.map(\.name),
+            latencyForNode: { self.appState.providerNodeLatencies[provider]?[$0] })
     }
 
     func orderedUniqueNames(_ names: [String]) -> [String] {
@@ -264,22 +323,20 @@ extension MenuBarRoot {
     }
 
     func sortedGroupNodes(_ group: ProxyGroup) -> [String] {
-        let names = self.orderedUniqueNames(group.all)
-        let sorted = names.sorted { lhs, rhs in
-            let latencyComparison = self.compareLatency(
-                lhs: self.appState.delayValue(group: group.name, node: lhs),
-                rhs: self.appState.delayValue(group: group.name, node: rhs),
-                ascending: true)
-            if latencyComparison != .orderedSame {
-                return latencyComparison == .orderedAscending
-            }
+        self.sortedNodes(
+            names: group.all,
+            latencyForNode: { self.appState.delayValue(group: group.name, node: $0) })
+    }
+
+    private func sortedNodes(names: [String], latencyForNode: (String) -> Int?) -> [String] {
+        let unique = self.orderedUniqueNames(names)
+        let sorted = unique.sorted { lhs, rhs in
+            let cmp = self.compareLatency(lhs: latencyForNode(lhs), rhs: latencyForNode(rhs), ascending: true)
+            if cmp != .orderedSame { return cmp == .orderedAscending }
             return lhs.localizedStandardCompare(rhs) == .orderedAscending
         }
-
         guard self.appState.hideUnavailableProxyNodes else { return sorted }
-        return sorted.filter { node in
-            self.isProxyNodeAvailable(self.appState.delayValue(group: group.name, node: node))
-        }
+        return sorted.filter { self.isProxyNodeAvailable(latencyForNode($0)) }
     }
 
     func compactAsyncIconButton(
@@ -326,18 +383,11 @@ private struct CompactAsyncIconButton: View {
             Task { await self.action() }
         } label: {
             ZStack {
-                if self.hierarchicalSymbol {
-                    Image(systemName: self.symbol)
-                        .font(.appSystem(size: self.fontSize, weight: .semibold))
-                        .foregroundStyle(self.hovered ? self.tint : self.baseTint)
-                        .symbolRenderingMode(.hierarchical)
-                        .opacity(self.isLoading ? 0 : 1)
-                } else {
-                    Image(systemName: self.symbol)
-                        .font(.appSystem(size: self.fontSize, weight: .semibold))
-                        .foregroundStyle(self.hovered ? self.tint : self.baseTint)
-                        .opacity(self.isLoading ? 0 : 1)
-                }
+                Image(systemName: self.symbol)
+                    .font(.appSystem(size: self.fontSize, weight: .semibold))
+                    .foregroundStyle(self.hovered ? self.tint : self.baseTint)
+                    .symbolRenderingMode(self.hierarchicalSymbol ? .hierarchical : .monochrome)
+                    .opacity(self.isLoading ? 0 : 1)
 
                 ProgressView()
                     .controlSize(.mini)

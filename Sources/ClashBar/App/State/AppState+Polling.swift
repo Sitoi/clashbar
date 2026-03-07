@@ -91,10 +91,11 @@ extension AppState {
         self.updateDataAcquisitionPolicy()
 
         guard presented else { return }
+        self.flushPendingTrafficSnapshotIfNeeded(immediately: true)
         self.scheduleRefreshForActivatedTab(activeMenuTab)
     }
 
-    func setActiveMenuTab(_ tab: MenuPanelTabHint) {
+    func setActiveMenuTab(_ tab: RootTab) {
         let changed = activeMenuTab != tab
         activeMenuTab = tab
         self.updateDataAcquisitionPolicy()
@@ -103,7 +104,7 @@ extension AppState {
         self.scheduleRefreshForActivatedTab(tab)
     }
 
-    private func scheduleRefreshForActivatedTab(_ tab: MenuPanelTabHint) {
+    private func scheduleRefreshForActivatedTab(_ tab: RootTab) {
         activatedTabRefreshGeneration += 1
         let generation = activatedTabRefreshGeneration
         Task { [weak self] in
@@ -114,11 +115,13 @@ extension AppState {
 
     private func desiredDataAcquisitionPolicy(
         panelPresented: Bool,
-        activeTab: MenuPanelTabHint) -> DataAcquisitionPolicy
+        activeTab: RootTab) -> DataAcquisitionPolicy
     {
+        let trafficEnabled = panelPresented || self.statusBarDisplayMode != .iconOnly
+
         if !panelPresented {
             return DataAcquisitionPolicy(
-                enableTrafficStream: true,
+                enableTrafficStream: trafficEnabled,
                 enableMemoryStream: false,
                 enableConnectionsStream: false,
                 connectionsIntervalMilliseconds: nil,
@@ -139,7 +142,7 @@ extension AppState {
         let logsEnabled = activeTab == .logs
 
         return DataAcquisitionPolicy(
-            enableTrafficStream: true,
+            enableTrafficStream: trafficEnabled,
             enableMemoryStream: memoryEnabled,
             enableConnectionsStream: connectionsEnabled,
             connectionsIntervalMilliseconds: connectionsEnabled ? 1000 : nil,
@@ -148,7 +151,7 @@ extension AppState {
             lowFrequencyIntervalNanoseconds: lowFrequencyInterval)
     }
 
-    private func updateDataAcquisitionPolicy() {
+    func updateDataAcquisitionPolicy() {
         guard processManager.isRunning else {
             self.ensurePeriodicTasksForCurrentVisibility()
             mediumFrequencyIntervalNanoseconds = foregroundMediumFrequencyIntervalNanoseconds
@@ -166,7 +169,7 @@ extension AppState {
         self.applyStreamPolicy(policy)
     }
 
-    func refreshForActivatedTab(_ tab: MenuPanelTabHint, generation: Int? = nil) async {
+    func refreshForActivatedTab(_ tab: RootTab, generation: Int? = nil) async {
         guard processManager.isRunning else { return }
 
         func shouldContinueRefresh() -> Bool {

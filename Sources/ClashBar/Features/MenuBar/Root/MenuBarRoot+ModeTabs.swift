@@ -1,4 +1,3 @@
-import AppKit
 import SwiftUI
 
 extension MenuBarRoot {
@@ -28,8 +27,8 @@ extension MenuBarRoot {
                 mode: .direct,
                 symbol: "paperplane")
         }
-        .frame(width: contentWidth)
         .padding(2)
+        .frame(width: contentWidth)
         .background(
             nativeControlFill,
             in: RoundedRectangle(cornerRadius: MenuBarLayoutTokens.cardCornerRadius, style: .continuous))
@@ -85,9 +84,8 @@ extension MenuBarRoot {
             }
         }
         .buttonStyle(.plain)
-        .onHover { isHovering in
-            hoveredMode = isHovering ? mode : (hoveredMode == mode ? nil : hoveredMode)
-        }
+        .onHover { hoveredMode = self.nextHovered(
+            current: hoveredMode, target: mode, isHovering: $0) }
     }
 
     var topTabs: some View {

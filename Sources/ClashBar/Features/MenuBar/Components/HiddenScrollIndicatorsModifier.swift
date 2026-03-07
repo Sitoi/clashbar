@@ -19,12 +19,18 @@ private struct ScrollViewScrollerConfigurator: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
+        self.applyScrollViewStyleIfNeeded(from: nsView, retries: 6)
+    }
+
+    private func applyScrollViewStyleIfNeeded(from view: NSView, retries: Int) {
         DispatchQueue.main.async {
-            guard let scrollView = nsView.enclosingScrollView else { return }
-            scrollView.hasVerticalScroller = false
-            scrollView.hasHorizontalScroller = false
-            scrollView.autohidesScrollers = true
-            scrollView.scrollerStyle = .overlay
+            if let windowContent = view.window?.contentView {
+                ScrollIndicatorPolicy.suppressRecursively(in: windowContent)
+                return
+            }
+
+            guard retries > 0 else { return }
+            self.applyScrollViewStyleIfNeeded(from: view, retries: retries - 1)
         }
     }
 }

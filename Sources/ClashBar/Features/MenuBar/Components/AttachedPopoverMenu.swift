@@ -62,7 +62,7 @@ struct AttachedPopoverMenu<Label: View, Content: View>: View {
         }
 
         return AnyView(
-            ScrollView(.vertical, showsIndicators: false) {
+            ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: 0) {
                     self.content {
                         self.dismissPopover()

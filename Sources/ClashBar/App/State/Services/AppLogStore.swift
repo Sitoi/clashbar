@@ -15,10 +15,20 @@ struct AppLogStore {
         }
     }
 
-    func append(level: String, message: String) {
+    func append(entries: [AppErrorLogEntry]) {
+        self.append(records: entries.map {
+            (timestamp: $0.timestamp, level: $0.level, message: $0.message)
+        })
+    }
+
+    private func append(records: [(timestamp: Date, level: String, message: String)]) {
+        guard !records.isEmpty else { return }
         self.ensureLogFileExists()
-        let line = "[\(Self.timestampString(from: Date()))] [\(level.uppercased())] \(message)\n"
-        guard let data = line.data(using: .utf8),
+        let content = records.map {
+            "[\(Self.timestampString(from: $0.timestamp))] [\($0.level.uppercased())] \($0.message)\n"
+        }.joined()
+
+        guard let data = content.data(using: .utf8),
               let handle = FileHandle(forWritingAtPath: logFileURL.path)
         else {
             return

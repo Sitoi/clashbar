@@ -16,7 +16,6 @@ extension MenuBarRoot {
                 self.rulesRefreshButton
             }
             .padding(.vertical, MenuBarLayoutTokens.vRow)
-            .background(Color.clear)
             .overlay(alignment: .bottom) {
                 Rectangle()
                     .fill(nativeSeparator)
@@ -68,8 +67,6 @@ extension MenuBarRoot {
                         }
                     }
                 }
-                .background(Color.clear)
-                .clipShape(RoundedRectangle(cornerRadius: 0, style: .continuous))
             }
         }
     }
@@ -102,18 +99,12 @@ extension MenuBarRoot {
 
     func rulesRow(rule: RuleItem, index: Int, providerLookup: [String: ProviderDetail]) -> some View {
         let hovered = hoveredRuleIndex == index
-        let normalizedType = rule.type?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let normalizedPayload = rule.payload?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let normalizedProxy = rule.proxy?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let typeText = ((normalizedType?.isEmpty == false ? normalizedType : tr("ui.common.na")) ?? tr("ui.common.na"))
-            .uppercased()
-        let targetText = (normalizedPayload?.isEmpty == false ? normalizedPayload : tr("ui.common.na")) ??
-            tr("ui.common.na")
-        let policyText = (normalizedProxy?.isEmpty == false ? normalizedProxy : tr("ui.common.na")) ??
-            tr("ui.common.na")
+        let typeText = (rule.type.trimmedNonEmpty ?? tr("ui.common.na")).uppercased()
+        let targetText = rule.payload.trimmedNonEmpty ?? tr("ui.common.na")
+        let policyText = rule.proxy.trimmedNonEmpty ?? tr("ui.common.na")
         let iconSpec = self.ruleTypeIcon(for: typeText)
         let badge = self.rulePolicyBadge(for: policyText)
-        let stats = self.ruleStats(for: rule, payload: targetText, providerLookup: providerLookup)
+        let stats = self.ruleStats(payload: targetText, providerLookup: providerLookup)
 
         return HStack(spacing: 0) {
             Image(systemName: iconSpec.symbol)
@@ -170,9 +161,8 @@ extension MenuBarRoot {
         .padding(.horizontal, MenuBarLayoutTokens.hRow)
         .frame(height: 32)
         .background(nativeHoverRowBackground(hovered))
-        .onHover { isHovering in
-            hoveredRuleIndex = isHovering ? index : (hoveredRuleIndex == index ? nil : hoveredRuleIndex)
-        }
+        .onHover { hoveredRuleIndex = self.nextHovered(
+            current: hoveredRuleIndex, target: index, isHovering: $0) }
     }
 
     func ruleTypeIcon(for type: String) -> (symbol: String, color: Color) {
@@ -204,11 +194,10 @@ extension MenuBarRoot {
     }
 
     func ruleStats(
-        for rule: RuleItem,
         payload: String,
         providerLookup: [String: ProviderDetail]) -> (count: Int, updatedText: String?, hasProvider: Bool)
     {
-        let payloadTrimmed = payload.trimmingCharacters(in: .whitespacesAndNewlines)
+        let payloadTrimmed = payload.trimmed
         guard !payloadTrimmed.isEmpty, payloadTrimmed != tr("ui.common.na") else {
             return (count: 0, updatedText: nil, hasProvider: false)
         }
@@ -220,11 +209,6 @@ extension MenuBarRoot {
                 updatedText: ValueFormatter.relativeTime(from: provider.updatedAt, language: language),
                 hasProvider: true)
         }
-
-        let type = rule.type?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
-        if type.contains("ruleset") {
-            return (count: 0, updatedText: nil, hasProvider: false)
-        }
         return (count: 0, updatedText: nil, hasProvider: false)
     }
 
@@ -235,9 +219,7 @@ extension MenuBarRoot {
         for (key, detail) in appState.ruleProviders {
             map[key.lowercased()] = detail
 
-            if let name = detail.name?.trimmingCharacters(in: .whitespacesAndNewlines),
-               !name.isEmpty
-            {
+            if let name = detail.name.trimmedNonEmpty {
                 map[name.lowercased()] = detail
             }
         }
