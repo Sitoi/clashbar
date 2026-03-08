@@ -2,7 +2,7 @@ import SwiftUI
 
 extension MenuBarRoot {
     var logsTabBody: some View {
-        let logs = self.filteredLogs
+        let logs = self.visibleLogs
 
         return VStack(alignment: .leading, spacing: MenuBarLayoutTokens.sectionGap) {
             self.logsControlCard(filteredCount: logs.count)
@@ -10,7 +10,7 @@ extension MenuBarRoot {
             if logs.isEmpty {
                 emptyCard(tr("ui.empty.logs"))
             } else {
-                LazyVStack(alignment: .leading, spacing: 0) {
+                MeasurementAwareVStack(alignment: .leading, spacing: 0) {
                     SeparatedForEach(data: logs, id: \.id, separator: nativeSeparator) { log in
                         self.logEntryRow(log)
                             .padding(.horizontal, MenuBarLayoutTokens.hRow)
@@ -152,12 +152,15 @@ extension MenuBarRoot {
         .controlSize(.small)
     }
 
+    private static let fullLogSourceSelection = Set(AppLogSource.allCases)
+    private static let fullLogLevelSelection = Set(LogLevelFilter.allCases)
+
     var allLogSourceSelection: Set<AppLogSource> {
-        Set(AppLogSource.allCases)
+        Self.fullLogSourceSelection
     }
 
     var allLogLevelSelection: Set<LogLevelFilter> {
-        Set(LogLevelFilter.allCases)
+        Self.fullLogLevelSelection
     }
 
     func logsCountSummaryBadge(filteredCount: Int) -> some View {
@@ -187,17 +190,6 @@ extension MenuBarRoot {
         logSearchText = ""
     }
 
-    var filteredLogs: [AppErrorLogEntry] {
-        let trimmedKeyword = self.trimmedLogKeyword
-        let logs = Array(appState.errorLogs.prefix(120))
-        return logs.filter { log in
-            guard selectedLogSources.contains(log.source) else { return false }
-            guard trimmedKeyword.isEmpty || self.logSearchTextContent(for: log)
-                .localizedStandardContains(trimmedKeyword) else { return false }
-            return selectedLogLevels.contains(self.logLevelFilter(self.normalizedLogLevel(log.level)))
-        }
-    }
-
     func toggleSelection<Value: Hashable>(
         _ value: Value,
         selection: inout Set<Value>,
@@ -211,6 +203,28 @@ extension MenuBarRoot {
         } else {
             selection.insert(value)
         }
+    }
+
+    func refreshVisibleLogs() {
+        let source = self.appState.errorLogs.prefix(120)
+        let trimmedKeyword = self.trimmedLogKeyword
+        let isShowingAllSources = self.selectedLogSources == self.allLogSourceSelection
+        let isShowingAllLevels = self.selectedLogLevels == self.allLogLevelSelection
+
+        let nextLogs: [AppErrorLogEntry]
+        if trimmedKeyword.isEmpty && isShowingAllSources && isShowingAllLevels {
+            nextLogs = Array(source)
+        } else {
+            nextLogs = source.filter { log in
+                guard self.selectedLogSources.contains(log.source) else { return false }
+                guard trimmedKeyword.isEmpty || self.logSearchTextContent(for: log)
+                    .localizedStandardContains(trimmedKeyword) else { return false }
+                return self.selectedLogLevels.contains(self.logLevelFilter(self.normalizedLogLevel(log.level)))
+            }
+        }
+
+        guard nextLogs != self.visibleLogs else { return }
+        self.visibleLogs = nextLogs
     }
 
     func logEntryRow(_ log: AppErrorLogEntry) -> some View {

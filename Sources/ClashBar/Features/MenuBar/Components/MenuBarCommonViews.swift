@@ -37,6 +37,28 @@ struct SeparatedForEach<Element: Equatable, ID: Hashable, RowContent: View>: Vie
     }
 }
 
+struct MeasurementAwareVStack<Content: View>: View {
+    @Environment(\.panelMeasurementMode) private var panelMeasurementMode
+
+    let alignment: HorizontalAlignment
+    let spacing: CGFloat
+    @ViewBuilder let content: Content
+
+    init(alignment: HorizontalAlignment = .center, spacing: CGFloat = 0, @ViewBuilder content: () -> Content) {
+        self.alignment = alignment
+        self.spacing = spacing
+        self.content = content()
+    }
+
+    var body: some View {
+        if self.panelMeasurementMode {
+            VStack(alignment: self.alignment, spacing: self.spacing) { self.content }
+        } else {
+            LazyVStack(alignment: self.alignment, spacing: self.spacing) { self.content }
+        }
+    }
+}
+
 extension MenuBarRoot {
     func fractionSummaryBadge(current: Int, total: Int) -> some View {
         HStack(spacing: MenuBarLayoutTokens.hMicro) {

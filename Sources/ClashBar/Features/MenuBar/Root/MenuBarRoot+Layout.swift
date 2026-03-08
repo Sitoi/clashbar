@@ -1,59 +1,34 @@
 import SwiftUI
 
 extension MenuBarRoot {
-    var panelVerticalPadding: CGFloat {
-        0
-    }
-
-    var clampedPreferredPanelHeight: CGFloat {
-        max(1, min(popoverLayoutModel.preferredPanelHeight, popoverLayoutModel.maxPanelHeight))
-    }
-
-    var maxPanelContentHeight: CGFloat {
-        max(0, popoverLayoutModel.maxPanelHeight - self.panelVerticalPadding)
-    }
-
-    var currentPanelContentHeight: CGFloat {
-        max(0, self.clampedPreferredPanelHeight - self.panelVerticalPadding)
-    }
-
-    var hasMeasuredFixedSections: Bool {
+    private var hasMeasuredFixedSections: Bool {
         topHeaderHeight > 0 && modeAndTabSectionHeight > 0 && footerBarHeight > 0
     }
 
-    var hasMeasuredCurrentTabContent: Bool {
-        tabContentHeights[currentTab] != nil
+    private var hasResolvedCurrentTabLayout: Bool {
+        self.hasMeasuredFixedSections && self.currentTabContentHeight > 0
     }
 
-    var hasMeasuredLayoutForCurrentTab: Bool {
-        self.hasMeasuredFixedSections && self.hasMeasuredCurrentTabContent
-    }
-
-    var unresolvedTabScrollAreaHeight: CGFloat {
-        max(0, self.currentPanelContentHeight - self.fixedSectionHeight)
-    }
-
-    var measuredTabContentHeight: CGFloat {
-        max(1, tabContentHeights[currentTab] ?? self.unresolvedTabScrollAreaHeight)
-    }
-
-    var fixedSectionHeight: CGFloat {
+    private var fixedSectionHeight: CGFloat {
         topHeaderHeight + modeAndTabSectionHeight + footerBarHeight
     }
 
-    var maxScrollableContentHeight: CGFloat {
-        max(0, self.maxPanelContentHeight - self.fixedSectionHeight)
+    private var fallbackTabScrollAreaHeight: CGFloat {
+        max(0, popoverLayoutModel.resolvedPanelHeight - self.fixedSectionHeight)
+    }
+
+    private var availableTabScrollAreaHeight: CGFloat {
+        max(0, popoverLayoutModel.maxPanelHeight - self.fixedSectionHeight)
     }
 
     var tabScrollAreaHeight: CGFloat {
-        guard self.hasMeasuredLayoutForCurrentTab else { return self.unresolvedTabScrollAreaHeight }
-        return min(self.measuredTabContentHeight, self.maxScrollableContentHeight)
+        guard self.hasResolvedCurrentTabLayout else { return self.fallbackTabScrollAreaHeight }
+        return min(max(1, self.currentTabContentHeight), self.availableTabScrollAreaHeight)
     }
 
     var resolvedPanelHeight: CGFloat {
-        guard self.hasMeasuredLayoutForCurrentTab else { return self.clampedPreferredPanelHeight }
-        let target = self.fixedSectionHeight + self.tabScrollAreaHeight + self.panelVerticalPadding
-        return max(1, min(target, popoverLayoutModel.maxPanelHeight))
+        guard self.hasResolvedCurrentTabLayout else { return popoverLayoutModel.resolvedPanelHeight }
+        return max(1, min(self.fixedSectionHeight + self.tabScrollAreaHeight, popoverLayoutModel.maxPanelHeight))
     }
 
     enum SectionHeightTarget {
@@ -81,19 +56,17 @@ extension MenuBarRoot {
         }
     }
 
-    func updateTabContentHeight(_ measured: CGFloat, for tab: RootTab) {
-        let normalized = max(1, measured)
-        let existing = tabContentHeights[tab] ?? 0
-        guard abs(existing - normalized) > 0.5 else { return }
+    func updateCurrentTabContentHeight(_ measured: CGFloat, for tab: RootTab) {
+        guard tab == self.currentTab else { return }
 
-        tabContentHeights[tab] = normalized
+        let normalized = max(1, measured)
+        guard abs(self.currentTabContentHeight - normalized) > 0.5 else { return }
+
+        self.currentTabContentHeight = normalized
     }
 
     func publishPreferredPanelHeight() {
-        guard self.hasMeasuredLayoutForCurrentTab else { return }
-        let clampedHeight = max(1, min(resolvedPanelHeight, popoverLayoutModel.maxPanelHeight)).rounded(.up)
-        guard abs(popoverLayoutModel.preferredPanelHeight - clampedHeight) > 0.5 else { return }
-
-        popoverLayoutModel.preferredPanelHeight = clampedHeight
+        guard self.hasResolvedCurrentTabLayout else { return }
+        popoverLayoutModel.requestPanelHeight(max(1, self.resolvedPanelHeight.rounded(.up)))
     }
 }

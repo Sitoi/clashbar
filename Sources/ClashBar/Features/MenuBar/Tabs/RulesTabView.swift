@@ -2,8 +2,8 @@ import SwiftUI
 
 extension MenuBarRoot {
     var rulesTabBody: some View {
-        let visibleRules = Array(appState.ruleItems.prefix(100))
-        let providerLookup = self.ruleProviderLookupMap()
+        let visibleRules = self.visibleRules
+        let providerLookup = self.ruleProviderLookup
 
         return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 0) {
@@ -48,7 +48,7 @@ extension MenuBarRoot {
                     .frame(height: MenuBarLayoutTokens.hairline)
             }
 
-            if appState.ruleItems.isEmpty {
+            if visibleRules.isEmpty {
                 Text(tr("ui.empty.rules"))
                     .font(.appSystem(size: 12, weight: .regular))
                     .foregroundStyle(nativeSecondaryLabel)
@@ -210,6 +210,18 @@ extension MenuBarRoot {
                 hasProvider: true)
         }
         return (count: 0, updatedText: nil, hasProvider: false)
+    }
+
+    func refreshVisibleRules() {
+        let nextRules = Array(self.appState.ruleItems.prefix(100))
+        let nextLookup = self.ruleProviderLookupMap()
+
+        if nextRules != self.visibleRules {
+            self.visibleRules = nextRules
+        }
+
+        guard nextLookup != self.ruleProviderLookup else { return }
+        self.ruleProviderLookup = nextLookup
     }
 
     func ruleProviderLookupMap() -> [String: ProviderDetail] {

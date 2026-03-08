@@ -89,17 +89,19 @@ extension MenuBarRoot {
     }
 
     var topTabs: some View {
-        EqualWidthSegmentedTabControl(
-            items: RootTab.allCases.map { ($0, tr($0.titleKey)) },
-            selected: currentTab)
-        { tab in
-            guard currentTab != tab else { return }
-            var transaction = Transaction(animation: nil)
-            transaction.disablesAnimations = true
-            withTransaction(transaction) {
-                currentTab = tab
+        Picker(
+            "",
+            selection: Binding(
+                get: { self.currentTab },
+                set: { self.setCurrentTabWithoutAnimation($0) }))
+        {
+            ForEach(RootTab.allCases, id: \.self) { tab in
+                Text(self.tr(tab.titleKey))
+                    .tag(tab)
             }
         }
+        .labelsHidden()
+        .pickerStyle(.segmented)
         .frame(width: contentWidth, height: 24, alignment: .leading)
     }
 }

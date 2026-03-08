@@ -256,14 +256,13 @@ extension AppState {
     }
 
     private func applyConnectionsSnapshot(_ snapshot: ConnectionsSnapshot) {
-        let totalCount = snapshot.connections.count
+        let totalCount = snapshot.totalCount
         if connectionsCount != totalCount {
             connectionsCount = totalCount
         }
 
-        let latestConnections = Array(snapshot.connections.prefix(maxRetainedConnections))
-        if connections != latestConnections {
-            connections = latestConnections
+        if connections != snapshot.connections {
+            connections = snapshot.connections
         }
     }
 

@@ -339,7 +339,6 @@ final class AppState: ObservableObject {
     let maxLogEntries = 200
     let hiddenPanelMaxInMemoryLogEntries = 20
     let maxBufferedMihomoLogEntries = 40
-    let maxRetainedConnections = 300
     let historyMaxPoints = 60
     let mihomoLogFlushIntervalNanoseconds: UInt64 = 150_000_000
     let foregroundMediumFrequencyIntervalNanoseconds: UInt64 = 4_000_000_000

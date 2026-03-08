@@ -24,7 +24,7 @@ extension MenuBarRoot {
     }()
 
     var activityTabBody: some View {
-        let connections = self.filteredConnections
+        let connections = self.visibleConnections
 
         return VStack(alignment: .leading, spacing: MenuBarLayoutTokens.sectionGap) {
             self.activityControlCard
@@ -32,7 +32,7 @@ extension MenuBarRoot {
             if connections.isEmpty {
                 emptyCard(tr("ui.empty.connections"))
             } else {
-                LazyVStack(spacing: 0) {
+                MeasurementAwareVStack(spacing: 0) {
                     SeparatedForEach(data: connections, id: \.id, separator: nativeSeparator) { conn in
                         self.connectionRow(conn)
                     }
@@ -120,8 +120,8 @@ extension MenuBarRoot {
 
     var networkCountSummaryBadge: some View {
         self.fractionSummaryBadge(
-            current: self.filteredConnections.count,
-            total: self.networkSourceConnections.count)
+            current: self.visibleConnections.count,
+            total: min(self.appState.connections.count, 120))
     }
 
     var trimmedNetworkKeyword: String {
@@ -136,22 +136,6 @@ extension MenuBarRoot {
         self.networkFilterText = ""
         self.networkTransportFilter = .all
         self.networkSortOption = .default
-    }
-
-    var networkSourceConnections: [ConnectionSummary] {
-        Array(appState.connections.prefix(120))
-    }
-
-    var filteredConnections: [ConnectionSummary] {
-        let keyword = self.trimmedNetworkKeyword
-        let filtered = self.networkSourceConnections.filter { conn in
-            guard self.networkTransportFilter.matches(conn.metadata?.network) else { return false }
-            guard keyword.isEmpty || self.connectionSearchText(for: conn).localizedStandardContains(keyword) else {
-                return false
-            }
-            return true
-        }
-        return self.sortedConnections(filtered)
     }
 
     func sortedConnections(_ source: [ConnectionSummary]) -> [ConnectionSummary] {
@@ -199,6 +183,28 @@ extension MenuBarRoot {
             return date.timeIntervalSince1970
         }
         return Self.activityISO8601Basic.date(from: value)?.timeIntervalSince1970
+    }
+
+    func refreshVisibleConnections() {
+        let source = self.appState.connections.prefix(120)
+        let keyword = self.trimmedNetworkKeyword
+
+        let filtered: [ConnectionSummary]
+        if keyword.isEmpty && self.networkTransportFilter == .all {
+            filtered = Array(source)
+        } else {
+            filtered = source.filter { conn in
+                guard self.networkTransportFilter.matches(conn.metadata?.network) else { return false }
+                guard keyword.isEmpty || self.connectionSearchText(for: conn).localizedStandardContains(keyword) else {
+                    return false
+                }
+                return true
+            }
+        }
+
+        let nextConnections = self.sortedConnections(filtered)
+        guard nextConnections != self.visibleConnections else { return }
+        self.visibleConnections = nextConnections
     }
 
     func connectionRow(_ conn: ConnectionSummary) -> some View {

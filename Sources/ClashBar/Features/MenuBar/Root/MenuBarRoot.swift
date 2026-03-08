@@ -101,10 +101,30 @@ enum NetworkSortOption: String, CaseIterable, Identifiable {
     }
 }
 
+private struct ActivityRefreshToken: Equatable {
+    let connections: [ConnectionSummary]
+    let keyword: String
+    let transport: NetworkTransportFilter
+    let sort: NetworkSortOption
+}
+
+private struct LogsRefreshToken: Equatable {
+    let logs: [AppErrorLogEntry]
+    let sources: Set<AppLogSource>
+    let levels: Set<LogLevelFilter>
+    let keyword: String
+}
+
+private struct RulesRefreshToken: Equatable {
+    let items: [RuleItem]
+    let providers: [String: ProviderDetail]
+}
+
 struct MenuBarRoot: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var popoverLayoutModel: PopoverLayoutModel
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.panelMeasurementMode) var panelMeasurementMode
 
     @State var currentTab: RootTab = .proxy
     @State var switchingMode: CoreMode?
@@ -123,7 +143,11 @@ struct MenuBarRoot: View {
     @State var topHeaderHeight: CGFloat = 0
     @State var modeAndTabSectionHeight: CGFloat = 0
     @State var footerBarHeight: CGFloat = 0
-    @State var tabContentHeights: [RootTab: CGFloat] = [:]
+    @State var currentTabContentHeight: CGFloat = 0
+    @State var visibleConnections: [ConnectionSummary] = []
+    @State var visibleLogs: [AppErrorLogEntry] = []
+    @State var visibleRules: [RuleItem] = []
+    @State var ruleProviderLookup: [String: ProviderDetail] = [:]
     @AppStorage("clashbar.proxy.group.hide_hidden") var hideHiddenProxyGroups: Bool = true
 
     var contentWidth: CGFloat {
@@ -134,10 +158,6 @@ struct MenuBarRoot: View {
         self.appState.uiLanguage
     }
 
-    var tabContentTopInset: CGFloat {
-        MenuBarLayoutTokens.vDense
-    }
-
     func tr(_ key: String) -> String {
         L10n.t(key, language: self.language)
     }
@@ -146,7 +166,30 @@ struct MenuBarRoot: View {
         L10n.t(key, language: self.language, args: args)
     }
 
+    func setCurrentTabWithoutAnimation(_ tab: RootTab) {
+        guard self.currentTab != tab else { return }
+
+        var transaction = Transaction(animation: nil)
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            self.currentTab = tab
+        }
+    }
+
     var body: some View {
+        VStack(spacing: 0) {
+            self.panelContent
+            Spacer(minLength: 0)
+        }
+        .frame(width: MenuBarLayoutTokens.panelWidth, alignment: .topLeading)
+        .overlay(alignment: .topLeading) {
+            if !self.panelMeasurementMode {
+                self.currentTabMeasurementLayer
+            }
+        }
+    }
+
+    var panelContent: some View {
         VStack(spacing: 0) {
             topHeader
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -157,52 +200,64 @@ struct MenuBarRoot: View {
                 .reportHeight { updateSectionHeight($0, target: .modeAndTab) }
 
             ScrollView(.vertical) {
-                self.tabScrollContent(for: self.currentTab)
+                self.tabContent(for: self.currentTab)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .scrollIndicators(.hidden)
-            .forceHiddenScrollIndicators()
             .frame(maxWidth: .infinity, alignment: .topLeading)
-            .frame(height: tabScrollAreaHeight)
+            .frame(height: tabScrollAreaHeight, alignment: .top)
 
             footerBar
                 .padding(.top, MenuBarLayoutTokens.sectionGap)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .reportHeight { updateSectionHeight($0, target: .footer) }
         }
-        .frame(width: self.contentWidth, alignment: .leading)
+        .frame(width: self.contentWidth, alignment: .topLeading)
         .padding(.horizontal, MenuBarLayoutTokens.hPage)
-        .frame(width: MenuBarLayoutTokens.panelWidth, height: resolvedPanelHeight)
+        .frame(width: MenuBarLayoutTokens.panelWidth, height: resolvedPanelHeight, alignment: .topLeading)
         .background(self.panelBackground)
         .clipShape(RoundedRectangle(cornerRadius: MenuBarLayoutTokens.panelCornerRadius, style: .continuous))
         .onAppear {
-            let restoredTab = self.appState.activeMenuTab
-            if self.currentTab != restoredTab {
-                var transaction = Transaction(animation: nil)
-                transaction.disablesAnimations = true
-                withTransaction(transaction) {
-                    self.currentTab = restoredTab
-                }
-            }
+            self.setCurrentTabWithoutAnimation(self.appState.activeMenuTab)
             self.appState.setActiveMenuTab(self.currentTab)
+            self.refreshDerivedData(for: self.currentTab)
             publishPreferredPanelHeight()
         }
         .onChange(of: self.currentTab) { tab in
+            self.currentTabContentHeight = 0
             self.appState.setActiveMenuTab(tab)
+            self.refreshDerivedData(for: tab)
         }
         .onChange(of: self.appState.activeMenuTab) { tab in
             guard self.currentTab != tab else { return }
-
-            var transaction = Transaction(animation: nil)
-            transaction.disablesAnimations = true
-            withTransaction(transaction) {
-                self.currentTab = tab
-            }
+            self.setCurrentTabWithoutAnimation(tab)
+            self.currentTabContentHeight = 0
+            self.refreshDerivedData(for: tab)
         }
         .onChange(of: resolvedPanelHeight) { _ in
             publishPreferredPanelHeight()
         }
         .onChange(of: self.popoverLayoutModel.maxPanelHeight) { _ in
             publishPreferredPanelHeight()
+        }
+        .onChange(of: ActivityRefreshToken(
+            connections: self.appState.connections,
+            keyword: self.networkFilterText,
+            transport: self.networkTransportFilter,
+            sort: self.networkSortOption)) { _ in
+            self.refreshActivityDerivedDataIfVisible()
+        }
+        .onChange(of: LogsRefreshToken(
+            logs: self.appState.errorLogs,
+            sources: self.selectedLogSources,
+            levels: self.selectedLogLevels,
+            keyword: self.logSearchText)) { _ in
+            self.refreshLogsDerivedDataIfVisible()
+        }
+        .onChange(of: RulesRefreshToken(
+            items: self.appState.ruleItems,
+            providers: self.appState.ruleProviders)) { _ in
+            self.refreshRulesDerivedDataIfVisible()
         }
     }
 
@@ -222,12 +277,23 @@ struct MenuBarRoot: View {
         }
     }
 
-    func tabScrollContent(for tab: RootTab) -> some View {
+    func tabContent(for tab: RootTab) -> some View {
         self.tabBody(for: tab)
-            .padding(.top, self.tabContentTopInset)
+            .padding(.top, MenuBarLayoutTokens.vDense)
             .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .reportHeight { updateTabContentHeight($0, for: tab) }
+    }
+
+    var currentTabMeasurementLayer: some View {
+        let measuredTab = self.currentTab
+
+        return self.tabContent(for: measuredTab)
+            .frame(width: self.contentWidth, alignment: .topLeading)
+            .reportHeight { updateCurrentTabContentHeight($0, for: measuredTab) }
+            .hidden()
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+            .environment(\.panelMeasurementMode, true)
+            .id(measuredTab)
     }
 
     var panelBackground: some View {
@@ -238,5 +304,33 @@ struct MenuBarRoot: View {
                     .stroke(nativeSeparator, lineWidth: 0.8)
             }
             .shadow(color: Color(nsColor: .shadowColor).opacity(0.28), radius: 18, x: 0, y: 10)
+    }
+
+    func refreshDerivedData(for tab: RootTab) {
+        switch tab {
+        case .proxy, .system:
+            return
+        case .rules:
+            self.refreshVisibleRules()
+        case .activity:
+            self.refreshVisibleConnections()
+        case .logs:
+            self.refreshVisibleLogs()
+        }
+    }
+
+    func refreshActivityDerivedDataIfVisible() {
+        guard self.currentTab == .activity else { return }
+        self.refreshVisibleConnections()
+    }
+
+    func refreshLogsDerivedDataIfVisible() {
+        guard self.currentTab == .logs else { return }
+        self.refreshVisibleLogs()
+    }
+
+    func refreshRulesDerivedDataIfVisible() {
+        guard self.currentTab == .rules else { return }
+        self.refreshVisibleRules()
     }
 }

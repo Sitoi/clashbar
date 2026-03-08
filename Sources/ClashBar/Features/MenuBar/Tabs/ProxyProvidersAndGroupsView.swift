@@ -408,6 +408,8 @@ extension MenuBarRoot {
             Spacer(minLength: 0)
             trailing()
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, MenuBarLayoutTokens.hRow)
     }
 
     func nextHovered<T: Equatable>(current: T?, target: T, isHovering: Bool) -> T? {
@@ -459,7 +461,7 @@ extension MenuBarRoot {
                 .padding(.horizontal, 6)
                 .padding(.vertical, 4)
         } else {
-            VStack(spacing: 2) {
+            VStack(spacing: 0) {
                 ForEach(nodes, id: \.self) { node in
                     row(node)
                 }

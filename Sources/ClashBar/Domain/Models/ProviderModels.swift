@@ -102,22 +102,39 @@ struct ProviderSubscriptionInfo: Decodable, Equatable {
 
 struct ProviderProxyNode: Decodable, Equatable {
     let name: String
-    let history: [ProviderProxyDelayHistoryEntry]?
+    let latestDelay: Int?
 
     private enum CodingKeys: String, CodingKey {
         case name
         case history
     }
 
-    init(name: String, history: [ProviderProxyDelayHistoryEntry]? = nil) {
+    init(name: String, latestDelay: Int? = nil) {
         self.name = name
-        self.history = history
+        self.latestDelay = latestDelay
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.name = try container.decodeIfPresent(String.self, forKey: .name) ?? "-"
-        self.history = try container.decodeIfPresent([ProviderProxyDelayHistoryEntry].self, forKey: .history)
+        self.latestDelay = Self.decodeLatestDelay(from: container)
+    }
+
+    private static func decodeLatestDelay(from container: KeyedDecodingContainer<CodingKeys>) -> Int? {
+        guard var historyContainer = try? container.nestedUnkeyedContainer(forKey: .history) else {
+            return nil
+        }
+
+        var latest: Int?
+        while !historyContainer.isAtEnd {
+            guard let entry = try? historyContainer.decode(ProviderProxyDelayHistoryEntry.self) else {
+                break
+            }
+            if let delay = entry.delay {
+                latest = delay
+            }
+        }
+        return latest
     }
 }
 

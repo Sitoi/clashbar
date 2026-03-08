@@ -127,14 +127,14 @@ extension AppState {
 
     private func applyProviderHealthcheckDelays(provider: String, detail: ProviderDetail) {
         detail.proxies?
-            .compactMap { proxy in
-                self.latestProviderDelay(proxy.history).map { (name: proxy.name, delay: $0) }
-            }
+            .compactMap { proxy in proxy.latestDelay.map { (name: proxy.name, delay: $0) } }
             .forEach { self.setProviderNodeLatency(provider: provider, node: $0.name, value: $0.delay) }
     }
 
     private func sanitizedProviderDetail(_ detail: ProviderDetail, includeNodes: Bool) -> ProviderDetail {
-        let proxies = includeNodes ? detail.proxies?.map { ProviderProxyNode(name: $0.name) } : nil
+        let proxies = includeNodes ? detail.proxies?.map {
+            ProviderProxyNode(name: $0.name, latestDelay: $0.latestDelay)
+        } : nil
         return detail.with(proxies: proxies)
     }
 
@@ -142,7 +142,9 @@ extension AppState {
         previous: ProviderDetail?,
         incoming: ProviderDetail) -> ProviderDetail
     {
-        let fallbackNodes = incoming.proxies?.map { ProviderProxyNode(name: $0.name) }
+        let fallbackNodes = incoming.proxies?.map {
+            ProviderProxyNode(name: $0.name, latestDelay: $0.latestDelay)
+        }
         return incoming.with(proxies: previous?.proxies ?? fallbackNodes)
     }
 
@@ -172,10 +174,6 @@ extension AppState {
         guard var existing = providerNodeLatencies[provider] else { return }
         existing = existing.filter { allowedNodes.contains($0.key) }
         providerNodeLatencies[provider] = existing
-    }
-
-    private func latestProviderDelay(_ history: [ProviderProxyDelayHistoryEntry]?) -> Int? {
-        history?.lazy.reversed().compactMap(\.delay).first
     }
 
     private func applyRefreshedProviderDetail(provider: String, detail: ProviderDetail) {
@@ -368,7 +366,7 @@ extension AppState {
 
             self.providerProxyCount = filteredProxyProviders.count
             self.providerRuleCount = ruleProviders.providers.count
-            self.rulesCount = rules.rules.count
+            self.rulesCount = rules.totalCount
 
             let currentNames = Set(filteredProxyProviders.keys)
             self.expandedProxyProviders = self.expandedProxyProviders.intersection(currentNames)
