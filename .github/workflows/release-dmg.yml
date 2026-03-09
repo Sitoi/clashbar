@@ -230,6 +230,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare-version.outputs.tag }}
+
       - name: Download dmg artifacts
         uses: actions/download-artifact@v4
         with:
@@ -237,11 +242,23 @@ jobs:
           merge-multiple: true
           path: dist
 
+      - name: Generate release body
+        shell: bash
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          chmod +x Scripts/generate_release_notes.sh
+          Scripts/generate_release_notes.sh \
+            "${{ needs.prepare-version.outputs.tag }}" \
+            "${{ needs.prepare-version.outputs.version }}" \
+            release.md
+
       - name: Publish release assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare-version.outputs.tag }}
           name: ClashBar ${{ needs.prepare-version.outputs.version }}
+          body_path: release.md
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
