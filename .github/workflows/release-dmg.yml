@@ -3,16 +3,16 @@ name: Release DMG
 on:
   push:
     tags:
-      - "v*"
-      - "*.*.*"
+      - 'v*'
+      - '*.*.*'
   workflow_dispatch:
     inputs:
       tag:
-        description: "Optional explicit tag (v1.2.3 or 1.2.3). Leave empty to auto-increment."
+        description: 'Optional explicit tag (v1.2.3 or 1.2.3). Leave empty to auto-increment.'
         required: false
         type: string
       bump:
-        description: "Version bump when tag is empty."
+        description: 'Version bump when tag is empty.'
         required: false
         default: auto
         type: choice
@@ -160,9 +160,19 @@ jobs:
           - target_arch: arm64
             dmg_suffix: apple-silicon
             artifact_name: dmg-arm64
+            bundle_mihomo_binary: '1'
+          - target_arch: arm64
+            dmg_suffix: apple-silicon-no-core
+            artifact_name: dmg-arm64-no-core
+            bundle_mihomo_binary: '0'
           - target_arch: x86_64
             dmg_suffix: intel
             artifact_name: dmg-x86_64
+            bundle_mihomo_binary: '1'
+          - target_arch: x86_64
+            dmg_suffix: intel-no-core
+            artifact_name: dmg-x86_64-no-core
+            bundle_mihomo_binary: '0'
     runs-on: macos-15
     permissions:
       contents: read
@@ -193,6 +203,8 @@ jobs:
         run: |
           APP_VERSION="${{ needs.prepare-version.outputs.version }}" \
           BUILD_NUMBER="${{ needs.prepare-version.outputs.build_number }}" \
+          PREPARE_MIHOMO_BINARY="${{ matrix.bundle_mihomo_binary }}" \
+          BUNDLE_MIHOMO_BINARY="${{ matrix.bundle_mihomo_binary }}" \
           TARGET_ARCH="${{ matrix.target_arch }}" \
           ./Scripts/build.sh app
 
@@ -233,7 +245,4 @@ jobs:
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
-            dist/ClashBar-${{ needs.prepare-version.outputs.version }}-apple-silicon.dmg
-            dist/ClashBar-${{ needs.prepare-version.outputs.version }}-apple-silicon.dmg.sha256
-            dist/ClashBar-${{ needs.prepare-version.outputs.version }}-intel.dmg
-            dist/ClashBar-${{ needs.prepare-version.outputs.version }}-intel.dmg.sha256
+            dist/*.dmg

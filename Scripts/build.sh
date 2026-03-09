@@ -27,6 +27,10 @@ Stages:
   dmg          Build dmg from existing app bundle only.
   app          Run preprocess + package.
   all          Run preprocess + package + dmg (default).
+
+Environment:
+  PREPARE_MIHOMO_BINARY=0  Skip preprocessing/downloading mihomo.
+  BUNDLE_MIHOMO_BINARY=0   Build a no-core app/dmg without bundled mihomo.
 EOF
 }
 

@@ -378,6 +378,9 @@ final class AppState: ObservableObject {
     var remoteConfigSources: [String: String] = [:]
     var externalControllerWarningKeys: Set<String> = []
     let streamJSONDecoder = JSONDecoder()
+    let initialNoCoreSetupGuideShownKey = "clashbar.core.install.guide.shown.v1"
+    let bundlesMihomoCore: Bool
+    var didPresentInitialNoCoreSetupGuide = false
 
     init(
         processManager: (any MihomoControlling)? = nil,
@@ -402,6 +405,7 @@ final class AppState: ObservableObject {
         self.clashbarLogStore = clashbarLogStore
         self.mihomoLogStore = mihomoLogStore
         self.configManager = configManager ?? ConfigDirectoryManager(workingDirectoryManager: workingDirectoryManager)
+        self.bundlesMihomoCore = Self.resolveBundledMihomoCoreFlag()
         self.uiLanguage = loadPersistedUILanguage()
         self.appearanceMode = loadPersistedAppearanceMode()
         applyAppAppearance()
@@ -474,8 +478,10 @@ final class AppState: ObservableObject {
             self.startConfigDirectoryMonitoringIfNeeded()
         }
         if startBackgroundRefresh, self.autoStartCore {
-            Task { [weak self] in
-                await self?.attemptAutoStartIfNeeded()
+            if !self.shouldDeferAutoStartForMissingManagedCore() {
+                Task { [weak self] in
+                    await self?.attemptAutoStartIfNeeded()
+                }
             }
         }
 
@@ -499,5 +505,19 @@ final class AppState: ObservableObject {
             webSocketTask.cancel(with: .goingAway, reason: nil)
         }
         providerRefreshTask?.cancel()
+    }
+
+    private static func resolveBundledMihomoCoreFlag() -> Bool {
+        guard let value = Bundle.main.object(forInfoDictionaryKey: "ClashBarBundlesMihomoCore") else {
+            return true
+        }
+
+        if let number = value as? NSNumber {
+            return number.boolValue
+        }
+        if let string = value as? String {
+            return NSString(string: string).boolValue
+        }
+        return true
     }
 }

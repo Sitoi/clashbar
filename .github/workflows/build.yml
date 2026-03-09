@@ -30,7 +30,13 @@ jobs:
       matrix:
         include:
           - target_arch: arm64
+            bundle_mihomo_binary: "1"
+          - target_arch: arm64
+            bundle_mihomo_binary: "0"
           - target_arch: x86_64
+            bundle_mihomo_binary: "1"
+          - target_arch: x86_64
+            bundle_mihomo_binary: "0"
     runs-on: macos-15
     permissions:
       contents: read
@@ -57,5 +63,7 @@ jobs:
       - name: Build app
         shell: bash
         run: |
+          PREPARE_MIHOMO_BINARY="${{ matrix.bundle_mihomo_binary }}" \
+          BUNDLE_MIHOMO_BINARY="${{ matrix.bundle_mihomo_binary }}" \
           TARGET_ARCH="${{ matrix.target_arch }}" \
           ./Scripts/build.sh app

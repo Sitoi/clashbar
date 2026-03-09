@@ -8,6 +8,7 @@ MIHOMO_REPO="${MIHOMO_REPO:-MetaCubeX/mihomo}"
 MIHOMO_VERSION="${MIHOMO_VERSION:-}"
 DOWNLOAD_MIHOMO="${DOWNLOAD_MIHOMO:-1}"
 REUSE_LOCAL_MIHOMO="${REUSE_LOCAL_MIHOMO:-1}"
+PREPARE_MIHOMO_BINARY="${PREPARE_MIHOMO_BINARY:-1}"
 PREPROCESS_DIR="${PREPROCESS_DIR:-$ROOT/dist/preprocess}"
 
 MIHOMO_RESOURCE_PATH="$ROOT/Sources/ClashBar/Resources/bin/mihomo"
@@ -172,5 +173,10 @@ prepare_icon() {
   rm -rf "$iconset_dir"
 }
 
-prepare_mihomo
+if [ "$PREPARE_MIHOMO_BINARY" = "1" ]; then
+  prepare_mihomo
+else
+  rm -f "$PREPROCESSED_MIHOMO_PATH"
+  echo "Skipping mihomo preprocessing because PREPARE_MIHOMO_BINARY=$PREPARE_MIHOMO_BINARY"
+fi
 prepare_icon

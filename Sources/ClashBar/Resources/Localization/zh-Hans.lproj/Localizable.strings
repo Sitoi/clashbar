@@ -175,7 +175,7 @@
 "app.system_proxy.error.helper_recovery_failed" = "恢复系统代理 helper 失败: %@";
 "app.system_proxy.error.helper_connection_failed" = "连接系统代理 helper 失败: %@";
 "app.system_proxy.error.helper_operation_failed" = "系统代理 helper 执行失败: %@";
-"app.tun.error.binary_not_found" = "未找到 mihomo 二进制，请重新打包或重装 ClashBar。";
+"app.tun.error.binary_not_found" = "未找到 mihomo 二进制。请先将名为“mihomo”的可执行文件复制到以下目录：\n%@";
 "app.tun.error.permission_missing" = "TUN 模式需要 mihomo 二进制具备 root + setuid 权限。";
 "app.tun.error.authorization_cancelled" = "管理员授权已取消。";
 "app.tun.error.authorization_failed" = "授予 TUN 权限失败: %@";
@@ -213,6 +213,9 @@
 "app.core.alert.start_failed.title" = "启动内核失败";
 "app.core.alert.restart_failed.title" = "重启内核失败";
 "app.core.alert.process_terminated.title" = "内核异常退出";
+"app.core.error.binary_not_found" = "当前版本未内置 mihomo。请先将名为“mihomo”的可执行文件复制到以下目录，再重新启动 ClashBar Core：\n%@";
+"app.core.setup_required.title" = "安装 Mihomo 内核";
+"app.core.setup_required.message" = "当前版本不内置 mihomo。首次使用前，请将名为“mihomo”的可执行文件复制到以下目录：\n%@\n\nClashBar 之后会从该目录读取内核。";
 
 "log.process.terminated" = "mihomo 已退出，退出码 %d";
 "log.working_dir_init_failed" = "初始化工作目录失败: %@";

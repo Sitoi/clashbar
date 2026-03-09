@@ -11,6 +11,7 @@ PREPROCESS_DIR="${PREPROCESS_DIR:-$ROOT/dist/preprocess}"
 PREPROCESSED_ICON_PATH="${PREPROCESSED_ICON_PATH:-$PREPROCESS_DIR/${APP_NAME}.icns}"
 PREPROCESSED_MIHOMO_PATH="${PREPROCESSED_MIHOMO_PATH:-$PREPROCESS_DIR/mihomo}"
 REQUIRE_MIHOMO_BINARY="${REQUIRE_MIHOMO_BINARY:-1}"
+BUNDLE_MIHOMO_BINARY="${BUNDLE_MIHOMO_BINARY:-1}"
 
 APP="$ROOT/dist/${APP_NAME}.app"
 HELPER_LABEL="com.clashbar.helper"
@@ -92,7 +93,8 @@ resolve_mihomo_install_path() {
   echo "$bundle_dir/$filename"
 }
 
-remove_bundled_mihomo_raw_candidates() {
+remove_bundled_mihomo_candidates() {
+  local filename="$1"
   local path=""
 
   while IFS= read -r path; do
@@ -101,12 +103,12 @@ remove_bundled_mihomo_raw_candidates() {
       rm -f "$path"
     fi
   done < <(printf '%s\n' \
-    "$(resolve_mihomo_install_path "mihomo")" \
-    "$APP/Contents/Resources/ClashBar_ClashBar.bundle/bin/mihomo" \
-    "$APP/Contents/Resources/ClashBar_ClashBar.bundle/Resources/bin/mihomo" \
-    "$APP/Contents/Resources/bin/mihomo" \
-    "$APP/Contents/Resources/Resources/bin/mihomo" \
-    "$APP/Contents/Resources/mihomo" | awk '!seen[$0]++')
+    "$(resolve_mihomo_install_path "$filename")" \
+    "$APP/Contents/Resources/ClashBar_ClashBar.bundle/bin/$filename" \
+    "$APP/Contents/Resources/ClashBar_ClashBar.bundle/Resources/bin/$filename" \
+    "$APP/Contents/Resources/bin/$filename" \
+    "$APP/Contents/Resources/Resources/bin/$filename" \
+    "$APP/Contents/Resources/$filename" | awk '!seen[$0]++')
 }
 
 BIN="$(resolve_build_artifact "$BIN_CANDIDATE" file "$BIN_PATTERN")"
@@ -143,28 +145,34 @@ chmod +x "$APP/Contents/MacOS/ClashBar"
 rm -rf "$APP/Contents/Resources/ClashBar_ClashBar.bundle"
 cp -R "$RESOURCE_BUNDLE" "$APP/Contents/Resources/ClashBar_ClashBar.bundle"
 
-if [ -f "$PREPROCESSED_MIHOMO_PATH" ]; then
-  MIHOMO_SOURCE_PATH="$PREPROCESSED_MIHOMO_PATH"
-elif [ -f "$(resolve_mihomo_install_path "mihomo")" ]; then
-  MIHOMO_SOURCE_PATH="$(resolve_mihomo_install_path "mihomo")"
-else
-  MIHOMO_SOURCE_PATH=""
-fi
+if [ "$BUNDLE_MIHOMO_BINARY" = "1" ]; then
+  if [ -f "$PREPROCESSED_MIHOMO_PATH" ]; then
+    MIHOMO_SOURCE_PATH="$PREPROCESSED_MIHOMO_PATH"
+  elif [ -f "$(resolve_mihomo_install_path "mihomo")" ]; then
+    MIHOMO_SOURCE_PATH="$(resolve_mihomo_install_path "mihomo")"
+  else
+    MIHOMO_SOURCE_PATH=""
+  fi
 
-if [ -n "$MIHOMO_SOURCE_PATH" ]; then
-  MIHOMO_INSTALL_PATH="$(resolve_mihomo_install_path "mihomo.gz")"
-  mkdir -p "$(dirname "$MIHOMO_INSTALL_PATH")"
-  remove_bundled_mihomo_raw_candidates
-  rm -f "$MIHOMO_INSTALL_PATH"
-  gzip -c "$MIHOMO_SOURCE_PATH" > "$MIHOMO_INSTALL_PATH"
-  chmod 644 "$MIHOMO_INSTALL_PATH"
-  echo "Bundled compressed mihomo payload: $MIHOMO_INSTALL_PATH"
-elif [ "$REQUIRE_MIHOMO_BINARY" = "1" ]; then
-  echo "Missing preprocessed mihomo binary: $PREPROCESSED_MIHOMO_PATH" >&2
-  echo "Run ./Scripts/preprocess.sh (or ./Scripts/build.sh app/all) before packaging." >&2
-  exit 1
+  if [ -n "$MIHOMO_SOURCE_PATH" ]; then
+    MIHOMO_INSTALL_PATH="$(resolve_mihomo_install_path "mihomo.gz")"
+    mkdir -p "$(dirname "$MIHOMO_INSTALL_PATH")"
+    remove_bundled_mihomo_candidates "mihomo"
+    remove_bundled_mihomo_candidates "mihomo.gz"
+    gzip -c "$MIHOMO_SOURCE_PATH" > "$MIHOMO_INSTALL_PATH"
+    chmod 644 "$MIHOMO_INSTALL_PATH"
+    echo "Bundled compressed mihomo payload: $MIHOMO_INSTALL_PATH"
+  elif [ "$REQUIRE_MIHOMO_BINARY" = "1" ]; then
+    echo "Missing preprocessed mihomo binary: $PREPROCESSED_MIHOMO_PATH" >&2
+    echo "Run ./Scripts/preprocess.sh (or ./Scripts/build.sh app/all) before packaging." >&2
+    exit 1
+  else
+    echo "Warning: preprocessed mihomo binary not found, and no bundled mihomo resource was available."
+  fi
 else
-  echo "Warning: preprocessed mihomo binary not found, and no bundled mihomo resource was available."
+  remove_bundled_mihomo_candidates "mihomo"
+  remove_bundled_mihomo_candidates "mihomo.gz"
+  echo "Skipped bundling mihomo payload."
 fi
 
 cp "$HELPER_BIN" "$APP/Contents/Library/HelperTools/$HELPER_LABEL"
@@ -179,6 +187,12 @@ else
   echo "Warning: preprocessed icon not found at $PREPROCESSED_ICON_PATH"
 fi
 
+if [ "$BUNDLE_MIHOMO_BINARY" = "1" ]; then
+  BUNDLES_MIHOMO_CORE_PLIST_VALUE="<true/>"
+else
+  BUNDLES_MIHOMO_CORE_PLIST_VALUE="<false/>"
+fi
+
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -191,6 +205,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <key>CFBundleShortVersionString</key><string>${APP_VERSION}</string>
 <key>CFBundleVersion</key><string>${BUILD_NUMBER}</string>
 $ICON_PLIST_ENTRY
+<key>ClashBarBundlesMihomoCore</key>${BUNDLES_MIHOMO_CORE_PLIST_VALUE}
 <key>NSAppTransportSecurity</key>
 <dict>
 <key>NSAllowsArbitraryLoads</key><true/>

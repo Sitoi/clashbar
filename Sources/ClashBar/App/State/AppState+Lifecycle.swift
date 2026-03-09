@@ -67,8 +67,9 @@ extension AppState {
                     refreshSystemProxyBeforeOverlay: true,
                     refreshSystemProxyAfterBootstrap: false))
         } catch {
+            let errorMessage = self.coreErrorMessage(error)
             preserveLocalSettingsOnNextSync = false
-            let message = tr("log.start.failed", error.localizedDescription)
+            let message = tr("log.start.failed", errorMessage)
             appendLog(level: "error", message: message)
             self.presentCoreFailureAlert(
                 title: self.tr("app.core.alert.start_failed.title"),
@@ -142,8 +143,9 @@ extension AppState {
                     refreshSystemProxyBeforeOverlay: false,
                     refreshSystemProxyAfterBootstrap: true))
         } catch {
+            let errorMessage = self.coreErrorMessage(error)
             preserveLocalSettingsOnNextSync = false
-            let message = tr("log.restart.failed", error.localizedDescription)
+            let message = tr("log.restart.failed", errorMessage)
             appendLog(level: "error", message: message)
             self.presentCoreFailureAlert(
                 title: self.tr("app.core.alert.restart_failed.title"),
@@ -241,7 +243,7 @@ extension AppState {
             try await processManager.validateConfigAsync(configPath: configPath)
             return nil
         } catch {
-            let detailsRaw = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+            let detailsRaw = self.coreErrorMessage(error).trimmingCharacters(in: .whitespacesAndNewlines)
             return detailsRaw.isEmpty ? tr("ui.common.unknown") : detailsRaw
         }
     }

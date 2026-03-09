@@ -79,7 +79,7 @@ extension AppState {
         if let permissionError = error as? TunPermissionServiceError {
             switch permissionError {
             case .coreBinaryNotFound, .coreBinaryNotExecutable:
-                return tr("app.tun.error.binary_not_found")
+                return tr("app.tun.error.binary_not_found", workingDirectoryManager.coreDirectoryURL.path)
             case .permissionMissing:
                 return tr("app.tun.error.permission_missing")
             case .authorizationCancelled:

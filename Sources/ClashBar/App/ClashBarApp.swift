@@ -103,6 +103,7 @@ final class ClashBarAppDelegate: NSObject, NSApplicationDelegate {
         }
         NSApp.setActivationPolicy(.accessory)
         self.statusItemController = StatusItemController(appState: self.appState)
+        self.appState.presentInitialNoCoreSetupGuideIfNeeded()
     }
 
     func applicationWillTerminate(_ notification: Notification) {

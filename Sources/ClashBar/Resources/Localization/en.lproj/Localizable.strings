@@ -175,7 +175,7 @@
 "app.system_proxy.error.helper_recovery_failed" = "Failed to recover privileged helper: %@";
 "app.system_proxy.error.helper_connection_failed" = "Failed to connect privileged helper: %@";
 "app.system_proxy.error.helper_operation_failed" = "Privileged helper operation failed: %@";
-"app.tun.error.binary_not_found" = "mihomo binary not found. Rebuild or reinstall ClashBar.";
+"app.tun.error.binary_not_found" = "No mihomo core was found. Copy an executable named \"mihomo\" to %@ first.";
 "app.tun.error.permission_missing" = "TUN mode requires root + setuid permissions on mihomo binary.";
 "app.tun.error.authorization_cancelled" = "Administrator authorization was cancelled.";
 "app.tun.error.authorization_failed" = "Failed to grant TUN permissions: %@";
@@ -213,6 +213,9 @@
 "app.core.alert.start_failed.title" = "Core Start Failed";
 "app.core.alert.restart_failed.title" = "Core Restart Failed";
 "app.core.alert.process_terminated.title" = "Core Terminated Unexpectedly";
+"app.core.error.binary_not_found" = "No mihomo core was found. Copy an executable named \"mihomo\" to %@, then start ClashBar Core again.";
+"app.core.setup_required.title" = "Install Mihomo Core";
+"app.core.setup_required.message" = "This build does not bundle mihomo. Before first use, copy an executable named \"mihomo\" into:\n%@\n\nClashBar will load the core from that folder.";
 
 "log.process.terminated" = "mihomo terminated with code %d";
 "log.working_dir_init_failed" = "Failed to initialize working directory: %@";

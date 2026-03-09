@@ -32,7 +32,7 @@
 
 </div>
 
-![ClashBar](./imgs/clashbar.png)
+![ClashBar](./imgs/clashbar.svg)
 
 ---
 

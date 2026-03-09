@@ -1,6 +1,17 @@
 import Darwin
 import Foundation
 
+enum MihomoBinaryResolutionError: LocalizedError {
+    case binaryNotFound(expectedDirectory: String)
+
+    var errorDescription: String? {
+        switch self {
+        case let .binaryNotFound(expectedDirectory):
+            "mihomo binary not found. Expected an executable named 'mihomo' in \(expectedDirectory)."
+        }
+    }
+}
+
 enum MihomoConfigValidationError: LocalizedError {
     case launchFailed(String)
     case timedOut(seconds: Int, details: String)
@@ -379,9 +390,7 @@ final class MihomoProcessManager: MihomoControlling, @unchecked Sendable {
     private func resolveMihomoBinary() throws -> String {
         try self.workingDirectoryManager.bootstrapDirectories(fileManager: self.fileManager)
 
-        let managedBinaryPath = self.workingDirectoryManager.coreDirectoryURL
-            .appendingPathComponent("mihomo", isDirectory: false)
-            .path
+        let managedBinaryPath = self.workingDirectoryManager.managedMihomoBinaryURL.path
 
         if self.fileManager.fileExists(atPath: managedBinaryPath) {
             try self.ensureExecutableIfNeeded(at: managedBinaryPath)
@@ -401,10 +410,8 @@ final class MihomoProcessManager: MihomoControlling, @unchecked Sendable {
         }
 
         guard let bundledCompressedBinaryPath = self.firstBundledCompressedBinaryPath() else {
-            throw NSError(
-                domain: "ClashBar.Core",
-                code: 404,
-                userInfo: [NSLocalizedDescriptionKey: "mihomo binary not found in app resources"])
+            throw MihomoBinaryResolutionError.binaryNotFound(
+                expectedDirectory: self.workingDirectoryManager.coreDirectoryURL.path)
         }
 
         try self.validateBinarySecurity(at: bundledCompressedBinaryPath)

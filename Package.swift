@@ -21,7 +21,7 @@ let package = Package(
             dependencies: ["ProxyHelperShared"],
             path: "Sources/ClashBar",
             resources: [
-                .copy("Resources/bin/mihomo"),
+                .copy("Resources/bin"),
                 .copy("Resources/Brand/clashbar-icon.png"),
                 .copy("Resources/ConfigTemplates/ClashBar.yaml"),
                 .process("Resources/Localization"),
