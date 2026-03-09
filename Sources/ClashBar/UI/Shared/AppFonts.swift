@@ -1,14 +1,17 @@
 import AppKit
 import SwiftUI
 
-extension Font {
-    static func appSystem(size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        Font(NSFont.systemFont(ofSize: size, weight: weight.nsFontWeight))
-    }
+private typealias FS = MenuBarLayoutTokens.FontSize
 
-    static func appMonospaced(size: CGFloat, weight: Font.Weight = .regular) -> Font {
+extension Font {
+    static func app(size: CGFloat, weight: Font.Weight = .regular) -> Font {
         Font(NSFont.monospacedSystemFont(ofSize: size, weight: weight.nsFontWeight))
     }
+
+    static let appCaption = app(size: FS.caption, weight: .medium)
+    static let appBody = app(size: FS.body, weight: .medium)
+    static let appSubhead = app(size: FS.subhead, weight: .semibold)
+    static let appTitle = app(size: FS.title, weight: .bold)
 }
 
 extension Font.Weight {

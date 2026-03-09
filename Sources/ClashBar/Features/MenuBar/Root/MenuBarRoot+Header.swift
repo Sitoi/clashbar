@@ -2,14 +2,14 @@ import SwiftUI
 
 extension MenuBarRoot {
     var topHeader: some View {
-        HStack(alignment: .center, spacing: 10) {
-            HStack(alignment: .center, spacing: 10) {
+        HStack(alignment: .center, spacing: MenuBarLayoutTokens.space8) {
+            HStack(alignment: .center, spacing: MenuBarLayoutTokens.space8) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: MenuBarLayoutTokens.iconCornerRadius, style: .continuous)
-                        .fill(nativeControlFill.opacity(0.94))
+                    RoundedRectangle(cornerRadius: MenuBarLayoutTokens.cornerRadius, style: .continuous)
+                        .fill(nativeControlFill.opacity(MenuBarLayoutTokens.Opacity.solid))
                         .overlay {
-                            RoundedRectangle(cornerRadius: MenuBarLayoutTokens.iconCornerRadius, style: .continuous)
-                                .stroke(nativeControlBorder.opacity(0.92), lineWidth: 0.7)
+                            RoundedRectangle(cornerRadius: MenuBarLayoutTokens.cornerRadius, style: .continuous)
+                                .stroke(nativeControlBorder.opacity(MenuBarLayoutTokens.Opacity.solid), lineWidth: MenuBarLayoutTokens.stroke)
                         }
 
                     if let brandImage = BrandIcon.image {
@@ -17,42 +17,42 @@ extension MenuBarRoot {
                             .resizable()
                             .interpolation(.high)
                             .scaledToFit()
-                            .frame(width: 32, height: 32)
+                            .frame(width: MenuBarLayoutTokens.rowHeight, height: MenuBarLayoutTokens.rowHeight)
                     } else {
                         Image(systemName: "paperplane.fill")
                             .renderingMode(.template)
                             .symbolRenderingMode(.monochrome)
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 32, height: 32)
+                            .frame(width: MenuBarLayoutTokens.rowHeight, height: MenuBarLayoutTokens.rowHeight)
                             .foregroundStyle(nativeAccent)
                     }
                 }
-                .frame(width: 32, height: 32)
+                .frame(width: MenuBarLayoutTokens.rowHeight, height: MenuBarLayoutTokens.rowHeight)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 7) {
+                VStack(alignment: .leading, spacing: MenuBarLayoutTokens.space4) {
+                    HStack(spacing: MenuBarLayoutTokens.space6) {
                         Text("ClashBar")
-                            .font(.appSystem(size: 16, weight: .semibold))
+                            .font(.app(size: MenuBarLayoutTokens.FontSize.title, weight: .semibold))
                             .foregroundStyle(nativePrimaryLabel)
 
-                        HStack(spacing: MenuBarLayoutTokens.hMicro) {
+                        HStack(spacing: MenuBarLayoutTokens.space1) {
                             Circle()
                                 .fill(statusColor)
-                                .frame(width: 5, height: 5)
+                                .frame(width: MenuBarLayoutTokens.space4, height: MenuBarLayoutTokens.space4)
                             Text(runtimeBadgeText)
-                                .font(.appSystem(size: 11, weight: .medium))
+                                .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .medium))
                                 .foregroundStyle(nativeSecondaryLabel)
                         }
-                        .padding(.horizontal, MenuBarLayoutTokens.hDense)
-                        .padding(.vertical, 3)
-                        .background(nativeControlFill.opacity(0.92), in: Capsule())
+                        .padding(.horizontal, MenuBarLayoutTokens.space6)
+                        .padding(.vertical, MenuBarLayoutTokens.space2)
+                        .background(nativeControlFill.opacity(MenuBarLayoutTokens.Opacity.solid), in: Capsule())
                         .overlay {
-                            Capsule().stroke(nativeControlBorder.opacity(0.82), lineWidth: 0.7)
+                            Capsule().stroke(nativeControlBorder.opacity(MenuBarLayoutTokens.Theme.Dark.borderEmphasis), lineWidth: MenuBarLayoutTokens.stroke)
                         }
                     }
 
-                    HStack(spacing: 6) {
+                    HStack(spacing: MenuBarLayoutTokens.space6) {
                         self.headerControllerLink(
                             symbol: "network",
                             text: appState.externalControllerDisplay)
@@ -63,9 +63,9 @@ extension MenuBarRoot {
                 }
             }
 
-            Spacer(minLength: 6)
+            Spacer(minLength: MenuBarLayoutTokens.space6)
 
-            HStack(spacing: 6) {
+            HStack(spacing: MenuBarLayoutTokens.space6) {
                 self.compactTopIcon("arrow.clockwise", label: appState.primaryCoreActionLabel) {
                     await appState.performPrimaryCoreAction()
                 }
@@ -90,19 +90,19 @@ extension MenuBarRoot {
                 }
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, MenuBarLayoutTokens.space8)
     }
 
     func headerMetaLabel(symbol: String, text: String) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: MenuBarLayoutTokens.space4) {
             Image(systemName: symbol)
-                .font(.appSystem(size: 10, weight: .medium))
+                .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .medium))
                 .foregroundStyle(nativeTertiaryLabel)
             Text(text)
                 .lineLimit(1)
                 .truncationMode(.middle)
         }
-        .font(.appSystem(size: 11, weight: .medium))
+        .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .medium))
         .foregroundStyle(nativeSecondaryLabel)
     }
 
@@ -124,7 +124,7 @@ extension MenuBarRoot {
 
     var headerControllerWarningIcon: some View {
         Image(systemName: "exclamationmark.triangle.fill")
-            .font(.appSystem(size: 10, weight: .semibold))
+            .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .semibold))
             .foregroundStyle(nativeWarning)
             .help("external-controller is 0.0.0.0 and can be accessed from your LAN.")
             .accessibilityLabel("Warning: external-controller is bound to 0.0.0.0")
@@ -190,7 +190,7 @@ extension MenuBarRoot {
         return self.compactAsyncIconButton(
             symbol: symbol,
             label: label,
-            tint: tone.opacity(0.94),
+            tint: tone.opacity(MenuBarLayoutTokens.Opacity.solid),
             role: role,
             isLoading: isLoading,
             action: action)

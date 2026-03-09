@@ -39,7 +39,7 @@ final class StatusItemController: NSObject {
     private let popoverFallbackMaxHeight: CGFloat = 640
     private let popoverScreenPadding: CGFloat = 10
     private let panelTopSpacing: CGFloat = 0
-    private let panelHorizontalPadding: CGFloat = MenuBarLayoutTokens.hPage
+    private let panelHorizontalPadding: CGFloat = MenuBarLayoutTokens.space8
 
     private var changeCancellable: AnyCancellable?
     private var layoutCancellable: AnyCancellable?

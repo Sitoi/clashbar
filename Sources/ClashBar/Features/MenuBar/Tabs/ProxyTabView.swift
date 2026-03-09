@@ -1,12 +1,14 @@
 import SwiftUI
 
+private typealias T = MenuBarLayoutTokens
+
 extension MenuBarRoot {
     var quickRowTrailingColumnWidth: CGFloat {
         min(170, max(126, contentWidth * 0.44))
     }
 
     var proxyTabBody: some View {
-        VStack(alignment: .leading, spacing: MenuBarLayoutTokens.sectionGap) {
+        VStack(alignment: .leading, spacing: T.space6) {
             self.trafficOverview
             self.proxyQuickRows
             if !appState.sortedProxyProviderNames.isEmpty {
@@ -19,7 +21,7 @@ extension MenuBarRoot {
 
     var trafficOverview: some View {
         let sparklineHeight: CGFloat = 64
-        let sparklineHorizontalInset = MenuBarLayoutTokens.hRow
+        let sparklineHorizontalInset = T.space4
 
         return ZStack {
             TrafficSparklineView(
@@ -29,7 +31,7 @@ extension MenuBarRoot {
                 .padding(.horizontal, sparklineHorizontalInset)
 
             VStack(spacing: 0) {
-                HStack(spacing: MenuBarLayoutTokens.hDense) {
+                HStack(spacing: T.space6) {
                     self.cornerMetric(
                         symbol: "link",
                         value: "\(appState.connectionsCount)",
@@ -48,7 +50,7 @@ extension MenuBarRoot {
 
                 Spacer(minLength: 0)
 
-                HStack(spacing: MenuBarLayoutTokens.hDense) {
+                HStack(spacing: T.space6) {
                     self.cornerMetric(
                         symbol: "memorychip",
                         value: ValueFormatter.bytesInteger(appState.memory.inuse),
@@ -60,16 +62,16 @@ extension MenuBarRoot {
                         value: ValueFormatter.speedAndTotal(
                             rate: appState.traffic.down,
                             total: appState.displayDownTotal),
-                        color: nativePositive.opacity(0.92),
+                        color: nativePositive.opacity(T.Opacity.solid),
                         iconTrailing: true)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
             }
-            .padding(.horizontal, MenuBarLayoutTokens.hRow)
-            .padding(.vertical, MenuBarLayoutTokens.vDense)
+            .padding(.horizontal, T.space4)
+            .padding(.vertical, T.space2)
         }
         .frame(height: sparklineHeight)
-        .padding(.top, MenuBarLayoutTokens.vDense)
+        .padding(.top, T.space2)
     }
 
     func cornerMetric(
@@ -79,15 +81,15 @@ extension MenuBarRoot {
         iconTrailing: Bool = false) -> some View
     {
         let icon = Image(systemName: symbol)
-            .font(.appSystem(size: 11, weight: .semibold))
+            .font(.app(size: T.FontSize.caption, weight: .semibold))
             .foregroundStyle(color)
         let text = Text(value)
-            .font(.appMonospaced(size: 12, weight: .regular))
+            .font(.app(size: T.FontSize.body, weight: .regular))
             .foregroundStyle(nativeSecondaryLabel)
             .lineLimit(1)
-            .minimumScaleFactor(0.80)
+            .minimumScaleFactor(T.minimumScale)
 
-        return HStack(spacing: iconTrailing ? MenuBarLayoutTokens.hMicro : MenuBarLayoutTokens.hMicro + 1) {
+        return HStack(spacing: iconTrailing ? T.space1 : T.space2) {
             if iconTrailing { text; icon } else { icon; text }
         }
     }
@@ -99,16 +101,16 @@ extension MenuBarRoot {
                     title: tr("ui.quick.switch_config"),
                     symbol: "doc.text",
                     foreground: nativePurple,
-                    background: nativePurple.opacity(0.14))
+                    background: nativePurple.opacity(T.Opacity.tint))
                 {
-                    HStack(spacing: MenuBarLayoutTokens.hMicro + 1) {
+                    HStack(spacing: T.space2) {
                         Text(appState.selectedConfigName)
-                            .font(.appSystem(size: 11, weight: .regular))
+                            .font(.app(size: T.FontSize.caption, weight: .regular))
                             .lineLimit(1)
                             .truncationMode(.middle)
                             .foregroundStyle(nativeSecondaryLabel)
                         Image(systemName: "chevron.right")
-                            .font(.appSystem(size: 10, weight: .medium))
+                            .font(.app(size: T.FontSize.caption, weight: .medium))
                             .foregroundStyle(nativeTertiaryLabel)
                     }
                 }
@@ -150,7 +152,7 @@ extension MenuBarRoot {
                 title: tr("ui.quick.system_proxy"),
                 symbol: "network",
                 foreground: nativeInfo,
-                background: nativeInfo.opacity(0.14),
+                background: nativeInfo.opacity(T.Opacity.tint),
                 isDisabled: appState.isProxySyncing,
                 isOn: Binding(
                     get: { appState.isSystemProxyEnabled },
@@ -162,7 +164,7 @@ extension MenuBarRoot {
                 title: tr("ui.quick.tun_mode"),
                 symbol: "shield.lefthalf.filled",
                 foreground: nativePositive,
-                background: nativePositive.opacity(0.14),
+                background: nativePositive.opacity(T.Opacity.tint),
                 isDisabled: !appState.isTunToggleEnabled,
                 isOn: Binding(
                     get: { appState.isTunEnabled },
@@ -177,10 +179,10 @@ extension MenuBarRoot {
                     title: tr("ui.quick.copy_terminal"),
                     symbol: "terminal",
                     foreground: nativeWarning,
-                    background: nativeWarning.opacity(0.14))
+                    background: nativeWarning.opacity(T.Opacity.tint))
                 {
                     Image(systemName: "doc.on.doc")
-                        .font(.appSystem(size: 12, weight: .medium))
+                        .font(.app(size: T.FontSize.body, weight: .medium))
                         .foregroundStyle(hoveringCopyRow ? nativeSecondaryLabel : nativeTertiaryLabel.opacity(0.6))
                 }
             }
@@ -196,18 +198,18 @@ extension MenuBarRoot {
         background: Color,
         @ViewBuilder trailing: () -> some View) -> some View
     {
-        HStack(spacing: MenuBarLayoutTokens.hDense) {
+        HStack(spacing: T.space6) {
             self.quickIcon(symbol: symbol, foreground: foreground, background: background)
             Text(title)
-                .font(.appSystem(size: 12, weight: .medium))
+                .font(.app(size: T.FontSize.body, weight: .medium))
                 .foregroundStyle(nativePrimaryLabel)
             Spacer(minLength: 0)
             trailing()
                 .frame(width: self.quickRowTrailingColumnWidth, alignment: .trailing)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, MenuBarLayoutTokens.hRow)
-        .padding(.vertical, MenuBarLayoutTokens.vDense + 1)
+        .padding(.horizontal, T.space4)
+        .padding(.vertical, T.space2)
     }
 
     // swiftlint:disable:next function_parameter_count
@@ -234,14 +236,14 @@ extension MenuBarRoot {
     }
 
     func quickIcon(symbol: String, foreground: Color, background: Color) -> some View {
-        RoundedRectangle(cornerRadius: MenuBarLayoutTokens.iconCornerRadius, style: .continuous)
+        RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
             .fill(background)
             .frame(
-                width: MenuBarLayoutTokens.rowLeadingIconSize,
-                height: MenuBarLayoutTokens.rowLeadingIconSize)
+                width: T.rowLeadingIcon,
+                height: T.rowLeadingIcon)
             .overlay {
                 Image(systemName: symbol)
-                    .font(.appSystem(size: 12, weight: .semibold))
+                    .font(.app(size: T.FontSize.body, weight: .semibold))
                     .foregroundStyle(foreground)
             }
     }

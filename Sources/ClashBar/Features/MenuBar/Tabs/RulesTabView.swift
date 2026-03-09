@@ -7,7 +7,7 @@ extension MenuBarRoot {
 
         return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 0) {
-                HStack(spacing: 8) {
+                HStack(spacing: MenuBarLayoutTokens.space8) {
                     self.rulesStatChip(title: tr("ui.rule.stats.rules"), value: "\(appState.rulesCount)")
                     self.rulesStatChip(title: tr("ui.rule.stats.sets"), value: "\(appState.providerRuleCount)")
                 }
@@ -15,45 +15,44 @@ extension MenuBarRoot {
                 Spacer(minLength: 0)
                 self.rulesRefreshButton
             }
-            .padding(.vertical, MenuBarLayoutTokens.vRow)
+            .padding(.vertical, MenuBarLayoutTokens.space6)
             .overlay(alignment: .bottom) {
                 Rectangle()
                     .fill(nativeSeparator)
-                    .frame(height: MenuBarLayoutTokens.hairline)
+                    .frame(height: MenuBarLayoutTokens.stroke)
             }
 
             HStack(spacing: 0) {
                 Color.clear.frame(width: 24)
                 Text(tr("ui.rules.column.target_type"))
-                    .font(.appSystem(size: 11, weight: .medium))
+                    .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .medium))
                     .foregroundStyle(nativeTertiaryLabel)
                     .frame(width: 120, alignment: .leading)
                 Text(tr("ui.rules.column.policy"))
-                    .font(.appSystem(size: 11, weight: .medium))
+                    .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .medium))
                     .foregroundStyle(nativeTertiaryLabel)
                     .frame(width: 90, alignment: .leading)
                 Text(tr("ui.rules.column.stats"))
-                    .font(.appSystem(size: 11, weight: .medium))
+                    .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .medium))
                     .foregroundStyle(nativeTertiaryLabel)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
             .textCase(.uppercase)
-            .tracking(0.7)
-            .padding(.horizontal, MenuBarLayoutTokens.hRow)
-            .padding(.vertical, 6)
+            .padding(.horizontal, MenuBarLayoutTokens.space4)
+            .padding(.vertical, MenuBarLayoutTokens.space6)
             .background(nativeControlFill.opacity(0.35))
             .overlay(alignment: .bottom) {
                 Rectangle()
                     .fill(nativeSeparator)
-                    .frame(height: MenuBarLayoutTokens.hairline)
+                    .frame(height: MenuBarLayoutTokens.stroke)
             }
 
             if visibleRules.isEmpty {
                 Text(tr("ui.empty.rules"))
-                    .font(.appSystem(size: 12, weight: .regular))
+                    .font(.app(size: MenuBarLayoutTokens.FontSize.body, weight: .regular))
                     .foregroundStyle(nativeSecondaryLabel)
-                    .padding(.horizontal, MenuBarLayoutTokens.hRow)
-                    .padding(.vertical, MenuBarLayoutTokens.vDense + 6)
+                    .padding(.horizontal, MenuBarLayoutTokens.space4)
+                    .padding(.vertical, MenuBarLayoutTokens.space8)
                     .frame(maxWidth: .infinity, minHeight: 52, alignment: .topLeading)
             } else {
                 VStack(spacing: 0) {
@@ -63,7 +62,7 @@ extension MenuBarRoot {
                         if index < visibleRules.count - 1 {
                             Rectangle()
                                 .fill(nativeSeparator)
-                                .frame(height: MenuBarLayoutTokens.hairline)
+                                .frame(height: MenuBarLayoutTokens.stroke)
                         }
                     }
                 }
@@ -72,16 +71,16 @@ extension MenuBarRoot {
     }
 
     func rulesStatChip(title: String, value: String) -> some View {
-        HStack(spacing: 5) {
+        HStack(spacing: MenuBarLayoutTokens.space4) {
             Text(title.uppercased())
-                .font(.appSystem(size: 11, weight: .semibold))
+                .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .semibold))
                 .foregroundStyle(nativeTertiaryLabel)
             Text(value)
-                .font(.appSystem(size: 12, weight: .bold))
+                .font(.app(size: MenuBarLayoutTokens.FontSize.body, weight: .bold))
                 .foregroundStyle(nativePrimaryLabel)
         }
-        .padding(.horizontal, MenuBarLayoutTokens.hDense)
-        .padding(.vertical, MenuBarLayoutTokens.vDense)
+        .padding(.horizontal, MenuBarLayoutTokens.space6)
+        .padding(.vertical, MenuBarLayoutTokens.space2)
     }
 
     var rulesRefreshButton: some View {
@@ -108,58 +107,58 @@ extension MenuBarRoot {
 
         return HStack(spacing: 0) {
             Image(systemName: iconSpec.symbol)
-                .font(.appSystem(size: 14, weight: .medium))
+                .font(.app(size: MenuBarLayoutTokens.FontSize.subhead, weight: .medium))
                 .foregroundStyle(iconSpec.color)
                 .frame(width: 24, alignment: .leading)
 
-            VStack(alignment: .leading, spacing: 1.5) {
+            VStack(alignment: .leading, spacing: MenuBarLayoutTokens.space1) {
                 Text(targetText)
-                    .font(.appSystem(size: 13, weight: .medium))
+                    .font(.app(size: MenuBarLayoutTokens.FontSize.body, weight: .medium))
                     .foregroundStyle(nativePrimaryLabel)
                     .lineLimit(1)
                     .truncationMode(.tail)
                 Text(typeText)
-                    .font(.appSystem(size: 11, weight: .regular))
+                    .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .regular))
                     .foregroundStyle(nativeTertiaryLabel)
                     .lineLimit(1)
             }
             .frame(width: 120, alignment: .leading)
-            .padding(.trailing, MenuBarLayoutTokens.hDense)
+            .padding(.trailing, MenuBarLayoutTokens.space6)
 
-            HStack(spacing: MenuBarLayoutTokens.hMicro) {
+            HStack(spacing: MenuBarLayoutTokens.space1) {
                 if let symbol = badge.symbol {
                     Image(systemName: symbol)
-                        .font(.appSystem(size: 10, weight: .semibold))
+                        .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .semibold))
                         .foregroundStyle(badge.color)
                 }
                 Text(policyText)
-                    .font(.appSystem(size: 11, weight: .medium))
+                    .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .medium))
                     .foregroundStyle(badge.color)
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
-            .padding(.horizontal, MenuBarLayoutTokens.hDense)
-            .padding(.vertical, MenuBarLayoutTokens.vDense)
+            .padding(.horizontal, MenuBarLayoutTokens.space6)
+            .padding(.vertical, MenuBarLayoutTokens.space2)
             .background(
                 Capsule(style: .continuous)
                     .fill(badge.background))
             .frame(width: 90, alignment: .leading)
 
-            VStack(alignment: .trailing, spacing: 1.5) {
+            VStack(alignment: .trailing, spacing: MenuBarLayoutTokens.space1) {
                 Text("\(stats.count)")
-                    .font(.appMonospaced(size: 12, weight: .regular))
+                    .font(.app(size: MenuBarLayoutTokens.FontSize.body, weight: .regular))
                     .foregroundStyle(stats.hasProvider ? nativeSecondaryLabel : nativeTertiaryLabel)
                 if let updatedText = stats.updatedText {
                     Text(updatedText)
-                        .font(.appSystem(size: 10, weight: .regular))
+                        .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .regular))
                         .foregroundStyle(nativeTertiaryLabel)
                         .lineLimit(1)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .padding(.horizontal, MenuBarLayoutTokens.hRow)
-        .frame(height: 32)
+        .padding(.horizontal, MenuBarLayoutTokens.space4)
+        .frame(height: MenuBarLayoutTokens.rowHeight)
         .background(nativeHoverRowBackground(hovered))
         .onHover { hoveredRuleIndex = self.nextHovered(
             current: hoveredRuleIndex, target: index, isHovering: $0) }
@@ -168,15 +167,15 @@ extension MenuBarRoot {
     func ruleTypeIcon(for type: String) -> (symbol: String, color: Color) {
         let lower = type.lowercased()
         if lower.contains("ipcidr") {
-            return ("globe.americas.fill", nativeInfo.opacity(0.9))
+            return ("globe.americas.fill", nativeInfo.opacity(MenuBarLayoutTokens.Opacity.solid))
         }
         if lower.contains("domain") || lower.contains("suffix") || lower.contains("keyword") {
-            return ("network", nativeTeal.opacity(0.9))
+            return ("network", nativeTeal.opacity(MenuBarLayoutTokens.Opacity.solid))
         }
         if lower.contains("ruleset") {
-            return ("archivebox.fill", nativeWarning.opacity(0.9))
+            return ("archivebox.fill", nativeWarning.opacity(MenuBarLayoutTokens.Opacity.solid))
         }
-        return ("circle.grid.2x2.fill", nativeIndigo.opacity(0.9))
+        return ("circle.grid.2x2.fill", nativeIndigo.opacity(MenuBarLayoutTokens.Opacity.solid))
     }
 
     func rulePolicyBadge(for policy: String) -> (symbol: String?, color: Color, background: Color) {
@@ -184,8 +183,8 @@ extension MenuBarRoot {
         if lower.contains("fishy") {
             return (
                 symbol: "exclamationmark.triangle.fill",
-                color: nativeAccent.opacity(0.92),
-                background: nativeAccent.opacity(0.16))
+                color: nativeAccent.opacity(MenuBarLayoutTokens.Opacity.solid),
+                background: nativeAccent.opacity(MenuBarLayoutTokens.Opacity.tint))
         }
         return (
             symbol: nil,

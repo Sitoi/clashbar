@@ -1,9 +1,9 @@
 import AppKit
 import SwiftUI
 
-struct AttachedPopoverMenu<Label: View, Content: View>: View {
-    @Environment(\.panelMeasurementMode) private var panelMeasurementMode
+private typealias T = MenuBarLayoutTokens
 
+struct AttachedPopoverMenu<Label: View, Content: View>: View {
     let width: CGFloat?
     let maxHeight: CGFloat?
     let onWillPresent: (() -> Void)?
@@ -29,33 +29,29 @@ struct AttachedPopoverMenu<Label: View, Content: View>: View {
     }
 
     var body: some View {
-        if self.panelMeasurementMode {
+        Button(action: self.activateAnchor) {
             self.anchorLabel
-        } else {
-            Button(action: self.activateAnchor) {
-                self.anchorLabel
-            }
-            .buttonStyle(.plain)
-            .onHover { hovering in
-                if hovering, !self.suppressAutoOpen {
-                    self.requestOpen()
-                }
-                self.isAnchorHovered = hovering
-                if !hovering {
-                    self.suppressAutoOpen = false
-                }
-            }
-            .background(
-                SideAttachedPopoverHost(
-                    anchorHovered: self.$isAnchorHovered,
-                    suppressAutoOpen: self.$suppressAutoOpen,
-                    width: self.width,
-                    maxHeight: self.maxHeight,
-                    onVisibilityChanged: { visible in
-                        self.shouldBuildPopoverContent = visible
-                    },
-                    content: self.popoverContent))
         }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            if hovering, !self.suppressAutoOpen {
+                self.requestOpen()
+            }
+            self.isAnchorHovered = hovering
+            if !hovering {
+                self.suppressAutoOpen = false
+            }
+        }
+        .background(
+            SideAttachedPopoverHost(
+                anchorHovered: self.$isAnchorHovered,
+                suppressAutoOpen: self.$suppressAutoOpen,
+                width: self.width,
+                maxHeight: self.maxHeight,
+                onVisibilityChanged: { visible in
+                    self.shouldBuildPopoverContent = visible
+                },
+                content: self.popoverContent))
     }
 
     var anchorLabel: some View {
@@ -77,15 +73,19 @@ struct AttachedPopoverMenu<Label: View, Content: View>: View {
             .scrollIndicators(.hidden)
             .frame(width: self.width, alignment: .leading)
             .frame(maxHeight: self.maxHeight)
-            .padding(8)
+            .padding(T.space8)
             .background(
-                RoundedRectangle(cornerRadius: MenuBarLayoutTokens.cardCornerRadius, style: .continuous)
+                RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
                     .fill(.regularMaterial))
             .overlay {
-                RoundedRectangle(cornerRadius: MenuBarLayoutTokens.cardCornerRadius, style: .continuous)
-                    .stroke(Color(nsColor: .separatorColor).opacity(0.46), lineWidth: 0.65)
+                RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
+                    .stroke(Color(nsColor: .separatorColor).opacity(0.46), lineWidth: T.stroke)
             }
-            .shadow(color: Color(nsColor: .shadowColor).opacity(0.20), radius: 12, x: 0, y: 6)
+            .shadow(
+                color: Color(nsColor: .shadowColor).opacity(T.Shadow.standard.opacity),
+                radius: T.Shadow.standard.radius,
+                x: T.Shadow.standard.x,
+                y: T.Shadow.standard.y)
         }
     }
 
@@ -118,22 +118,22 @@ struct AttachedPopoverMenuItem: View {
         Button {
             self.action()
         } label: {
-            HStack(spacing: MenuBarLayoutTokens.hDense) {
+            HStack(spacing: T.space6) {
                 Image(systemName: "checkmark")
-                    .font(.appSystem(size: 10, weight: .semibold))
+                    .font(.app(size: T.FontSize.caption, weight: .semibold))
                     .opacity(self.selected ? 1 : 0)
                     .frame(width: 12, alignment: .center)
                 Text(self.title)
-                    .font(.appSystem(size: 12, weight: .medium))
+                    .font(.app(size: T.FontSize.body, weight: .medium))
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Spacer(minLength: 0)
             }
             .foregroundStyle(self.itemForeground)
-            .padding(.horizontal, MenuBarLayoutTokens.hDense)
-            .padding(.vertical, MenuBarLayoutTokens.vDense + 1)
+            .padding(.horizontal, T.space6)
+            .padding(.vertical, T.space2)
             .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
                     .fill(self.itemBackground))
             .contentShape(Rectangle())
         }
@@ -156,7 +156,7 @@ struct AttachedPopoverMenuItem: View {
 struct AttachedPopoverMenuDivider: View {
     var body: some View {
         Divider()
-            .padding(.vertical, 2)
+            .padding(.vertical, T.space2)
     }
 }
 

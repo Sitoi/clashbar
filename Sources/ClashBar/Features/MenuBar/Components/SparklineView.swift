@@ -1,5 +1,7 @@
 import SwiftUI
 
+private typealias T = MenuBarLayoutTokens
+
 struct TrafficSparklineView: View {
     let upValues: [Int64]
     let downValues: [Int64]
@@ -34,7 +36,7 @@ struct TrafficSparklineView: View {
                 self.axisPath(width: geo.size.width, axisY: axisY)
                     .stroke(
                         Color(nsColor: .separatorColor).opacity(0.55),
-                        style: StrokeStyle(lineWidth: 0.7, lineCap: .round))
+                        style: StrokeStyle(lineWidth: T.stroke, lineCap: .round))
 
                 self.lineAreaPath(for: normalizedUp, context: upContext)
                     .fill(

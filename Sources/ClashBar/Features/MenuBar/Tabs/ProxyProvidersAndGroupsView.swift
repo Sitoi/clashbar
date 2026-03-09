@@ -1,10 +1,12 @@
 import SwiftUI
 
+private typealias T = MenuBarLayoutTokens
+
 extension MenuBarRoot {
     var proxyProvidersSection: some View {
         let providers = appState.sortedProxyProviderNames
 
-        return VStack(alignment: .leading, spacing: MenuBarLayoutTokens.sectionGap) {
+        return VStack(alignment: .leading, spacing: T.space6) {
             self.nodesSectionHeader(
                 tr("ui.section.proxy_providers"),
                 symbol: "shippingbox.fill",
@@ -32,7 +34,7 @@ extension MenuBarRoot {
         let remaining = ValueFormatter.subscriptionRemaining(total: total, upload: upload, download: download)
         let remainingRatio = ValueFormatter.subscriptionRemainingRatio(total: total, upload: upload, download: download)
         let quotaTextColumnWidth: CGFloat = 124
-        let rowHorizontalPadding = MenuBarLayoutTokens.hRow
+        let rowHorizontalPadding = T.space4
         let hovered = hoveredProxyProviderName == name
 
         return AttachedPopoverMenu(
@@ -40,37 +42,37 @@ extension MenuBarRoot {
                 Task { await appState.ensureProviderNodesLoaded(provider: name) }
             },
             label: {
-                VStack(alignment: .leading, spacing: MenuBarLayoutTokens.vDense + 1) {
-                    HStack(spacing: MenuBarLayoutTokens.hDense) {
-                        RoundedRectangle(cornerRadius: MenuBarLayoutTokens.iconCornerRadius, style: .continuous)
-                            .fill(nativeTeal.opacity(0.14))
+                VStack(alignment: .leading, spacing: T.space2) {
+                    HStack(spacing: T.space6) {
+                        RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
+                            .fill(nativeTeal.opacity(T.Opacity.tint))
                             .frame(
-                                width: MenuBarLayoutTokens.rowLeadingIconSize,
-                                height: MenuBarLayoutTokens.rowLeadingIconSize)
+                                width: T.rowLeadingIcon,
+                                height: T.rowLeadingIcon)
                             .overlay {
                                 Image(systemName: "shippingbox.fill")
-                                    .font(.appSystem(size: 9, weight: .semibold))
-                                    .foregroundStyle(nativeTeal.opacity(0.92))
+                                    .font(.app(size: T.FontSize.caption, weight: .semibold))
+                                    .foregroundStyle(nativeTeal.opacity(T.Opacity.solid))
                             }
 
                         Text(name)
-                            .font(.appSystem(size: 12, weight: .semibold))
+                            .font(.app(size: T.FontSize.body, weight: .semibold))
                             .foregroundStyle(nativePrimaryLabel)
                             .lineLimit(1)
 
                         if detail?.subscriptionInfo != nil {
                             Text(expireText)
-                                .font(.appSystem(size: 10, weight: .regular))
+                                .font(.app(size: T.FontSize.caption, weight: .regular))
                                 .foregroundStyle(nativeSecondaryLabel)
-                                .padding(.horizontal, MenuBarLayoutTokens.hMicro + 2)
-                                .padding(.vertical, MenuBarLayoutTokens.vDense)
+                                .padding(.horizontal, T.space2)
+                                .padding(.vertical, T.space2)
                                 .background(nativeBadgeCapsule())
                         }
 
                         Spacer(minLength: 0)
 
                         Text(updatedText)
-                            .font(.appSystem(size: 10, weight: .regular))
+                            .font(.app(size: T.FontSize.caption, weight: .regular))
                             .foregroundStyle(nativeTertiaryLabel)
 
                         self.providerActionButton(
@@ -88,45 +90,45 @@ extension MenuBarRoot {
                         }
 
                         Image(systemName: "chevron.right")
-                            .font(.appSystem(size: 10, weight: .semibold))
+                            .font(.app(size: T.FontSize.caption, weight: .semibold))
                             .foregroundStyle(nativeTertiaryLabel)
-                            .frame(width: 8, alignment: .trailing)
+                            .frame(width: T.space8, alignment: .trailing)
                     }
 
                     if let remaining, let total, let remainingRatio {
                         let quotaText =
                             "\(ValueFormatter.bytesCompactNoSpace(remaining)) / " +
                             "\(ValueFormatter.bytesCompactNoSpace(total))"
-                        HStack(spacing: MenuBarLayoutTokens.hDense) {
+                        HStack(spacing: T.space6) {
                             Text(quotaText)
-                                .font(.appMonospaced(size: 10, weight: .regular))
+                                .font(.app(size: T.FontSize.caption, weight: .regular))
                                 .foregroundStyle(nativeSecondaryLabel)
                                 .lineLimit(1)
                                 .frame(width: quotaTextColumnWidth, alignment: .leading)
 
                             GeometryReader { geo in
                                 ZStack(alignment: .leading) {
-                                    Capsule().fill(nativeControlFill.opacity(0.92))
+                                    Capsule().fill(nativeControlFill.opacity(T.Opacity.solid))
                                     Capsule()
-                                        .fill(nativeAccent.opacity(0.9))
+                                        .fill(nativeAccent.opacity(T.Opacity.solid))
                                         .frame(width: geo.size.width * remainingRatio)
                                 }
                             }
-                            .frame(height: 5)
+                            .frame(height: T.space4)
                         }
                     }
                 }
                 .padding(.horizontal, rowHorizontalPadding)
-                .padding(.vertical, MenuBarLayoutTokens.vDense + 1)
+                .padding(.vertical, T.space2)
                 .background(nativeHoverRowBackground(hovered))
                 .animation(.easeInOut(duration: 0.14), value: hovered)
             },
             content: { dismiss in
                 self.popoverHeader(name: name, count: nodeCount) {
                     Image(systemName: "shippingbox.fill")
-                        .font(.appSystem(size: 12, weight: .semibold))
-                        .foregroundStyle(nativeTeal.opacity(0.92))
-                        .frame(width: 16, alignment: .center)
+                        .font(.app(size: T.FontSize.body, weight: .semibold))
+                        .foregroundStyle(nativeTeal.opacity(T.Opacity.solid))
+                        .frame(width: T.rowLeadingIcon, alignment: .center)
                 }
 
                 let nodes = sortedProviderNodes(provider: name, detail: detail)
@@ -179,10 +181,10 @@ extension MenuBarRoot {
         return self.compactAsyncIconButton(
             symbol: kind.symbol,
             label: tr(kind.labelKey),
-            tint: tone.opacity(0.96),
+            tint: tone.opacity(T.Opacity.solid),
             isLoading: isLoading,
-            size: 16,
-            fontSize: 10.5,
+            size: T.rowLeadingIcon,
+            fontSize: T.FontSize.caption,
             hierarchicalSymbol: true,
             action: action)
     }
@@ -192,13 +194,13 @@ extension MenuBarRoot {
             ? appState.proxyGroups.filter { $0.hidden != true }
             : appState.proxyGroups
 
-        return VStack(alignment: .leading, spacing: MenuBarLayoutTokens.sectionGap) {
+        return VStack(alignment: .leading, spacing: T.space6) {
             self.nodesSectionHeader(
                 tr("ui.section.proxy_groups"),
                 symbol: "point.3.connected.trianglepath.dotted",
                 count: "\(groups.count)")
             {
-                HStack(spacing: MenuBarLayoutTokens.hDense) {
+                HStack(spacing: T.space6) {
                     self.compactTopIcon(
                         hideHiddenProxyGroups ? "eye.slash" : "eye",
                         label: tr(
@@ -229,7 +231,7 @@ extension MenuBarRoot {
             if groups.isEmpty {
                 emptyCard(tr("ui.empty.proxy_groups"))
             } else {
-                VStack(spacing: 2) {
+                VStack(spacing: T.space2) {
                     ForEach(groups, id: \.name) { group in
                         self.proxyGroupInlineRow(group)
                     }
@@ -251,8 +253,8 @@ extension MenuBarRoot {
         let nodeCount = group.all.count
         let iconURL = self.proxyGroupIconURL(group)
         let hasLeadingIcon = iconURL != nil
-        let rowHorizontalPadding = MenuBarLayoutTokens.hRow
-        let rowVerticalPadding: CGFloat = 1
+        let rowHorizontalPadding = T.space4
+        let rowVerticalPadding: CGFloat = T.space1
         let hovered = hoveredProxyGroupName == group.name
 
         return AttachedPopoverMenu {
@@ -260,35 +262,35 @@ extension MenuBarRoot {
                 let columns = self.proxyGroupMainColumnWidths(
                     totalWidth: geo.size.width,
                     hasLeadingIcon: hasLeadingIcon)
-                HStack(spacing: MenuBarLayoutTokens.hMicro) {
+                HStack(spacing: T.space1) {
                     if let iconURL {
                         self.proxyGroupLeadingIcon(iconURL)
                     }
 
                     Text(group.name)
-                        .font(.appSystem(size: 12, weight: .semibold))
+                        .font(.app(size: T.FontSize.body, weight: .semibold))
                         .foregroundStyle(nativePrimaryLabel)
                         .lineLimit(1)
                         .truncationMode(.tail)
-                        .minimumScaleFactor(0.9)
+                        .minimumScaleFactor(T.minimumScale)
                         .frame(width: columns.name, alignment: .leading)
 
                     Text(currentNode)
-                        .font(.appSystem(size: 11, weight: .medium))
+                        .font(.app(size: T.FontSize.caption, weight: .medium))
                         .foregroundStyle(nativeSecondaryLabel)
                         .lineLimit(1)
                         .truncationMode(.middle)
-                        .minimumScaleFactor(0.9)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 1)
+                        .minimumScaleFactor(T.minimumScale)
+                        .padding(.horizontal, T.space4)
+                        .padding(.vertical, T.space1)
                         .background(nativeBadgeCapsule())
                         .frame(width: columns.current, alignment: .leading)
 
                     Text(delayText)
-                        .font(.appMonospaced(size: 10, weight: .regular))
+                        .font(.app(size: T.FontSize.caption, weight: .regular))
                         .foregroundStyle(latencyColor(delayValue))
                         .lineLimit(1)
-                        .minimumScaleFactor(0.85)
+                        .minimumScaleFactor(T.minimumScale)
                         .frame(width: columns.delay, alignment: .trailing)
 
                     self.providerActionButton(
@@ -300,13 +302,13 @@ extension MenuBarRoot {
                     .frame(width: 18, alignment: .center)
 
                     Image(systemName: "chevron.right")
-                        .font(.appSystem(size: 10, weight: .semibold))
+                        .font(.app(size: T.FontSize.caption, weight: .semibold))
                         .foregroundStyle(nativeTertiaryLabel)
-                        .frame(width: 8, alignment: .trailing)
+                        .frame(width: T.space8, alignment: .trailing)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             }
-            .frame(height: 20)
+            .frame(height: T.compactRowHeight)
             .padding(.horizontal, rowHorizontalPadding)
             .padding(.vertical, rowVerticalPadding)
             .background(nativeHoverRowBackground(hovered))
@@ -343,11 +345,11 @@ extension MenuBarRoot {
         totalWidth: CGFloat,
         hasLeadingIcon: Bool) -> (name: CGFloat, current: CGFloat, delay: CGFloat)
     {
-        let iconWidth: CGFloat = hasLeadingIcon ? MenuBarLayoutTokens.rowLeadingIconColumnWidth : 0
+        let iconWidth: CGFloat = hasLeadingIcon ? T.rowLeadingIcon : 0
         let actionWidth: CGFloat = 18
         let chevronWidth: CGFloat = 8
         let spacingCount: CGFloat = hasLeadingIcon ? 5 : 4
-        let spacing = MenuBarLayoutTokens.hMicro * spacingCount
+        let spacing = T.space1 * spacingCount
         let available = max(0, totalWidth - iconWidth - actionWidth - chevronWidth - spacing)
         let name = floor(available * 0.34)
         let delay = floor(available * 0.17)
@@ -364,13 +366,13 @@ extension MenuBarRoot {
                     .antialiased(true)
                     .aspectRatio(contentMode: .fit)
                     .frame(
-                        maxWidth: MenuBarLayoutTokens.rowLeadingIconSize,
-                        maxHeight: MenuBarLayoutTokens.rowLeadingIconSize)
+                        maxWidth: T.rowLeadingIcon,
+                        maxHeight: T.rowLeadingIcon)
             }
         }
         .frame(
-            width: MenuBarLayoutTokens.rowLeadingIconColumnWidth,
-            height: MenuBarLayoutTokens.rowLeadingIconSize,
+            width: T.rowLeadingIcon,
+            height: T.rowLeadingIcon,
             alignment: .center)
     }
 
@@ -385,26 +387,25 @@ extension MenuBarRoot {
         count: String? = nil,
         @ViewBuilder trailing: () -> some View = { EmptyView() }) -> some View
     {
-        HStack(spacing: MenuBarLayoutTokens.hDense) {
+        HStack(spacing: T.space6) {
             Image(systemName: symbol)
-                .font(.appSystem(size: 10, weight: .semibold))
+                .font(.app(size: T.FontSize.caption, weight: .semibold))
                 .foregroundStyle(nativeTertiaryLabel)
                 .frame(
-                    width: MenuBarLayoutTokens.rowLeadingIconColumnWidth,
-                    height: MenuBarLayoutTokens.rowLeadingIconSize,
+                    width: T.rowLeadingIcon,
+                    height: T.rowLeadingIcon,
                     alignment: .center)
 
             Text(title)
-                .font(.appSystem(size: 12, weight: .bold))
-                .tracking(1.1)
+                .font(.app(size: T.FontSize.body, weight: .bold))
                 .foregroundStyle(nativeTertiaryLabel)
 
             if let count {
                 Text(count)
-                    .font(.appMonospaced(size: 10, weight: .bold))
+                    .font(.app(size: T.FontSize.caption, weight: .bold))
                     .foregroundStyle(nativeSecondaryLabel)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1)
+                    .padding(.horizontal, T.space4)
+                    .padding(.vertical, T.space1)
                     .background(nativeBadgeCapsule())
             }
 
@@ -412,10 +413,10 @@ extension MenuBarRoot {
             trailing()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, MenuBarLayoutTokens.hRow)
+        .padding(.horizontal, T.space4)
     }
 
-    func nextHovered<T: Equatable>(current: T?, target: T, isHovering: Bool) -> T? {
+    func nextHovered<V: Equatable>(current: V?, target: V, isHovering: Bool) -> V? {
         isHovering ? target : (current == target ? nil : current)
     }
 
@@ -425,29 +426,29 @@ extension MenuBarRoot {
         @ViewBuilder leading: () -> some View = { EmptyView() }) -> some View
     {
         VStack(spacing: 0) {
-            HStack(spacing: MenuBarLayoutTokens.hMicro) {
+            HStack(spacing: T.space1) {
                 leading()
 
                 Text(name)
-                    .font(.appSystem(size: 12, weight: .semibold))
+                    .font(.app(size: T.FontSize.body, weight: .semibold))
                     .foregroundStyle(nativePrimaryLabel)
                     .lineLimit(1)
 
                 Spacer(minLength: 0)
 
                 Text("\(count)")
-                    .font(.appMonospaced(size: 10, weight: .medium))
+                    .font(.app(size: T.FontSize.caption, weight: .medium))
                     .foregroundStyle(nativeSecondaryLabel)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 1)
+                    .padding(.horizontal, T.space4)
+                    .padding(.vertical, T.space1)
                     .background(nativeBadgeCapsule())
             }
-            .padding(.horizontal, 4)
-            .padding(.bottom, 2)
+            .padding(.horizontal, T.space4)
+            .padding(.bottom, T.space2)
 
             Divider()
                 .overlay(nativeSeparator)
-                .padding(.bottom, 1)
+                .padding(.bottom, T.space1)
         }
     }
 
@@ -458,11 +459,11 @@ extension MenuBarRoot {
     {
         if nodes.isEmpty {
             Text(tr("ui.common.na"))
-                .font(.appSystem(size: 11, weight: .regular))
+                .font(.app(size: T.FontSize.caption, weight: .regular))
                 .foregroundStyle(nativeSecondaryLabel)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 4)
+                .padding(.horizontal, T.space6)
+                .padding(.vertical, T.space4)
         } else {
             VStack(spacing: 0) {
                 ForEach(nodes, id: \.self) { node in
@@ -486,19 +487,19 @@ private struct ProxyGroupPopoverNodeItem: View {
 
     var body: some View {
         Button(action: self.action) {
-            HStack(spacing: MenuBarLayoutTokens.hMicro) {
+            HStack(spacing: T.space1) {
                 Image(systemName: self.selected ? "checkmark.circle.fill" : "circle")
-                    .font(.appSystem(size: 10, weight: .semibold))
+                    .font(.app(size: T.FontSize.caption, weight: .semibold))
                     .foregroundStyle(self
                         .selected ? Color(nsColor: .controlAccentColor) : Color(nsColor: .tertiaryLabelColor))
                     .frame(width: 11, alignment: .center)
 
                 Text(self.title)
-                    .font(.appSystem(size: 12, weight: self.selected ? .semibold : .medium))
+                    .font(.app(size: T.FontSize.body, weight: self.selected ? .semibold : .medium))
                     .foregroundStyle(self.selected ? Color.primary : Color.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
-                    .minimumScaleFactor(0.9)
+                    .minimumScaleFactor(T.minimumScale)
 
                 Spacer(minLength: 0)
 
@@ -511,11 +512,11 @@ private struct ProxyGroupPopoverNodeItem: View {
                 }
                 .frame(width: 56, alignment: .trailing)
             }
-            .frame(height: 20)
-            .padding(.horizontal, 4)
-            .padding(.vertical, 1)
+            .frame(height: T.compactRowHeight)
+            .padding(.horizontal, T.space4)
+            .padding(.vertical, T.space1)
             .background(
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
                     .fill(self.rowBackground))
         }
         .buttonStyle(.plain)
@@ -524,7 +525,7 @@ private struct ProxyGroupPopoverNodeItem: View {
 
     var rowBackground: Color {
         if self.selected {
-            return Color(nsColor: .controlAccentColor).opacity(0.18)
+            return Color(nsColor: .controlAccentColor).opacity(T.Opacity.tint)
         }
         if self.isHovered {
             return Color(nsColor: .selectedContentBackgroundColor).opacity(0.22)
@@ -542,20 +543,20 @@ private struct ProxyGroupPopoverNodeItem: View {
                 : self.delayColor.opacity(self.selected ? 1 : 0.94)
 
             Text(self.delayText)
-                .font(.appMonospaced(size: 10, weight: .semibold))
+                .font(.app(size: T.FontSize.caption, weight: .semibold))
                 .foregroundStyle(foreground)
                 .lineLimit(1)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 1.5)
+                .padding(.horizontal, T.space6)
+                .padding(.vertical, T.space1)
                 .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
                         .fill(background))
         } else {
             Text(self.delayText)
-                .font(.appMonospaced(size: 10, weight: .regular))
+                .font(.app(size: T.FontSize.caption, weight: .regular))
                 .foregroundStyle(self.delayColor.opacity(self.selected ? 1 : 0.85))
                 .lineLimit(1)
-                .minimumScaleFactor(0.85)
+                .minimumScaleFactor(T.minimumScale)
         }
     }
 }
@@ -566,7 +567,7 @@ private struct LatencyLoadingIndicator: View {
             .controlSize(.mini)
             .frame(width: 30, height: 14, alignment: .center)
             .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(Color(nsColor: .quaternaryLabelColor).opacity(0.24)))
+                RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
+                    .fill(Color(nsColor: .quaternaryLabelColor).opacity(T.Opacity.tint)))
     }
 }

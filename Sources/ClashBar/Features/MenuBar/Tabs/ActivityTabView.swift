@@ -3,10 +3,10 @@ import SwiftUI
 
 extension MenuBarRoot {
     private enum ActivityLayout {
-        static let topLineSpacing: CGFloat = 2
-        static let topMetaSpacing: CGFloat = 1
-        static let secondLineSpacing: CGFloat = 2
-        static let rowLineHeight: CGFloat = 15
+        static let topLineSpacing: CGFloat = MenuBarLayoutTokens.space2
+        static let topMetaSpacing: CGFloat = MenuBarLayoutTokens.space1
+        static let secondLineSpacing: CGFloat = MenuBarLayoutTokens.space2
+        static let rowLineHeight: CGFloat = 16
         static let topRuleMinWidth: CGFloat = 26
         static let topPayloadMinWidth: CGFloat = 14
     }
@@ -26,7 +26,7 @@ extension MenuBarRoot {
     var activityTabBody: some View {
         let connections = self.visibleConnections
 
-        return VStack(alignment: .leading, spacing: MenuBarLayoutTokens.sectionGap) {
+        return VStack(alignment: .leading, spacing: MenuBarLayoutTokens.space6) {
             self.activityControlCard
 
             if connections.isEmpty {
@@ -42,11 +42,10 @@ extension MenuBarRoot {
     }
 
     var activityControlCard: some View {
-        VStack(alignment: .leading, spacing: MenuBarLayoutTokens.vDense + 2) {
-            HStack(spacing: MenuBarLayoutTokens.hDense) {
+        VStack(alignment: .leading, spacing: MenuBarLayoutTokens.space4) {
+            HStack(spacing: MenuBarLayoutTokens.space6) {
                 Text(tr("ui.tab.activity"))
-                    .font(.appSystem(size: 12, weight: .bold))
-                    .tracking(1.2)
+                    .font(.app(size: MenuBarLayoutTokens.FontSize.body, weight: .bold))
                     .textCase(.uppercase)
                     .foregroundStyle(nativeTertiaryLabel)
 
@@ -73,10 +72,10 @@ extension MenuBarRoot {
 
             TextField(tr("ui.placeholder.filter_connection"), text: $networkFilterText)
                 .textFieldStyle(.roundedBorder)
-                .font(.appSystem(size: 12, weight: .regular))
+                .font(.app(size: MenuBarLayoutTokens.FontSize.body, weight: .regular))
                 .foregroundStyle(nativePrimaryLabel)
 
-            HStack(spacing: MenuBarLayoutTokens.hDense) {
+            HStack(spacing: MenuBarLayoutTokens.space6) {
                 self.activityFilterMenu
                 self.activitySortMenu
 
@@ -95,7 +94,7 @@ extension MenuBarRoot {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .menuRowPadding(vertical: MenuBarLayoutTokens.vDense + 2)
+        .menuRowPadding(vertical: MenuBarLayoutTokens.space4)
     }
 
     var activityFilterMenu: some View {
@@ -189,11 +188,10 @@ extension MenuBarRoot {
         let source = self.appState.connections.prefix(120)
         let keyword = self.trimmedNetworkKeyword
 
-        let filtered: [ConnectionSummary]
-        if keyword.isEmpty && self.networkTransportFilter == .all {
-            filtered = Array(source)
+        let filtered: [ConnectionSummary] = if keyword.isEmpty, self.networkTransportFilter == .all {
+            Array(source)
         } else {
-            filtered = source.filter { conn in
+            source.filter { conn in
                 guard self.networkTransportFilter.matches(conn.metadata?.network) else { return false }
                 guard keyword.isEmpty || self.connectionSearchText(for: conn).localizedStandardContains(keyword) else {
                     return false
@@ -223,16 +221,16 @@ extension MenuBarRoot {
             ?? parsedRule?.payload.trimmedNonEmpty
             ?? "--"
 
-        return HStack(alignment: .center, spacing: MenuBarLayoutTokens.hDense) {
+        return HStack(alignment: .center, spacing: MenuBarLayoutTokens.space6) {
             Image(systemName: visual.symbol)
-                .font(.appSystem(size: 12, weight: .semibold))
+                .font(.app(size: MenuBarLayoutTokens.FontSize.body, weight: .semibold))
                 .foregroundStyle(visual.color)
                 .frame(
-                    width: MenuBarLayoutTokens.rowLeadingIconColumnWidth,
-                    height: MenuBarLayoutTokens.rowLeadingIconSize,
+                    width: MenuBarLayoutTokens.rowLeadingIcon,
+                    height: MenuBarLayoutTokens.rowLeadingIcon,
                     alignment: .center)
 
-            VStack(alignment: .leading, spacing: MenuBarLayoutTokens.vDense) {
+            VStack(alignment: .leading, spacing: MenuBarLayoutTokens.space2) {
                 self.connectionRowTopLine(host: hostText, ruleType: ruleTypeText, rulePayload: rulePayloadText)
                 self.connectionRowMetrics(time: timeText, network: networkType, up: upText, down: downText)
                 self.activityChainsLine(parts: self.connectionChainsParts(conn.chains))
@@ -241,8 +239,8 @@ extension MenuBarRoot {
 
             self.connectionRowCloseButton(id: conn.id, hovered: hovered)
         }
-        .padding(.horizontal, MenuBarLayoutTokens.hRow)
-        .padding(.vertical, MenuBarLayoutTokens.vDense + 1)
+        .padding(.horizontal, MenuBarLayoutTokens.space4)
+        .padding(.vertical, MenuBarLayoutTokens.space2)
         .background(nativeHoverRowBackground(hovered))
         .onHover { hoveredConnectionID = self.nextHovered(
             current: hoveredConnectionID, target: conn.id, isHovering: $0) }
@@ -258,7 +256,7 @@ extension MenuBarRoot {
 
             HStack(spacing: ActivityLayout.topLineSpacing) {
                 Text(host)
-                    .font(.appSystem(size: 12, weight: .semibold))
+                    .font(.app(size: MenuBarLayoutTokens.FontSize.body, weight: .semibold))
                     .foregroundStyle(nativePrimaryLabel)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -293,14 +291,14 @@ extension MenuBarRoot {
                 self.activityMetricColumn(
                     symbol: "arrow.up",
                     text: up,
-                    symbolColor: nativeInfo.opacity(0.9),
+                    symbolColor: nativeInfo.opacity(MenuBarLayoutTokens.Opacity.solid),
                     spacing: 0,
                     truncation: .tail,
                     width: columnWidth)
                 self.activityMetricColumn(
                     symbol: "arrow.down",
                     text: down,
-                    symbolColor: nativePositive.opacity(0.9),
+                    symbolColor: nativePositive.opacity(MenuBarLayoutTokens.Opacity.solid),
                     spacing: 0,
                     truncation: .tail,
                     width: columnWidth)
@@ -314,7 +312,7 @@ extension MenuBarRoot {
             Task { await appState.closeConnection(id: id) }
         } label: {
             Image(systemName: "xmark")
-                .font(.appSystem(size: 8, weight: .semibold))
+                .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .semibold))
                 .frame(width: 10, height: 10)
         }
         .buttonStyle(.plain)
@@ -353,7 +351,7 @@ extension MenuBarRoot {
         symbolColor: Color = .secondary,
         textColor: Color = .secondary,
         fallback: String? = nil,
-        spacing: CGFloat = 2,
+        spacing: CGFloat = MenuBarLayoutTokens.space2,
         truncation: Text.TruncationMode = .middle,
         width: CGFloat) -> some View
     {
@@ -361,11 +359,11 @@ extension MenuBarRoot {
 
         return HStack(spacing: spacing) {
             Image(systemName: symbol)
-                .font(.appSystem(size: 9, weight: .semibold))
+                .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .semibold))
                 .foregroundStyle(symbolColor)
                 .frame(width: 10, alignment: .leading)
             Text(renderedText)
-                .font(.appMonospaced(size: 10, weight: .regular))
+                .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .regular))
                 .foregroundStyle(textColor)
                 .lineLimit(1)
                 .truncationMode(truncation)
@@ -376,23 +374,23 @@ extension MenuBarRoot {
 
     func activityTopBadge(text: String) -> some View {
         Text(text)
-            .font(.appMonospaced(size: 9, weight: .semibold))
+            .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .semibold))
             .foregroundStyle(nativeSecondaryLabel)
             .lineLimit(1)
             .truncationMode(.tail)
-            .minimumScaleFactor(0.85)
-            .padding(.horizontal, 2)
-            .padding(.vertical, 1)
+            .minimumScaleFactor(MenuBarLayoutTokens.minimumScale)
+            .padding(.horizontal, MenuBarLayoutTokens.space2)
+            .padding(.vertical, MenuBarLayoutTokens.space1)
             .background(nativeBadgeCapsule())
     }
 
     func activityTopPayload(text: String) -> some View {
         Text(text)
-            .font(.appMonospaced(size: 9, weight: .medium))
+            .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .medium))
             .foregroundStyle(nativeSecondaryLabel)
             .lineLimit(1)
             .truncationMode(.middle)
-            .minimumScaleFactor(0.85)
+            .minimumScaleFactor(MenuBarLayoutTokens.minimumScale)
             .frame(maxWidth: .infinity, alignment: .trailing)
     }
 
@@ -400,14 +398,14 @@ extension MenuBarRoot {
         let chainText = parts.joined(separator: " > ")
         let displayText = parts.isEmpty ? tr("ui.common.na") : chainText
 
-        return HStack(spacing: 2) {
+        return HStack(spacing: MenuBarLayoutTokens.space2) {
             Image(systemName: "point.3.connected.trianglepath.dotted")
-                .font(.appSystem(size: 9, weight: .semibold))
+                .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .semibold))
                 .foregroundStyle(nativeSecondaryLabel)
                 .frame(width: 10, alignment: .leading)
 
             Text(displayText)
-                .font(.appMonospaced(size: 10, weight: .regular))
+                .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .regular))
                 .foregroundStyle(nativeSecondaryLabel)
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -428,10 +426,12 @@ extension MenuBarRoot {
 
         var ruleWidth = max(
             ActivityLayout.topRuleMinWidth,
-            self.activityMonospacedTextWidth(ruleText, size: 9, weight: .semibold) + 4)
+            self
+                .activityMonospacedTextWidth(ruleText, size: MenuBarLayoutTokens.FontSize.caption, weight: .semibold) +
+                4)
         var payloadWidth = max(
             ActivityLayout.topPayloadMinWidth,
-            self.activityMonospacedTextWidth(payloadText, size: 9, weight: .medium))
+            self.activityMonospacedTextWidth(payloadText, size: MenuBarLayoutTokens.FontSize.caption, weight: .medium))
         let desiredMetaWidth = ruleWidth + ActivityLayout.topMetaSpacing + payloadWidth
 
         if desiredMetaWidth > metaMaxWidth {
@@ -524,25 +524,25 @@ extension MenuBarRoot {
         let network = conn.metadata?.network?.lowercased() ?? ""
 
         if host.contains("google") || host.contains("gstatic") {
-            return ("shield.fill", nativePurple.opacity(0.92))
+            return ("shield.fill", nativePurple.opacity(MenuBarLayoutTokens.Opacity.solid))
         }
         if host.contains("icloud") || host.contains("apple") {
-            return ("icloud.fill", nativeInfo.opacity(0.92))
+            return ("icloud.fill", nativeInfo.opacity(MenuBarLayoutTokens.Opacity.solid))
         }
         if host.contains("github") {
-            return ("terminal.fill", nativeIndigo.opacity(0.9))
+            return ("terminal.fill", nativeIndigo.opacity(MenuBarLayoutTokens.Opacity.solid))
         }
         if host.contains("twitter") || host.contains("x.com") {
-            return ("lock.fill", nativePositive.opacity(0.92))
+            return ("lock.fill", nativePositive.opacity(MenuBarLayoutTokens.Opacity.solid))
         }
         if host.contains("amazon") {
-            return ("cart.fill", nativeWarning.opacity(0.92))
+            return ("cart.fill", nativeWarning.opacity(MenuBarLayoutTokens.Opacity.solid))
         }
         if network.contains("udp") {
-            return ("dot.radiowaves.left.and.right", nativeTeal.opacity(0.92))
+            return ("dot.radiowaves.left.and.right", nativeTeal.opacity(MenuBarLayoutTokens.Opacity.solid))
         }
         if network.contains("tcp") {
-            return ("network", nativeInfo.opacity(0.92))
+            return ("network", nativeInfo.opacity(MenuBarLayoutTokens.Opacity.solid))
         }
         return ("globe", nativeSecondaryLabel)
     }

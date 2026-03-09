@@ -1,5 +1,7 @@
 import SwiftUI
 
+private typealias T = MenuBarLayoutTokens
+
 extension MenuBarRoot {
     var settingsMenuControlWidth: CGFloat {
         min(152, max(118, contentWidth * 0.43))
@@ -19,15 +21,15 @@ extension MenuBarRoot {
 
     var settingsFeedbackState: (message: String, color: Color, symbol: String)? {
         if let error = appState.settingsErrorMessage.trimmedNonEmpty {
-            return (error, nativeCritical.opacity(0.92), "exclamationmark.triangle.fill")
+            return (error, nativeCritical.opacity(T.Opacity.solid), "exclamationmark.triangle.fill")
         }
 
         if let launchError = appState.launchAtLoginErrorMessage.trimmedNonEmpty {
-            return (launchError, nativeWarning.opacity(0.92), "exclamationmark.circle.fill")
+            return (launchError, nativeWarning.opacity(T.Opacity.solid), "exclamationmark.circle.fill")
         }
 
         if let saved = appState.settingsSavedMessage.trimmedNonEmpty {
-            return (saved, nativePositive.opacity(0.92), "checkmark.circle.fill")
+            return (saved, nativePositive.opacity(T.Opacity.solid), "checkmark.circle.fill")
         }
 
         return nil
@@ -93,7 +95,7 @@ extension MenuBarRoot {
         ]
         let selectedLogLevel = appState.stringValue(for: .logLevel)
 
-        return VStack(alignment: .leading, spacing: MenuBarLayoutTokens.sectionGap) {
+        return VStack(alignment: .leading, spacing: T.space6) {
             if let feedback = settingsFeedbackState {
                 settingsFeedbackBanner(
                     text: feedback.message,
@@ -149,20 +151,20 @@ extension MenuBarRoot {
                     tr("ui.section.proxy_ports"),
                     symbol: "point.3.connected.trianglepath.dotted")
 
-                VStack(alignment: .leading, spacing: MenuBarLayoutTokens.vDense + 2) {
-                    HStack(spacing: MenuBarLayoutTokens.hDense) {
+                VStack(alignment: .leading, spacing: T.space4) {
+                    HStack(spacing: T.space6) {
                         Text(tr("ui.settings.ports_auto_save_hint"))
-                            .font(.appSystem(size: 11, weight: .regular))
+                            .font(.app(size: T.FontSize.caption, weight: .regular))
                             .foregroundStyle(nativeSecondaryLabel)
 
                         Spacer(minLength: 0)
 
                         if self.portAutoSaving {
-                            HStack(spacing: MenuBarLayoutTokens.hMicro + 1) {
+                            HStack(spacing: T.space2) {
                                 ProgressView()
                                     .controlSize(.mini)
                                 Text(tr("ui.settings.ports_auto_saving"))
-                                    .font(.appSystem(size: 10, weight: .medium))
+                                    .font(.app(size: T.FontSize.caption, weight: .medium))
                                     .foregroundStyle(nativeSecondaryLabel)
                             }
                         }
@@ -175,7 +177,7 @@ extension MenuBarRoot {
                             text: item.text)
                     }
                 }
-                .menuRowPadding(vertical: MenuBarLayoutTokens.vDense + 2)
+                .menuRowPadding(vertical: T.space4)
             }
 
             VStack(spacing: 0) {
@@ -183,8 +185,8 @@ extension MenuBarRoot {
                     tr("ui.section.maintenance"),
                     symbol: "wrench.and.screwdriver")
 
-                VStack(alignment: .leading, spacing: MenuBarLayoutTokens.vDense + 2) {
-                    HStack(spacing: MenuBarLayoutTokens.hDense) {
+                VStack(alignment: .leading, spacing: T.space4) {
+                    HStack(spacing: T.space6) {
                         ForEach(maintenanceActions, id: \.titleKey) { item in
                             maintenanceActionButton(tr(item.titleKey), symbol: item.symbol) {
                                 await item.action()
@@ -192,7 +194,7 @@ extension MenuBarRoot {
                         }
                     }
 
-                    HStack(spacing: MenuBarLayoutTokens.hDense) {
+                    HStack(spacing: T.space6) {
                         Button {
                             appState.showCoreDirectoryInFinder()
                         } label: {
@@ -203,7 +205,7 @@ extension MenuBarRoot {
                         .controlSize(.small)
                     }
                 }
-                .menuRowPadding(vertical: MenuBarLayoutTokens.vDense + 2)
+                .menuRowPadding(vertical: T.space4)
             }
         }
     }

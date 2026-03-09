@@ -3,13 +3,13 @@ import SwiftUI
 
 extension MenuBarRoot {
     var modeAndTabSection: some View {
-        VStack(spacing: MenuBarLayoutTokens.sectionGap) {
+        VStack(spacing: MenuBarLayoutTokens.space6) {
             self.modeSwitcher
             self.topTabs
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .overlay(alignment: .bottom) {
-            Rectangle().fill(nativeSeparator).frame(height: MenuBarLayoutTokens.hairline)
+            Rectangle().fill(nativeSeparator).frame(height: MenuBarLayoutTokens.stroke)
         }
     }
 
@@ -28,14 +28,14 @@ extension MenuBarRoot {
                 mode: .direct,
                 symbol: "paperplane")
         }
-        .padding(2)
+        .padding(MenuBarLayoutTokens.space2)
         .frame(width: contentWidth)
         .background(
             nativeControlFill,
-            in: RoundedRectangle(cornerRadius: MenuBarLayoutTokens.cardCornerRadius, style: .continuous))
+            in: RoundedRectangle(cornerRadius: MenuBarLayoutTokens.cornerRadius, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: MenuBarLayoutTokens.cardCornerRadius, style: .continuous)
-                .stroke(nativeControlBorder, lineWidth: 0.7)
+            RoundedRectangle(cornerRadius: MenuBarLayoutTokens.cornerRadius, style: .continuous)
+                .stroke(nativeControlBorder, lineWidth: MenuBarLayoutTokens.stroke)
         }
     }
 
@@ -53,34 +53,34 @@ extension MenuBarRoot {
                 switchingMode = nil
             }
         } label: {
-            VStack(spacing: 2) {
+            VStack(spacing: MenuBarLayoutTokens.space2) {
                 if switchingThisMode {
                     ProgressView()
                         .controlSize(.mini)
                 } else {
                     Image(systemName: symbol)
-                        .font(.appSystem(size: 11, weight: .semibold))
+                        .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .semibold))
                 }
 
                 Text(title)
-                    .font(.appSystem(size: 10, weight: .semibold))
+                    .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .semibold))
                     .lineLimit(1)
             }
             .foregroundStyle((selected || hovered) ? nativePrimaryLabel : nativeSecondaryLabel)
             .frame(maxWidth: .infinity)
-            .frame(height: 34)
+            .frame(height: MenuBarLayoutTokens.rowHeight)
             .background(
-                RoundedRectangle(cornerRadius: MenuBarLayoutTokens.iconCornerRadius, style: .continuous)
+                RoundedRectangle(cornerRadius: MenuBarLayoutTokens.cornerRadius, style: .continuous)
                     .fill(
                         selected
-                            ? nativeAccent.opacity(0.16)
-                            : (hovered ? Color(nsColor: .selectedContentBackgroundColor).opacity(0.20) : .clear)))
+                            ? nativeAccent.opacity(MenuBarLayoutTokens.Opacity.tint)
+                            : (hovered ? Color(nsColor: .selectedContentBackgroundColor).opacity(MenuBarLayoutTokens.Opacity.tint) : .clear)))
             .overlay {
                 if selected || hovered {
-                    RoundedRectangle(cornerRadius: MenuBarLayoutTokens.iconCornerRadius, style: .continuous)
+                    RoundedRectangle(cornerRadius: MenuBarLayoutTokens.cornerRadius, style: .continuous)
                         .stroke(
-                            selected ? nativeAccent.opacity(0.30) : nativeControlBorder.opacity(0.82),
-                            lineWidth: 0.7)
+                            selected ? nativeAccent.opacity(MenuBarLayoutTokens.Opacity.tint) : nativeControlBorder.opacity(MenuBarLayoutTokens.Theme.Dark.borderEmphasis),
+                            lineWidth: MenuBarLayoutTokens.stroke)
                 }
             }
         }

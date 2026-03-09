@@ -7,7 +7,7 @@ final class StatusItemContentView: NSView {
     }
 
     // Keep a 1pt optical inset to stabilize status-item width across icon/text mode switches.
-    private let statusItemHorizontalPadding: CGFloat = MenuBarLayoutTokens.opticalNudge
+    private let statusItemHorizontalPadding: CGFloat = MenuBarLayoutTokens.space1
     private let iconSize: CGFloat = 24
     private let brandIconRenderSize: CGFloat = 24
     private let symbolPointSize: CGFloat = 20

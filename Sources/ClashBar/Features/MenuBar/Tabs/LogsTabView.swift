@@ -1,10 +1,12 @@
 import SwiftUI
 
+private typealias T = MenuBarLayoutTokens
+
 extension MenuBarRoot {
     var logsTabBody: some View {
         let logs = self.visibleLogs
 
-        return VStack(alignment: .leading, spacing: MenuBarLayoutTokens.sectionGap) {
+        return VStack(alignment: .leading, spacing: T.space6) {
             self.logsControlCard(filteredCount: logs.count)
 
             if logs.isEmpty {
@@ -13,8 +15,8 @@ extension MenuBarRoot {
                 MeasurementAwareVStack(alignment: .leading, spacing: 0) {
                     SeparatedForEach(data: logs, id: \.id, separator: nativeSeparator) { log in
                         self.logEntryRow(log)
-                            .padding(.horizontal, MenuBarLayoutTokens.hRow)
-                            .padding(.vertical, MenuBarLayoutTokens.vDense + 2)
+                            .padding(.horizontal, T.space4)
+                            .padding(.vertical, T.space4)
                     }
                 }
             }
@@ -22,8 +24,8 @@ extension MenuBarRoot {
     }
 
     func logsControlCard(filteredCount: Int) -> some View {
-        VStack(alignment: .leading, spacing: MenuBarLayoutTokens.vDense + 2) {
-            HStack(spacing: MenuBarLayoutTokens.hDense) {
+        VStack(alignment: .leading, spacing: T.space4) {
+            HStack(spacing: T.space6) {
                 self.logsSourceFilterButtons
 
                 Spacer(minLength: 0)
@@ -33,14 +35,14 @@ extension MenuBarRoot {
             self.logsSecondaryControlRow
             TextField(tr("ui.placeholder.search_logs"), text: $logSearchText)
                 .textFieldStyle(.roundedBorder)
-                .font(.appSystem(size: 12, weight: .regular))
+                .font(.app(size: T.FontSize.body, weight: .regular))
                 .foregroundStyle(nativePrimaryLabel)
         }
-        .menuRowPadding(vertical: MenuBarLayoutTokens.vDense + 2)
+        .menuRowPadding(vertical: T.space4)
     }
 
     var logsSecondaryControlRow: some View {
-        HStack(spacing: MenuBarLayoutTokens.hDense) {
+        HStack(spacing: T.space6) {
             self.logsLevelFilterButtons
 
             self.compactTopIcon(
@@ -104,19 +106,19 @@ extension MenuBarRoot {
     }
 
     // swiftlint:disable:next function_parameter_count
-    private func logFilterGroup<T: Hashable>(
+    private func logFilterGroup<V: Hashable>(
         symbol: String,
         allTitle: String,
         allSelected: Bool,
         selectAll: @escaping () -> Void,
-        items: [T],
-        itemTitle: @escaping (T) -> String,
-        itemSelected: @escaping (T) -> Bool,
-        toggleItem: @escaping (T) -> Void) -> some View
+        items: [V],
+        itemTitle: @escaping (V) -> String,
+        itemSelected: @escaping (V) -> Bool,
+        toggleItem: @escaping (V) -> Void) -> some View
     {
-        HStack(spacing: MenuBarLayoutTokens.hMicro + 1) {
+        HStack(spacing: T.space2) {
             Image(systemName: symbol)
-                .font(.appSystem(size: 10, weight: .semibold))
+                .font(.app(size: T.FontSize.caption, weight: .semibold))
                 .foregroundStyle(nativeTertiaryLabel)
 
             self.logFilterToggleButton(title: allTitle, selected: allSelected, action: selectAll)
@@ -146,7 +148,7 @@ extension MenuBarRoot {
     private func logFilterButtonLabel(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.appSystem(size: 11, weight: .medium))
+                .font(.app(size: T.FontSize.caption, weight: .medium))
                 .lineLimit(1)
         }
         .controlSize(.small)
@@ -235,55 +237,55 @@ extension MenuBarRoot {
         let tone = levelInfo.color
         let symbol = levelInfo.symbol
 
-        return HStack(alignment: .center, spacing: MenuBarLayoutTokens.hDense + 1) {
-            RoundedRectangle(cornerRadius: MenuBarLayoutTokens.iconCornerRadius, style: .continuous)
-                .fill(tone.opacity(0.14))
+        return HStack(alignment: .center, spacing: T.space6) {
+            RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
+                .fill(tone.opacity(T.Opacity.tint))
                 .frame(
-                    width: MenuBarLayoutTokens.rowLeadingIconColumnWidth,
-                    height: MenuBarLayoutTokens.rowLeadingIconSize)
+                    width: T.rowLeadingIcon,
+                    height: T.rowLeadingIcon)
                 .overlay {
                     Image(systemName: symbol)
-                        .font(.appSystem(size: 9, weight: .semibold))
+                        .font(.app(size: T.FontSize.caption, weight: .semibold))
                         .foregroundStyle(tone)
                 }
 
-            VStack(alignment: .leading, spacing: MenuBarLayoutTokens.vDense) {
-                HStack(spacing: MenuBarLayoutTokens.hMicro + 1) {
+            VStack(alignment: .leading, spacing: T.space2) {
+                HStack(spacing: T.space2) {
                     Text("[\(sourceInfo.label)]")
-                        .font(.appMonospaced(size: 10, weight: .semibold))
+                        .font(.app(size: T.FontSize.caption, weight: .semibold))
                         .foregroundStyle(sourceInfo.color)
 
                     Text("[\(levelInfo.label)]")
-                        .font(.appMonospaced(size: 10, weight: .semibold))
+                        .font(.app(size: T.FontSize.caption, weight: .semibold))
                         .foregroundStyle(tone)
 
                     if let protocolTag = parsed.protocolTag {
                         Text(protocolTag)
-                            .font(.appMonospaced(size: 10, weight: .semibold))
+                            .font(.app(size: T.FontSize.caption, weight: .semibold))
                             .foregroundStyle(parsed.protocolColor)
                     }
 
                     Text(ValueFormatter.dateTime(log.timestamp))
-                        .font(.appMonospaced(size: 10, weight: .regular))
+                        .font(.app(size: T.FontSize.caption, weight: .regular))
                         .foregroundStyle(nativeTertiaryLabel)
                         .lineLimit(1)
                 }
 
                 Text(parsed.mainText)
-                    .font(.appMonospaced(size: 11, weight: .regular))
+                    .font(.app(size: T.FontSize.caption, weight: .regular))
                     .foregroundStyle(nativePrimaryLabel)
                     .fixedSize(horizontal: false, vertical: true)
 
                 if let detailText = parsed.detailText {
                     Text(detailText)
-                        .font(.appMonospaced(size: 10, weight: .regular))
+                        .font(.app(size: T.FontSize.caption, weight: .regular))
                         .foregroundStyle(nativeSecondaryLabel)
                         .lineLimit(2)
-                        .padding(.leading, MenuBarLayoutTokens.hDense)
+                        .padding(.leading, T.space6)
                         .overlay(alignment: .leading) {
                             Rectangle()
-                                .fill(tone.opacity(0.30))
-                                .frame(width: MenuBarLayoutTokens.opticalNudge)
+                                .fill(tone.opacity(T.Opacity.tint))
+                                .frame(width: T.space1)
                         }
                 }
             }
@@ -320,7 +322,7 @@ extension MenuBarRoot {
         case .clashbar:
             (tr("ui.log_source.clashbar"), nativeSecondaryLabel)
         case .mihomo:
-            (tr("ui.log_source.mihomo"), nativeAccent.opacity(0.95))
+            (tr("ui.log_source.mihomo"), nativeAccent.opacity(T.Opacity.solid))
         }
     }
 
@@ -333,19 +335,19 @@ extension MenuBarRoot {
             return (
                 LogLevelFilter.error,
                 tr("ui.log_filter.error"),
-                nativeCritical.opacity(0.92),
+                nativeCritical.opacity(T.Opacity.solid),
                 "exclamationmark.octagon.fill")
         case .warning:
             return (
                 LogLevelFilter.warning,
                 tr("ui.log_filter.warning"),
-                nativeWarning.opacity(0.92),
+                nativeWarning.opacity(T.Opacity.solid),
                 "exclamationmark.triangle.fill")
         case .info:
             return (
                 LogLevelFilter.info,
                 tr("ui.log_filter.info"),
-                nativeAccent.opacity(0.9),
+                nativeAccent.opacity(T.Opacity.solid),
                 "info.circle.fill")
         }
     }
@@ -379,15 +381,15 @@ extension MenuBarRoot {
         }
 
         var protocolTag: String?
-        var protocolColor = nativeAccent.opacity(0.90)
+        var protocolColor = nativeAccent.opacity(T.Opacity.solid)
         if let tag = firstRegexCapture(in: message, regex: CachedLogRegex.protocolTag) {
             protocolTag = tag
             message = message.replacingOccurrences(of: tag, with: "").trimmed
 
             let upper = tag.uppercased()
-            if upper.contains("UDP") { protocolColor = nativeWarning.opacity(0.90) }
-            if upper.contains("DNS") { protocolColor = nativePositive.opacity(0.90) }
-            if upper.contains("HTTP") { protocolColor = nativeAccent.opacity(0.90) }
+            if upper.contains("UDP") { protocolColor = nativeWarning.opacity(T.Opacity.solid) }
+            if upper.contains("DNS") { protocolColor = nativePositive.opacity(T.Opacity.solid) }
+            if upper.contains("HTTP") { protocolColor = nativeAccent.opacity(T.Opacity.solid) }
         }
 
         if message.isEmpty {

@@ -1,29 +1,30 @@
 import SwiftUI
 
+private typealias T = MenuBarLayoutTokens
+
 extension MenuBarRoot {
     func settingsCardHeader(_ title: String, symbol: String) -> some View {
-        HStack(spacing: MenuBarLayoutTokens.hDense) {
+        HStack(spacing: T.space6) {
             Image(systemName: symbol)
-                .font(.appSystem(size: 10, weight: .semibold))
+                .font(.app(size: T.FontSize.caption, weight: .semibold))
                 .foregroundStyle(nativeTertiaryLabel)
             Text(title)
-                .font(.appSystem(size: 12, weight: .bold))
+                .font(.app(size: T.FontSize.body, weight: .bold))
                 .foregroundStyle(nativeTertiaryLabel)
-                .tracking(0.8)
                 .textCase(.uppercase)
             Spacer(minLength: 0)
         }
-        .menuRowPadding(vertical: MenuBarLayoutTokens.vDense + 1)
+        .menuRowPadding(vertical: T.space2)
     }
 
     func settingsRowLabel(symbol: String, title: String) -> some View {
-        HStack(spacing: MenuBarLayoutTokens.hDense) {
+        HStack(spacing: T.space6) {
             Image(systemName: symbol)
-                .font(.appSystem(size: 11, weight: .semibold))
+                .font(.app(size: T.FontSize.caption, weight: .semibold))
                 .foregroundStyle(nativeTertiaryLabel)
                 .frame(width: 14, alignment: .center)
             Text(title)
-                .font(.appSystem(size: 12, weight: .medium))
+                .font(.app(size: T.FontSize.body, weight: .medium))
                 .foregroundStyle(nativePrimaryLabel)
                 .lineLimit(1)
                 .truncationMode(.tail)
@@ -31,7 +32,7 @@ extension MenuBarRoot {
     }
 
     func settingsToggleRow(_ title: String, symbol: String, isOn: Binding<Bool>) -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: T.space8) {
             self.settingsRowLabel(symbol: symbol, title: title)
                 .layoutPriority(1)
             Spacer(minLength: 0)
@@ -40,7 +41,7 @@ extension MenuBarRoot {
                 .toggleStyle(.switch)
                 .controlSize(.small)
         }
-        .menuRowPadding(vertical: MenuBarLayoutTokens.vDense + 2)
+        .menuRowPadding(vertical: T.space4)
     }
 
     func settingsMenuRow(
@@ -53,21 +54,21 @@ extension MenuBarRoot {
     {
         let resolvedControlWidth = controlWidth ?? settingsMenuControlWidth
 
-        return HStack(spacing: 10) {
+        return HStack(spacing: T.space8) {
             self.settingsRowLabel(symbol: symbol, title: title)
                 .layoutPriority(1)
             Spacer(minLength: 0)
             AttachedPopoverMenu(width: popoverWidth ?? resolvedControlWidth) {
-                HStack(spacing: MenuBarLayoutTokens.hMicro + 1) {
+                HStack(spacing: T.space2) {
                     Text(valueText)
                         .foregroundStyle(nativeSecondaryLabel)
                         .lineLimit(1)
                         .truncationMode(.tail)
                     Image(systemName: "chevron.right")
-                        .font(.appSystem(size: 10, weight: .semibold))
+                        .font(.app(size: T.FontSize.caption, weight: .semibold))
                         .foregroundStyle(nativeTertiaryLabel)
                 }
-                .font(.appSystem(size: 11, weight: .medium))
+                .font(.app(size: T.FontSize.caption, weight: .medium))
                 .frame(maxWidth: .infinity, alignment: .trailing)
             } content: { dismiss in
                 options(dismiss)
@@ -76,7 +77,7 @@ extension MenuBarRoot {
             .buttonStyle(.bordered)
             .controlSize(.small)
         }
-        .menuRowPadding(vertical: MenuBarLayoutTokens.vDense + 2)
+        .menuRowPadding(vertical: T.space4)
     }
 
     // swiftlint:disable:next function_parameter_count
@@ -103,7 +104,7 @@ extension MenuBarRoot {
     }
 
     func settingsPortFieldRow(_ title: String, symbol: String, text: Binding<String>) -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: T.space8) {
             self.settingsRowLabel(symbol: symbol, title: title)
                 .layoutPriority(1)
 
@@ -111,7 +112,7 @@ extension MenuBarRoot {
 
             TextField(tr("ui.placeholder.port"), text: text)
                 .textFieldStyle(.roundedBorder)
-                .font(.appMonospaced(size: 12, weight: .regular))
+                .font(.app(size: T.FontSize.body, weight: .regular))
                 .foregroundStyle(nativePrimaryLabel)
                 .multilineTextAlignment(.trailing)
                 .frame(width: settingsPortFieldWidth, alignment: .trailing)
@@ -144,22 +145,22 @@ extension MenuBarRoot {
     }
 
     func settingsFeedbackBanner(text: String, color: Color, symbol: String) -> some View {
-        HStack(spacing: MenuBarLayoutTokens.hDense) {
+        HStack(spacing: T.space6) {
             Image(systemName: symbol)
-                .font(.appSystem(size: 11, weight: .semibold))
+                .font(.app(size: T.FontSize.caption, weight: .semibold))
                 .foregroundStyle(color)
 
             Text(text)
-                .font(.appSystem(size: 11, weight: .medium))
+                .font(.app(size: T.FontSize.caption, weight: .medium))
                 .foregroundStyle(nativePrimaryLabel)
                 .lineLimit(2)
 
             Spacer(minLength: 0)
         }
-        .menuRowPadding(vertical: MenuBarLayoutTokens.vDense + 2)
+        .menuRowPadding(vertical: T.space4)
         .overlay {
-            RoundedRectangle(cornerRadius: MenuBarLayoutTokens.cardCornerRadius, style: .continuous)
-                .stroke(color.opacity(0.26), lineWidth: 0.7)
+            RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
+                .stroke(color.opacity(0.26), lineWidth: T.stroke)
         }
     }
 
