@@ -1,7 +1,7 @@
 import AppKit
 
 enum BrandIcon {
-    private static let resourceName = "clashbar-icon"
+    private static let resourceName = "icon"
     private static let resourceExtension = "png"
     private static let resourceSubdirectory = "Brand"
 

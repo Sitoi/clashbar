@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="Sources/ClashBar/Resources/Brand/clashbar-icon.png" width="300" alt="ClashBar Logo" />
+<img src="Sources/ClashBar/Resources/Brand/icon.png" width="300" alt="ClashBar Logo" />
 
 # ClashBar
 
@@ -32,7 +32,7 @@
 
 </div>
 
-![ClashBar](./imgs/clashbar.svg)
+![ClashBar](./imgs/icon.png)
 
 ---
 

@@ -22,7 +22,7 @@ let package = Package(
             path: "Sources/ClashBar",
             resources: [
                 .copy("Resources/bin"),
-                .copy("Resources/Brand/clashbar-icon.png"),
+                .copy("Resources/Brand/icon.png"),
                 .copy("Resources/ConfigTemplates/ClashBar.yaml"),
                 .process("Resources/Localization"),
             ]),
