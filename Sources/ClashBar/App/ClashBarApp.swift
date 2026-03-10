@@ -60,6 +60,11 @@ struct ClashBarApp: App {
                     self.appDelegate.appState.setActiveMenuTab(.system)
                 }
                 .keyboardShortcut("5", modifiers: [.command, .option])
+
+                Button(self.tr("ui.tab.system")) {
+                    self.appDelegate.appState.setActiveMenuTab(.system)
+                }
+                .keyboardShortcut(",", modifiers: [.command])
             }
 
             CommandMenu("Actions") {
