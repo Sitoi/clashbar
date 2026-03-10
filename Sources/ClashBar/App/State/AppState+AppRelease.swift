@@ -26,36 +26,21 @@ extension AppState {
         URL(string: "https://github.com/Sitoi/ClashBar/releases")
     }
 
-    func refreshLatestAppReleaseIfNeeded(force: Bool = false) async {
-        guard force || self.shouldRefreshLatestAppRelease else { return }
+    func refreshLatestAppRelease() async {
         guard !self.isLatestAppReleaseCheckInFlight else { return }
 
         self.isLatestAppReleaseCheckInFlight = true
-        var didFinishCheck = false
         defer {
             self.isLatestAppReleaseCheckInFlight = false
-            if didFinishCheck {
-                self.lastLatestAppReleaseCheckAt = Date()
-            }
         }
 
         do {
             let release = try await AppReleaseService.fetchLatestRelease(currentVersion: self.currentAppVersionText)
             guard !Task.isCancelled else { return }
-            didFinishCheck = true
             guard self.latestAppReleaseInfo != release else { return }
             self.latestAppReleaseInfo = release
         } catch {
             guard !Task.isCancelled else { return }
-            didFinishCheck = true
         }
-    }
-
-    private var shouldRefreshLatestAppRelease: Bool {
-        guard let lastLatestAppReleaseCheckAt else { return true }
-        let refreshInterval = self.latestAppReleaseInfo == nil
-            ? self.latestAppReleaseRetryInterval
-            : self.latestAppReleaseRefreshInterval
-        return Date().timeIntervalSince(lastLatestAppReleaseCheckAt) >= refreshInterval
     }
 }

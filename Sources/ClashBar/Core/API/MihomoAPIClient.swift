@@ -13,7 +13,7 @@ enum HTTPMethod: String {
     case delete = "DELETE"
 }
 
-enum JSONValue: Sendable {
+enum JSONValue {
     case string(String)
     case int(Int)
     case bool(Bool)
@@ -42,9 +42,10 @@ enum JSONValue: Sendable {
     }
 }
 
-enum Endpoint: Sendable {
+enum Endpoint {
     private static let proxyProvidersPath = "/providers/proxies"
     private static let ruleProvidersPath = "/providers/rules"
+    private static let coreUpgradeRequestBody: [String: String] = ["path": "", "payload": ""]
 
     case version
     case traffic
@@ -75,6 +76,7 @@ enum Endpoint: Sendable {
     case closeConnection(id: String)
     case flushFakeIPCache
     case flushDNSCache
+    case upgradeCore
 
     var method: HTTPMethod {
         switch self {
@@ -88,7 +90,7 @@ enum Endpoint: Sendable {
             .patch
         case .closeAllConnections, .closeConnection:
             .delete
-        case .flushFakeIPCache, .flushDNSCache:
+        case .flushFakeIPCache, .flushDNSCache, .upgradeCore:
             .post
         }
     }
@@ -120,6 +122,7 @@ enum Endpoint: Sendable {
         case let .closeConnection(id): "/connections/\(id.urlPathSegmentEscaped)"
         case .flushFakeIPCache: "/cache/fakeip/flush"
         case .flushDNSCache: "/cache/dns/flush"
+        case .upgradeCore: "/upgrade"
         }
     }
 
@@ -146,6 +149,8 @@ enum Endpoint: Sendable {
             try? JSONSerialization.data(withJSONObject: body.mapValues(\.foundationObject))
         case let .switchProxy(_, target):
             try? JSONSerialization.data(withJSONObject: ["name": target])
+        case .upgradeCore:
+            try? JSONSerialization.data(withJSONObject: Self.coreUpgradeRequestBody)
         default:
             nil
         }
@@ -159,6 +164,8 @@ enum Endpoint: Sendable {
         case let .groupDelay(_, _, timeout),
              let .proxyProviderProxyHealthcheck(_, _, _, timeout):
             max(5, TimeInterval(timeout) / 1000.0 + 2)
+        case .upgradeCore:
+            60
         default:
             2
         }

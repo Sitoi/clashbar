@@ -17,6 +17,11 @@ struct VersionInfo: Codable, Equatable {
     let version: String
 }
 
+struct CoreUpgradeResponse: Decodable, Equatable {
+    let status: String?
+    let message: String?
+}
+
 struct TrafficSnapshot: Decodable, Equatable {
     let up: Int64
     let down: Int64

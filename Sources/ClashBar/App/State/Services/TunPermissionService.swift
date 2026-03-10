@@ -26,7 +26,7 @@ enum TunPermissionServiceError: LocalizedError {
     }
 }
 
-struct TunPermissionService: Sendable {
+struct TunPermissionService {
     func hasRequiredPermissions(binaryPath: String) -> Bool {
         let normalizedPath = binaryPath.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalizedPath.isEmpty else { return false }

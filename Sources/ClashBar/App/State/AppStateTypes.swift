@@ -26,6 +26,14 @@ enum CoreActionState {
     case restarting
 }
 
+enum CoreUpgradeState: Equatable {
+    case idle
+    case running
+    case succeeded
+    case alreadyLatest(version: String?)
+    case failed(message: String)
+}
+
 enum ConfigLogLevel: String, CaseIterable {
     case silent
     case error
@@ -34,7 +42,7 @@ enum ConfigLogLevel: String, CaseIterable {
     case debug
 }
 
-enum ConfigPatchValue: Sendable {
+enum ConfigPatchValue {
     case bool(Bool)
     case int(Int)
     case string(String)
@@ -235,7 +243,7 @@ extension EditableSettingsSnapshot {
     }
 }
 
-struct SystemProxyPorts: Equatable, Sendable {
+struct SystemProxyPorts: Equatable {
     let httpPort: Int?
     let httpsPort: Int?
     let socksPort: Int?

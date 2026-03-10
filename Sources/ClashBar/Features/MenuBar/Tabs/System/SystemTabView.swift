@@ -153,24 +153,6 @@ extension MenuBarRoot {
                     symbol: "point.3.connected.trianglepath.dotted")
 
                 VStack(alignment: .leading, spacing: T.space4) {
-                    HStack(spacing: T.space6) {
-                        Text(tr("ui.settings.ports_auto_save_hint"))
-                            .font(.app(size: T.FontSize.caption, weight: .regular))
-                            .foregroundStyle(nativeSecondaryLabel)
-
-                        Spacer(minLength: 0)
-
-                        if self.portAutoSaving {
-                            HStack(spacing: T.space2) {
-                                ProgressView()
-                                    .controlSize(.mini)
-                                Text(tr("ui.settings.ports_auto_saving"))
-                                    .font(.app(size: T.FontSize.caption, weight: .medium))
-                                    .foregroundStyle(nativeSecondaryLabel)
-                            }
-                        }
-                    }
-
                     ForEach(proxyPortFields, id: \.titleKey) { item in
                         settingsPortFieldRow(
                             tr(item.titleKey),

@@ -70,6 +70,7 @@ final class AppState: ObservableObject {
     @Published var errorLogs: [AppErrorLogEntry] = []
     @Published var startupErrorMessage: String?
     @Published var coreActionState: CoreActionState = .idle
+    @Published var coreUpgradeState: CoreUpgradeState = .idle
     @Published var providerRefreshStatus: ProviderRefreshStatus = .idle
     @Published var uiLanguage: AppLanguage = .zhHans
     @Published var appearanceMode: AppAppearanceMode = .system
@@ -311,6 +312,7 @@ final class AppState: ObservableObject {
     var networkAutoStopTask: Task<Void, Never>?
     var networkAutoStartTask: Task<Void, Never>?
     var deferredEditableSettingsOverlayTask: Task<Void, Never>?
+    var coreUpgradeFeedbackClearTask: Task<Void, Never>?
     var configDirectoryMonitorTask: Task<Void, Never>?
     var trafficDecodeTask: Task<Void, Never>?
     var mihomoLogFlushTask: Task<Void, Never>?
@@ -323,7 +325,6 @@ final class AppState: ObservableObject {
     var activatedTabRefreshGeneration: Int = 0
     var configFileSignatureSnapshot: [String: String] = [:]
     var pendingConfigChangeRestart = false
-    var lastLatestAppReleaseCheckAt: Date?
     var isLatestAppReleaseCheckInFlight = false
 
     let defaults = UserDefaults.standard
@@ -353,8 +354,6 @@ final class AppState: ObservableObject {
     let streamDisconnectLogThrottleInterval: TimeInterval = 2
     let streamReconnectBaseDelayNanoseconds: UInt64 = 1_000_000_000
     let streamReconnectMaxDelayNanoseconds: UInt64 = 8_000_000_000
-    let latestAppReleaseRefreshInterval: TimeInterval = 6 * 60 * 60
-    let latestAppReleaseRetryInterval: TimeInterval = 30 * 60
     // DRY: shared defaults for latency/provider healthcheck endpoints.
     let defaultHealthcheckURL = "https://www.gstatic.com/generate_204"
     let defaultHealthcheckTimeoutMilliseconds = 5000

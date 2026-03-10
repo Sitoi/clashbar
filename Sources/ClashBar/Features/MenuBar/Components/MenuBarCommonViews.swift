@@ -204,21 +204,22 @@ extension MenuBarRoot {
 
         return VStack(spacing: 0) {
             HStack(spacing: MenuBarLayoutTokens.space6) {
-                self.footerInfo(
-                    tr("ui.footer.core_mihomo", appState.version),
-                    url: mihomoRepositoryURL,
-                    iconSystemName: mihomoSymbol)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .layoutPriority(1)
+                HStack(spacing: MenuBarLayoutTokens.space6) {
+                    self.footerInfo(
+                        tr("ui.footer.core_mihomo", appState.version),
+                        url: mihomoRepositoryURL,
+                        iconSystemName: mihomoSymbol)
+
+                    self.footerCoreUpgradeControl
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .layoutPriority(1)
 
                 self.footerVersionInfo
                     .fixedSize(horizontal: true, vertical: false)
             }
             .menuRowPadding(vertical: MenuBarLayoutTokens.space2)
             .background(self.footerSurfaceBackground)
-        }
-        .task {
-            await self.appState.refreshLatestAppReleaseIfNeeded()
         }
     }
 
@@ -269,11 +270,117 @@ extension MenuBarRoot {
         .help(text)
     }
 
+    var footerCoreUpgradeControl: some View {
+        self.compactAsyncIconButton(
+            symbol: self.footerCoreUpgradeButtonSymbolName ?? "arrow.down.circle",
+            label: self.footerCoreUpgradeButtonTitle,
+            tint: self.footerCoreUpgradeButtonTint,
+            baseTint: self.nativeSecondaryLabel,
+            isLoading: self.appState.isCoreUpgradeInFlight,
+            size: 18,
+            fontSize: MenuBarLayoutTokens.FontSize.caption,
+            hierarchicalSymbol: true)
+        {
+            await self.appState.upgradeCore()
+        }
+        .disabled(!self.isFooterCoreUpgradeEnabled)
+        .help(self.footerCoreUpgradeButtonHelp)
+        .padding(.horizontal, MenuBarLayoutTokens.space4)
+        .padding(.vertical, MenuBarLayoutTokens.space2)
+        .background(
+            Capsule(style: .continuous)
+                .fill(self.footerCoreUpgradeBackground))
+    }
+
+    var isFooterCoreUpgradeEnabled: Bool {
+        self.appState.isRuntimeRunning && !self.appState.isCoreUpgradeInFlight
+    }
+
+    var footerCoreUpgradeButtonTitle: String {
+        switch self.appState.coreUpgradeState {
+        case .idle:
+            tr("ui.action.upgrade_core")
+        case .running:
+            tr("ui.footer.core_upgrade.running")
+        case .succeeded:
+            tr("ui.footer.core_upgrade.success")
+        case .alreadyLatest:
+            tr("ui.footer.core_upgrade.latest")
+        case .failed:
+            tr("ui.footer.core_upgrade.failed")
+        }
+    }
+
+    var footerCoreUpgradeButtonSymbolName: String? {
+        switch self.appState.coreUpgradeState {
+        case .idle:
+            "arrow.down.circle"
+        case .running:
+            nil
+        case .succeeded:
+            "checkmark.circle.fill"
+        case .alreadyLatest:
+            "checkmark.circle"
+        case .failed:
+            "exclamationmark.triangle.fill"
+        }
+    }
+
+    var footerCoreUpgradeButtonTint: Color {
+        switch self.appState.coreUpgradeState {
+        case .idle, .running:
+            self.nativeAccent.opacity(MenuBarLayoutTokens.Opacity.solid)
+        case .succeeded, .alreadyLatest:
+            self.nativePositive.opacity(MenuBarLayoutTokens.Opacity.solid)
+        case .failed:
+            self.nativeCritical.opacity(MenuBarLayoutTokens.Opacity.solid)
+        }
+    }
+
+    var footerCoreUpgradeBackground: Color {
+        switch self.appState.coreUpgradeState {
+        case .idle:
+            self.nativeBadgeFill
+        case .running:
+            self.nativeAccent.opacity(MenuBarLayoutTokens.Opacity.tint)
+        case .succeeded, .alreadyLatest:
+            self.nativePositive.opacity(MenuBarLayoutTokens.Opacity.tint)
+        case .failed:
+            self.nativeCritical.opacity(MenuBarLayoutTokens.Opacity.tint)
+        }
+    }
+
+    var footerCoreUpgradeButtonHelp: String {
+        if !self.appState.isRuntimeRunning {
+            return tr("ui.footer.core_upgrade.help.disabled")
+        }
+
+        switch self.appState.coreUpgradeState {
+        case .idle:
+            return tr("ui.footer.core_upgrade.help")
+        case .running:
+            return tr("ui.footer.core_upgrade.help.running")
+        case .succeeded:
+            return tr("ui.footer.core_upgrade.help.success")
+        case let .alreadyLatest(version):
+            if let version, !version.isEmpty {
+                return tr("ui.footer.core_upgrade.help.latest_version", version)
+            }
+            return tr("ui.footer.core_upgrade.help.latest")
+        case let .failed(message):
+            return tr("ui.footer.core_upgrade.help.failed", message)
+        }
+    }
+
     @ViewBuilder
     var footerVersionInfo: some View {
         if let update = self.appState.availableAppUpdate {
             Link(destination: update.releaseURL) {
-                self.footerVersionUpdateLabel(update)
+                self.footerVersionBadge(
+                    text: tr("ui.footer.version", update.displayVersion),
+                    symbol: "arrow.down.circle.fill",
+                    tint: self.nativeAccent.opacity(MenuBarLayoutTokens.Opacity.solid),
+                    emphasized: true)
             }
             .buttonStyle(.plain)
             .help(tr("ui.footer.version_update_help", update.displayVersion))
@@ -282,35 +389,46 @@ extension MenuBarRoot {
                 self.appState.currentAppVersionText,
                 update.displayVersion))
         } else {
-            self.footerInfo(
-                tr("ui.footer.version", self.appState.currentAppVersionText),
-                url: self.appState.appReleaseIndexURL,
-                iconSystemName: "chevron.left.forwardslash.chevron.right")
+            if let releaseIndexURL = self.appState.appReleaseIndexURL {
+                Link(destination: releaseIndexURL) {
+                    self.footerVersionBadge(
+                        text: tr("ui.footer.version", self.appState.currentAppVersionText),
+                        symbol: nil,
+                        tint: self.nativeSecondaryLabel,
+                        emphasized: false)
+                }
+                .buttonStyle(.plain)
+                .help(tr("ui.footer.version", self.appState.currentAppVersionText))
+            } else {
+                self.footerVersionBadge(
+                    text: tr("ui.footer.version", self.appState.currentAppVersionText),
+                    symbol: nil,
+                    tint: self.nativeSecondaryLabel,
+                    emphasized: false)
+            }
         }
     }
 
-    func footerVersionUpdateLabel(_ release: AppReleaseInfo) -> some View {
+    func footerVersionBadge(text: String, symbol: String?, tint: Color, emphasized: Bool) -> some View {
         HStack(spacing: MenuBarLayoutTokens.space4) {
-            Image(systemName: "arrow.down.circle.fill")
-                .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .semibold))
-                .foregroundStyle(self.nativeAccent.opacity(MenuBarLayoutTokens.Opacity.solid))
+            if let symbol {
+                Image(systemName: symbol)
+                    .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .semibold))
+            }
 
-            Text(tr("ui.footer.version", self.appState.currentAppVersionText))
-                .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .medium))
-                .foregroundStyle(self.nativeSecondaryLabel)
+            Text(text)
+                .font(.app(
+                    size: MenuBarLayoutTokens.FontSize.caption,
+                    weight: emphasized ? .bold : .medium))
                 .lineLimit(1)
                 .minimumScaleFactor(MenuBarLayoutTokens.minimumScale)
-
-            Text(release.displayVersion)
-                .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .bold))
-                .foregroundStyle(self.nativeAccent.opacity(MenuBarLayoutTokens.Opacity.solid))
-                .lineLimit(1)
-                .padding(.horizontal, MenuBarLayoutTokens.space4)
-                .padding(.vertical, MenuBarLayoutTokens.space1)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(self.nativeAccent.opacity(MenuBarLayoutTokens.Opacity.tint)))
         }
+        .foregroundStyle(tint)
+        .padding(.horizontal, MenuBarLayoutTokens.space6)
+        .padding(.vertical, MenuBarLayoutTokens.space2)
+        .background(
+            Capsule(style: .continuous)
+                .fill(emphasized ? tint.opacity(MenuBarLayoutTokens.Opacity.tint) : self.nativeBadgeFill))
     }
 
     var statusColor: Color {

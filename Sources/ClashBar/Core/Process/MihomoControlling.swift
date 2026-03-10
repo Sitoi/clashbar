@@ -1,6 +1,6 @@
 import Foundation
 
-enum CoreLifecycleStatus: Equatable, Sendable {
+enum CoreLifecycleStatus: Equatable {
     case stopped
     case starting
     case running(pid: Int32)
