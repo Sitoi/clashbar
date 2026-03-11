@@ -19,7 +19,7 @@ extension AppState {
             .joined(separator: "\n")
 
         copyTextToPasteboard(content)
-        showPanelFeedback(tr("log.logs.copied_all", errorLogs.count), style: .success, symbol: "checkmark.circle.fill")
+        showPanelFeedback(tr("ui.feedback.copy.logs_all"), style: .success, symbol: "checkmark.circle.fill")
         appendLog(level: "info", message: tr("log.logs.copied_all", errorLogs.count))
     }
 

@@ -58,11 +58,14 @@ extension MenuBarRoot {
             HStack(spacing: MenuBarLayoutTokens.space6) {
                 self.compactTopIcon(
                     "arrow.clockwise",
-                    label: appState.primaryCoreActionLabel,
-                    isDisabled: !appState.isPrimaryCoreActionEnabled,
-                    disabledFeedback: tr("ui.feedback.action.processing"))
+                    label: tr("app.primary.restart"),
+                    isDisabled: !appState.isRuntimeRunning || appState.isCoreActionProcessing,
+                    disabledFeedback: appState.isRuntimeRunning
+                        ? tr("ui.feedback.action.processing")
+                        : tr("ui.feedback.restart.requires_running"),
+                    disabledFeedbackStyle: appState.isRuntimeRunning ? .info : .warning)
                 {
-                    await appState.performPrimaryCoreAction()
+                    await appState.restartCore()
                 }
 
                 self.compactTopIcon(

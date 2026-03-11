@@ -16,19 +16,31 @@ extension AppState {
     }
 
     func copyConnectionHost(_ host: String) {
-        self.copyAndLog(host, message: tr("log.connection.copy_host", host))
+        self.copyAndLog(
+            host,
+            feedbackMessage: tr("ui.feedback.copy.connection_host"),
+            logMessage: tr("log.connection.copy_host", host))
     }
 
     func copyConnectionID(_ id: String) {
-        self.copyAndLog(id, message: tr("log.connection.copy_id", id))
+        self.copyAndLog(
+            id,
+            feedbackMessage: tr("ui.feedback.copy.connection_id"),
+            logMessage: tr("log.connection.copy_id", id))
     }
 
     func copyLogMessage(_ log: AppErrorLogEntry) {
-        self.copyAndLog(log.message, message: tr("log.logs.copied_message"))
+        self.copyAndLog(
+            log.message,
+            feedbackMessage: tr("ui.feedback.copy.log_message"),
+            logMessage: tr("log.logs.copied_message"))
     }
 
     func copyLogEntry(_ log: AppErrorLogEntry) {
-        self.copyAndLog(self.formattedLogEntry(log), message: tr("log.logs.copied_entry"))
+        self.copyAndLog(
+            self.formattedLogEntry(log),
+            feedbackMessage: tr("ui.feedback.copy.log_entry"),
+            logMessage: tr("log.logs.copied_entry"))
     }
 
     func copyTextToPasteboard(_ text: String) {
@@ -42,10 +54,10 @@ extension AppState {
         return "[\(ValueFormatter.dateTime(log.timestamp))] [\(source)] [\(log.level.uppercased())] \(log.message)"
     }
 
-    private func copyAndLog(_ text: String, message: String) {
+    private func copyAndLog(_ text: String, feedbackMessage: String, logMessage: String) {
         // DRY: all copy actions share the same pasteboard + info-log behavior.
         self.copyTextToPasteboard(text)
-        self.showPanelFeedback(message, style: .success, symbol: "checkmark.circle.fill")
-        appendLog(level: "info", message: message)
+        self.showPanelFeedback(feedbackMessage, style: .success, symbol: "checkmark.circle.fill")
+        appendLog(level: "info", message: logMessage)
     }
 }

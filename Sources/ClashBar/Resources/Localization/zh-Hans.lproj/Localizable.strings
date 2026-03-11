@@ -59,7 +59,13 @@
 "ui.mode.hint.start_core" = "启动 Core 后可切换模式";
 "ui.mode.hint.wait_api" = "等待 Core API 恢复后可切换模式";
 "ui.feedback.action.processing" = "当前操作进行中，请稍候";
+"ui.feedback.restart.requires_running" = "请先启动 Core，再执行重启";
 "ui.feedback.copy_terminal.copied" = "终端代理命令已复制";
+"ui.feedback.copy.logs_all" = "全部日志已复制";
+"ui.feedback.copy.connection_host" = "连接 Host 已复制";
+"ui.feedback.copy.connection_id" = "连接 ID 已复制";
+"ui.feedback.copy.log_message" = "日志消息已复制";
+"ui.feedback.copy.log_entry" = "完整日志已复制";
 "ui.feedback.network_filters.idle" = "当前没有可重置的网络筛选";
 "ui.feedback.log_filters.idle" = "当前没有可重置的日志筛选";
 "ui.feedback.logs.empty" = "暂无日志可操作";

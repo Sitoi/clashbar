@@ -59,7 +59,13 @@
 "ui.mode.hint.start_core" = "Start the core to switch modes";
 "ui.mode.hint.wait_api" = "Wait for the core API to recover before switching modes";
 "ui.feedback.action.processing" = "Action already in progress. Please wait";
+"ui.feedback.restart.requires_running" = "Start the core before restarting it";
 "ui.feedback.copy_terminal.copied" = "Terminal proxy command copied";
+"ui.feedback.copy.logs_all" = "All logs copied";
+"ui.feedback.copy.connection_host" = "Connection host copied";
+"ui.feedback.copy.connection_id" = "Connection ID copied";
+"ui.feedback.copy.log_message" = "Log message copied";
+"ui.feedback.copy.log_entry" = "Full log entry copied";
 "ui.feedback.network_filters.idle" = "No active network filters to reset";
 "ui.feedback.log_filters.idle" = "No active log filters to reset";
 "ui.feedback.logs.empty" = "No logs available for this action";

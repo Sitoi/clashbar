@@ -169,6 +169,7 @@ extension AppState {
     func setUILanguage(_ language: AppLanguage) {
         guard uiLanguage != language else { return }
         uiLanguage = language
+        panelFeedback = nil
         defaults.set(language.rawValue, forKey: uiLanguageKey)
     }
 
