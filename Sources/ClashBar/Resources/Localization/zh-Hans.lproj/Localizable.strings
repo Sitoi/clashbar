@@ -69,6 +69,10 @@
 "ui.feedback.network_filters.idle" = "当前没有可重置的网络筛选";
 "ui.feedback.log_filters.idle" = "当前没有可重置的日志筛选";
 "ui.feedback.logs.empty" = "暂无日志可操作";
+"ui.feedback.proxy_groups.hidden" = "已隐藏 hidden 代理组";
+"ui.feedback.proxy_groups.visible" = "已显示 hidden 代理组";
+"ui.feedback.proxy_groups.testing" = "开始测试代理组延迟";
+"ui.feedback.proxy_groups.empty" = "暂无代理组可测试";
 
 
 "ui.quick.switch_config" = "切换配置";

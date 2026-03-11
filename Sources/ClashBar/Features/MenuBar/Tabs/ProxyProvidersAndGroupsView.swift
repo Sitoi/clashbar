@@ -194,6 +194,7 @@ extension MenuBarRoot {
         let groups = hideHiddenProxyGroups
             ? appState.proxyGroups.filter { $0.hidden != true }
             : appState.proxyGroups
+        let isTestingAllGroups = !appState.groupLatencyLoading.isEmpty
 
         return VStack(alignment: .leading, spacing: T.space6) {
             self.nodesSectionHeader(
@@ -211,13 +212,28 @@ extension MenuBarRoot {
                         toneOverride: nativeIndigo)
                     {
                         hideHiddenProxyGroups.toggle()
+                        appState.showPanelFeedback(
+                            tr(
+                                hideHiddenProxyGroups
+                                    ? "ui.feedback.proxy_groups.hidden"
+                                    : "ui.feedback.proxy_groups.visible"),
+                            style: .success,
+                            symbol: hideHiddenProxyGroups ? "eye.slash.circle.fill" : "eye.circle.fill")
                     }
 
                     self.compactTopIcon(
                         "gauge",
                         label: tr("ui.action.test_latency"),
-                        toneOverride: nativeTeal)
+                        toneOverride: nativeTeal,
+                        isLoading: isTestingAllGroups,
+                        isDisabled: groups.isEmpty,
+                        disabledFeedback: tr("ui.feedback.proxy_groups.empty"),
+                        disabledFeedbackStyle: .warning)
                     {
+                        appState.showPanelFeedback(
+                            tr("ui.feedback.proxy_groups.testing"),
+                            style: .info,
+                            symbol: "gauge.with.dots.needle.50percent")
                         await appState.refreshAllGroupLatencies(includeHiddenGroups: !hideHiddenProxyGroups)
                     }
                 }

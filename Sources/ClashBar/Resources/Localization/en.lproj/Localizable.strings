@@ -69,6 +69,10 @@
 "ui.feedback.network_filters.idle" = "No active network filters to reset";
 "ui.feedback.log_filters.idle" = "No active log filters to reset";
 "ui.feedback.logs.empty" = "No logs available for this action";
+"ui.feedback.proxy_groups.hidden" = "Hidden proxy groups are now hidden";
+"ui.feedback.proxy_groups.visible" = "Hidden proxy groups are now visible";
+"ui.feedback.proxy_groups.testing" = "Testing proxy group latency";
+"ui.feedback.proxy_groups.empty" = "No proxy groups available to test";
 
 
 "ui.quick.switch_config" = "Switch Config";
