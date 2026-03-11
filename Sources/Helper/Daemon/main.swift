@@ -463,14 +463,9 @@ private final class ProxyHelperListenerDelegate: NSObject, NSXPCListenerDelegate
     }
 }
 
-@main
-private struct ClashBarProxyHelperMain {
-    static func main() {
-        let delegate = ProxyHelperListenerDelegate()
-        let listener = NSXPCListener(machServiceName: ProxyHelperConstants.machServiceName)
-        listener.delegate = delegate
-        listener.setConnectionCodeSigningRequirement(ProxyHelperConstants.allowedClientRequirement)
-        listener.resume()
-        dispatchMain()
-    }
-}
+private let delegate = ProxyHelperListenerDelegate()
+private let listener = NSXPCListener(machServiceName: ProxyHelperConstants.machServiceName)
+listener.delegate = delegate
+listener.setConnectionCodeSigningRequirement(ProxyHelperConstants.allowedClientRequirement)
+listener.resume()
+dispatchMain()
