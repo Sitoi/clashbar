@@ -13,7 +13,7 @@ PREPROCESS_DIR="${PREPROCESS_DIR:-$ROOT/dist/preprocess}"
 
 MIHOMO_RESOURCE_PATH="$ROOT/Sources/ClashBar/Resources/bin/mihomo"
 PREPROCESSED_MIHOMO_PATH="$PREPROCESS_DIR/mihomo"
-ICON_SOURCE="$ROOT/Sources/ClashBar/Resources/Brand/icon.png"
+ICON_SOURCE="$ROOT/Sources/ClashBar/Resources/Brand/logo.png"
 PREPROCESSED_ICON_PATH="$PREPROCESS_DIR/${APP_NAME}.icns"
 MIHOMO_TMP_DIR=""
 

@@ -26,8 +26,10 @@ final class StatusItemContentView: NSView {
     private var currentDisplay: MenuBarDisplay?
     private var cachedUpLine: String = ""
     private var cachedDownLine: String = ""
-    private lazy var brandStatusIconImages: [BrandStatusIconTheme: NSImage] = Self.makeBrandStatusIconImages(
-        size: brandIconRenderSize)
+    private lazy var runBrandStatusIconImages: [BrandStatusIconTheme: NSImage] = Self.makeBrandStatusIconImages(
+        source: BrandIcon.runImage, size: brandIconRenderSize)
+    private lazy var sleepBrandStatusIconImages: [BrandStatusIconTheme: NSImage] = Self.makeBrandStatusIconImages(
+        source: BrandIcon.sleepImage, size: brandIconRenderSize)
     private static let brandIconRenderScales: [CGFloat] = [1, 2, 3]
     private static let speedTextAttributes: [NSAttributedString.Key: Any] = {
         let paragraph = NSMutableParagraphStyle()
@@ -41,7 +43,7 @@ final class StatusItemContentView: NSView {
     }()
 
     var usesBrandIcon: Bool {
-        self.brandStatusIconImages.isEmpty == false
+        self.runBrandStatusIconImages.isEmpty == false || self.sleepBrandStatusIconImages.isEmpty == false
     }
 
     override init(frame frameRect: NSRect) {
@@ -77,7 +79,8 @@ final class StatusItemContentView: NSView {
         let display = self.currentDisplay ?? MenuBarDisplay(
             mode: .iconOnly,
             symbolName: "bolt.slash.circle",
-            speedLines: nil)
+            speedLines: nil,
+            isRunning: false)
         switch display.mode {
         case .iconOnly:
             return self.statusItemHorizontalPadding * 2 + self.iconSize
@@ -100,7 +103,7 @@ final class StatusItemContentView: NSView {
         self.cachedDownLine = display.speedLines?.down ?? ""
 
         let shouldShowIcon = display.mode != .speedOnly
-        if shouldShowIcon, let brandIcon = self.currentBrandStatusIconImage {
+        if shouldShowIcon, let brandIcon = self.brandStatusIconImage(isRunning: display.isRunning) {
             if self.iconView.image !== brandIcon {
                 self.iconView.image = brandIcon
             }
@@ -198,8 +201,8 @@ final class StatusItemContentView: NSView {
             withAttributes: Self.speedTextAttributes)
     }
 
-    private var currentBrandStatusIconImage: NSImage? {
-        let images = self.brandStatusIconImages
+    private func brandStatusIconImage(isRunning: Bool) -> NSImage? {
+        let images = isRunning ? self.runBrandStatusIconImages : self.sleepBrandStatusIconImages
         guard images.isEmpty == false else { return nil }
         let theme = Self.brandStatusIconTheme(for: self.effectiveAppearance)
         return images[theme] ?? images.values.first
@@ -207,7 +210,8 @@ final class StatusItemContentView: NSView {
 
     private func refreshBrandIconForCurrentAppearance() {
         guard self.currentDisplay?.mode != .speedOnly else { return }
-        guard let image = self.currentBrandStatusIconImage else { return }
+        let isRunning = self.currentDisplay?.isRunning ?? false
+        guard let image = self.brandStatusIconImage(isRunning: isRunning) else { return }
         guard self.iconView.image !== image || self.iconView.contentTintColor != nil else { return }
         self.iconView.image = image
         self.iconView.contentTintColor = nil
@@ -215,8 +219,8 @@ final class StatusItemContentView: NSView {
         self.needsDisplay = true
     }
 
-    private static func makeBrandStatusIconImages(size: CGFloat) -> [BrandStatusIconTheme: NSImage] {
-        guard let source = BrandIcon.image else { return [:] }
+    private static func makeBrandStatusIconImages(source: NSImage?, size: CGFloat) -> [BrandStatusIconTheme: NSImage] {
+        guard let source else { return [:] }
         let targetSize = NSSize(width: size, height: size)
         var images: [BrandStatusIconTheme: NSImage] = [:]
 

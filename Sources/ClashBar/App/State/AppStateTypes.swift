@@ -134,6 +134,7 @@ struct MenuBarDisplay: Equatable {
     let mode: StatusBarDisplayMode
     let symbolName: String?
     let speedLines: MenuBarSpeedLines?
+    let isRunning: Bool
 }
 
 struct CoreFeatureRecoveryState {

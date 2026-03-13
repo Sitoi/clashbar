@@ -6,6 +6,7 @@ private struct StatusItemRenderKey: Equatable {
     let mode: StatusBarDisplayMode
     let symbolName: String?
     let speedLines: MenuBarSpeedLines?
+    let isRunning: Bool
 }
 
 private final class FloatingPanel: NSPanel {
@@ -274,13 +275,11 @@ final class StatusItemController: NSObject {
         let symbolName = shouldTrackSymbol ? display.symbolName : nil
         switch display.mode {
         case .iconOnly:
-            // Keep icon-only status item visually stable regardless of runtime state symbol changes.
-            return StatusItemRenderKey(mode: .iconOnly, symbolName: symbolName, speedLines: nil)
+            return StatusItemRenderKey(mode: .iconOnly, symbolName: symbolName, speedLines: nil, isRunning: display.isRunning)
         case .iconAndSpeed:
-            // In icon+speed mode, icon stays fixed; only speed text drives refresh.
-            return StatusItemRenderKey(mode: .iconAndSpeed, symbolName: symbolName, speedLines: display.speedLines)
+            return StatusItemRenderKey(mode: .iconAndSpeed, symbolName: symbolName, speedLines: display.speedLines, isRunning: display.isRunning)
         case .speedOnly:
-            return StatusItemRenderKey(mode: .speedOnly, symbolName: nil, speedLines: display.speedLines)
+            return StatusItemRenderKey(mode: .speedOnly, symbolName: nil, speedLines: display.speedLines, isRunning: display.isRunning)
         }
     }
 

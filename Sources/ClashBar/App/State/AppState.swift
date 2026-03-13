@@ -78,7 +78,8 @@ final class AppState: ObservableObject {
     @Published private(set) var menuBarDisplaySnapshot = MenuBarDisplay(
         mode: .iconOnly,
         symbolName: "bolt.slash.circle",
-        speedLines: nil)
+        speedLines: nil,
+        isRunning: false)
 
     @Published var settingsAllowLan: Bool = false {
         didSet { persistEditableSettingsSnapshot() }
@@ -208,13 +209,14 @@ final class AppState: ObservableObject {
     }
 
     private var computedMenuBarDisplay: MenuBarDisplay {
+        let running = self.isRuntimeRunning
         switch self.statusBarDisplayMode {
         case .iconOnly:
-            MenuBarDisplay(mode: .iconOnly, symbolName: self.menuBarSymbolName, speedLines: nil)
+            return MenuBarDisplay(mode: .iconOnly, symbolName: self.menuBarSymbolName, speedLines: nil, isRunning: running)
         case .iconAndSpeed:
-            MenuBarDisplay(mode: .iconAndSpeed, symbolName: self.menuBarSymbolName, speedLines: self.menuBarSpeedLines)
+            return MenuBarDisplay(mode: .iconAndSpeed, symbolName: self.menuBarSymbolName, speedLines: self.menuBarSpeedLines, isRunning: running)
         case .speedOnly:
-            MenuBarDisplay(mode: .speedOnly, symbolName: nil, speedLines: self.menuBarSpeedLines)
+            return MenuBarDisplay(mode: .speedOnly, symbolName: nil, speedLines: self.menuBarSpeedLines, isRunning: running)
         }
     }
 
