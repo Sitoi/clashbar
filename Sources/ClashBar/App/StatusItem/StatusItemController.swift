@@ -277,11 +277,23 @@ final class StatusItemController: NSObject {
         let symbolName = shouldTrackSymbol ? display.symbolName : nil
         switch display.mode {
         case .iconOnly:
-            return StatusItemRenderKey(mode: .iconOnly, symbolName: symbolName, speedLines: nil, isRunning: display.isRunning)
+            return StatusItemRenderKey(
+                mode: .iconOnly,
+                symbolName: symbolName,
+                speedLines: nil,
+                isRunning: display.isRunning)
         case .iconAndSpeed:
-            return StatusItemRenderKey(mode: .iconAndSpeed, symbolName: symbolName, speedLines: display.speedLines, isRunning: display.isRunning)
+            return StatusItemRenderKey(
+                mode: .iconAndSpeed,
+                symbolName: symbolName,
+                speedLines: display.speedLines,
+                isRunning: display.isRunning)
         case .speedOnly:
-            return StatusItemRenderKey(mode: .speedOnly, symbolName: nil, speedLines: display.speedLines, isRunning: display.isRunning)
+            return StatusItemRenderKey(
+                mode: .speedOnly,
+                symbolName: nil,
+                speedLines: display.speedLines,
+                isRunning: display.isRunning)
         }
     }
 

@@ -155,15 +155,13 @@ final class StatusItemContentView: NSView {
             let stackHeight = self.textLineHeight * 2
             let stackOriginY = floor(centerY - stackHeight / 2)
             self.speedImageView.frame = CGRect(
-                x: originX, y: stackOriginY,
-                width: self.textContainerWidth, height: stackHeight)
+                x: originX,
+                y: stackOriginY,
+                width: self.textContainerWidth,
+                height: stackHeight)
         } else {
             self.speedImageView.frame = .zero
         }
-    }
-
-    override func draw(_ dirtyRect: NSRect) {
-        super.draw(dirtyRect)
     }
 
     private func brandStatusIconImage(isRunning: Bool) -> NSImage? {
@@ -178,8 +176,10 @@ final class StatusItemContentView: NSView {
         let image = NSImage(size: pointSize)
         for scale in Self.brandIconRenderScales {
             guard let rep = Self.makeSpeedTextRepresentation(
-                upLine: upLine, downLine: downLine,
-                pointSize: pointSize, textLineHeight: self.textLineHeight,
+                upLine: upLine,
+                downLine: downLine,
+                pointSize: pointSize,
+                textLineHeight: self.textLineHeight,
                 scale: scale)
             else { continue }
             image.addRepresentation(rep)
@@ -193,8 +193,8 @@ final class StatusItemContentView: NSView {
         downLine: String,
         pointSize: NSSize,
         textLineHeight: CGFloat,
-        scale: CGFloat
-    ) -> NSBitmapImageRep? {
+        scale: CGFloat) -> NSBitmapImageRep?
+    {
         let pixelWidth = max(1, Int((pointSize.width * scale).rounded(.up)))
         let pixelHeight = max(1, Int((pointSize.height * scale).rounded(.up)))
 
