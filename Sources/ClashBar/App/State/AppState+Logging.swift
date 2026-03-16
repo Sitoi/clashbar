@@ -11,7 +11,7 @@ extension AppState {
     func clearAllLogs() {
         mihomoLogFlushTask?.cancel()
         mihomoLogFlushTask = nil
-        pendingMihomoLogs.removeAll(keepingCapacity: false)
+        pendingMihomoLogs.removeAll(keepingCapacity: true)
         errorLogs.removeAll(keepingCapacity: false)
         clashbarLogStore?.clear()
         mihomoLogStore?.clear()
@@ -46,6 +46,7 @@ extension AppState {
         guard !pendingMihomoLogs.isEmpty else { return }
         let entries = pendingMihomoLogs
         pendingMihomoLogs.removeAll(keepingCapacity: true)
+        pendingMihomoLogs.reserveCapacity(maxBufferedMihomoLogEntries)
         self.appendLogEntries(entries)
         self.persistLogEntriesToFile(entries)
     }
@@ -88,11 +89,10 @@ extension AppState {
     private func appendLogEntries(_ entries: [AppErrorLogEntry]) {
         guard !entries.isEmpty else { return }
 
-        errorLogs.insert(contentsOf: entries.reversed(), at: 0)
+        // Single-allocation prepend: avoids O(n) in-place shift + separate removeLast
         let maxEntries = isPanelPresented ? maxLogEntries : hiddenPanelMaxInMemoryLogEntries
-        if errorLogs.count > maxEntries {
-            errorLogs.removeLast(errorLogs.count - maxEntries)
-        }
+        let combined = entries.reversed() + errorLogs
+        errorLogs = Array(combined.prefix(maxEntries))
     }
 
     private func persistLogEntriesToFile(_ entries: [AppErrorLogEntry]) {

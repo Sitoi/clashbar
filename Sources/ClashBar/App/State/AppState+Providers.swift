@@ -11,10 +11,6 @@ extension AppState {
         let generation: Int
     }
 
-    var sortedProxyProviderNames: [String] {
-        proxyProvidersDetail.keys.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
-    }
-
     func updateRuleProvider(name: String) async {
         await self.runSingleProviderUpdate(
             actionName: tr("log.action_name.update_rule_provider", name),

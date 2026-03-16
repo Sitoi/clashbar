@@ -40,7 +40,9 @@ struct RulesSummary: Decodable, Equatable {
     }
 }
 
-struct RuleItem: Codable, Equatable {
+struct RuleItem: Codable, Equatable, Identifiable {
+    /// Stable identity derived from content, used by ForEach to avoid unnecessary view teardown.
+    var id: String { "\(type ?? ""):\(payload ?? ""):\(proxy ?? "")" }
     let type: String?
     let payload: String?
     let proxy: String?

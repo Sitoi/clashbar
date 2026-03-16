@@ -267,6 +267,8 @@ extension AppState {
         displayDownTotal = 0
         trafficHistoryUp = []
         trafficHistoryDown = []
+        trafficHistoryUp.reserveCapacity(historyMaxPoints)
+        trafficHistoryDown.reserveCapacity(historyMaxPoints)
         lastTrafficSampleAt = nil
     }
 

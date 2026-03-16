@@ -9,7 +9,20 @@ extension MenuBarRoot {
         static let rowLineHeight: CGFloat = 16
         static let topRuleMinWidth: CGFloat = 26
         static let topPayloadMinWidth: CGFloat = 14
+        // Width of the content VStack inside each connection row (static — panel is fixed 360pt)
+        // = panelWidth - rowHPad*2 - leadingIcon - hstackGaps - closeButton
+        // = 360 - 8 - 16 - 12 - 12 = 312
+        static let rowContentWidth: CGFloat =
+            MenuBarLayoutTokens.panelWidth
+            - (MenuBarLayoutTokens.space4 * 2)
+            - MenuBarLayoutTokens.rowLeadingIcon
+            - (MenuBarLayoutTokens.space6 * 2)
+            - 12
     }
+
+    // Text width measurement cache — keyed by "text\0size\0weight"
+    // Fonts and weights are finite; this cache never grows large.
+    private static var textWidthCache: [String: CGFloat] = [:]
 
     private static let activityISO8601WithFractional: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
@@ -140,27 +153,35 @@ extension MenuBarRoot {
     func sortedConnections(_ source: [ConnectionSummary]) -> [ConnectionSummary] {
         switch self.networkSortOption {
         case .default:
-            source
+            return source
         case .newest:
-            source.sorted { lhs, rhs in
-                let left = self.connectionSortTimestamp(lhs.start) ?? -1
-                let right = self.connectionSortTimestamp(rhs.start) ?? -1
-                if left != right { return left > right }
-                return lhs.id.localizedStandardCompare(rhs.id) == .orderedAscending
-            }
+            return self.connectionsSortedByTimestamp(source, descending: true)
         case .oldest:
-            source.sorted { lhs, rhs in
-                let left = self.connectionSortTimestamp(lhs.start) ?? .greatestFiniteMagnitude
-                let right = self.connectionSortTimestamp(rhs.start) ?? .greatestFiniteMagnitude
-                if left != right { return left < right }
-                return lhs.id.localizedStandardCompare(rhs.id) == .orderedAscending
-            }
+            return self.connectionsSortedByTimestamp(source, descending: false)
         case .uploadDesc:
-            self.connectionsSortedByTraffic(source) { $0.upload ?? 0 }
+            return self.connectionsSortedByTraffic(source) { $0.upload ?? 0 }
         case .downloadDesc:
-            self.connectionsSortedByTraffic(source) { $0.download ?? 0 }
+            return self.connectionsSortedByTraffic(source) { $0.download ?? 0 }
         case .totalDesc:
-            self.connectionsSortedByTraffic(source) { ($0.upload ?? 0) + ($0.download ?? 0) }
+            return self.connectionsSortedByTraffic(source) { ($0.upload ?? 0) + ($0.download ?? 0) }
+        }
+    }
+
+    // Pre-compute timestamp map once (O(n) parses) instead of O(n log n) in the comparator closure.
+    private func connectionsSortedByTimestamp(
+        _ source: [ConnectionSummary],
+        descending: Bool) -> [ConnectionSummary]
+    {
+        let fallback: TimeInterval = descending ? -1 : .greatestFiniteMagnitude
+        var timestamps: [String: TimeInterval] = Dictionary(minimumCapacity: source.count)
+        for conn in source {
+            timestamps[conn.id] = self.connectionSortTimestamp(conn.start) ?? fallback
+        }
+        return source.sorted { lhs, rhs in
+            let l = timestamps[lhs.id] ?? fallback
+            let r = timestamps[rhs.id] ?? fallback
+            if l != r { return descending ? (l > r) : (l < r) }
+            return lhs.id.localizedStandardCompare(rhs.id) == .orderedAscending
         }
     }
 
@@ -168,11 +189,16 @@ extension MenuBarRoot {
         _ source: [ConnectionSummary],
         _ metric: (ConnectionSummary) -> Int64) -> [ConnectionSummary]
     {
-        source.sorted { lhs, rhs in
+        // Pre-compute timestamps for tiebreaker (O(n) parses, not O(n log n))
+        var timestamps: [String: TimeInterval] = Dictionary(minimumCapacity: source.count)
+        for conn in source {
+            timestamps[conn.id] = self.connectionSortTimestamp(conn.start) ?? -1
+        }
+        return source.sorted { lhs, rhs in
             let left = metric(lhs)
             let right = metric(rhs)
             if left != right { return left > right }
-            return (self.connectionSortTimestamp(lhs.start) ?? -1) > (self.connectionSortTimestamp(rhs.start) ?? -1)
+            return (timestamps[lhs.id] ?? -1) > (timestamps[rhs.id] ?? -1)
         }
     }
 
@@ -248,61 +274,60 @@ extension MenuBarRoot {
     }
 
     private func connectionRowTopLine(host: String, ruleType: String, rulePayload: String) -> some View {
-        GeometryReader { proxy in
-            let layout = self.activityTopLineLayout(
-                totalWidth: max(proxy.size.width, 0),
-                ruleText: ruleType,
-                payloadText: rulePayload)
+        // Use static rowContentWidth constant — no GeometryReader needed since panel is always 360pt
+        let layout = activityTopLineLayout(
+            totalWidth: ActivityLayout.rowContentWidth,
+            ruleText: ruleType,
+            payloadText: rulePayload)
 
-            HStack(spacing: ActivityLayout.topLineSpacing) {
-                Text(host)
-                    .font(.app(size: MenuBarLayoutTokens.FontSize.body, weight: .semibold))
-                    .foregroundStyle(nativePrimaryLabel)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(width: layout.hostWidth, alignment: .leading)
+        return HStack(spacing: ActivityLayout.topLineSpacing) {
+            Text(host)
+                .font(.app(size: MenuBarLayoutTokens.FontSize.body, weight: .semibold))
+                .foregroundStyle(nativePrimaryLabel)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(width: layout.hostWidth, alignment: .leading)
 
-                HStack(spacing: ActivityLayout.topMetaSpacing) {
-                    self.activityTopBadge(text: ruleType)
-                        .frame(width: layout.ruleWidth, alignment: .trailing)
-                    self.activityTopPayload(text: rulePayload)
-                        .frame(width: layout.payloadWidth, alignment: .trailing)
-                }
-                .frame(
-                    width: layout.ruleWidth + ActivityLayout.topMetaSpacing + layout.payloadWidth,
-                    alignment: .trailing)
+            HStack(spacing: ActivityLayout.topMetaSpacing) {
+                self.activityTopBadge(text: ruleType)
+                    .frame(width: layout.ruleWidth, alignment: .trailing)
+                self.activityTopPayload(text: rulePayload)
+                    .frame(width: layout.payloadWidth, alignment: .trailing)
             }
+            .frame(
+                width: layout.ruleWidth + ActivityLayout.topMetaSpacing + layout.payloadWidth,
+                alignment: .trailing)
         }
         .frame(height: ActivityLayout.rowLineHeight)
     }
 
     private func connectionRowMetrics(time: String, network: String, up: String, down: String) -> some View {
-        GeometryReader { proxy in
-            let totalWidth = max(proxy.size.width, 0)
-            let columnWidth = max((totalWidth - (ActivityLayout.secondLineSpacing * 3)) / 4, 0)
+        // Use static rowContentWidth — no GeometryReader needed since panel is always 360pt
+        let columnWidth = max(
+            (ActivityLayout.rowContentWidth - (ActivityLayout.secondLineSpacing * 3)) / 4,
+            0)
 
-            HStack(spacing: ActivityLayout.secondLineSpacing) {
-                self.activityMetricColumn(symbol: "clock", text: time, fallback: tr("ui.common.na"), width: columnWidth)
-                self.activityMetricColumn(
-                    symbol: "network",
-                    text: network,
-                    fallback: tr("ui.common.na"),
-                    width: columnWidth)
-                self.activityMetricColumn(
-                    symbol: "arrow.up",
-                    text: up,
-                    symbolColor: nativeInfo.opacity(MenuBarLayoutTokens.Opacity.solid),
-                    spacing: 0,
-                    truncation: .tail,
-                    width: columnWidth)
-                self.activityMetricColumn(
-                    symbol: "arrow.down",
-                    text: down,
-                    symbolColor: nativePositive.opacity(MenuBarLayoutTokens.Opacity.solid),
-                    spacing: 0,
-                    truncation: .tail,
-                    width: columnWidth)
-            }
+        return HStack(spacing: ActivityLayout.secondLineSpacing) {
+            self.activityMetricColumn(symbol: "clock", text: time, fallback: tr("ui.common.na"), width: columnWidth)
+            self.activityMetricColumn(
+                symbol: "network",
+                text: network,
+                fallback: tr("ui.common.na"),
+                width: columnWidth)
+            self.activityMetricColumn(
+                symbol: "arrow.up",
+                text: up,
+                symbolColor: nativeInfo.opacity(MenuBarLayoutTokens.Opacity.solid),
+                spacing: 0,
+                truncation: .tail,
+                width: columnWidth)
+            self.activityMetricColumn(
+                symbol: "arrow.down",
+                text: down,
+                symbolColor: nativePositive.opacity(MenuBarLayoutTokens.Opacity.solid),
+                spacing: 0,
+                truncation: .tail,
+                width: columnWidth)
         }
         .frame(height: ActivityLayout.rowLineHeight)
     }
@@ -469,10 +494,16 @@ extension MenuBarRoot {
     }
 
     func activityMonospacedTextWidth(_ text: String, size: CGFloat, weight: NSFont.Weight) -> CGFloat {
+        let cacheKey = "\(text)\0\(size)\0\(weight.rawValue)"
+        if let cached = Self.textWidthCache[cacheKey] {
+            return cached
+        }
         let attributes: [NSAttributedString.Key: Any] = [
             .font: NSFont.monospacedSystemFont(ofSize: size, weight: weight),
         ]
-        return ceil((text as NSString).size(withAttributes: attributes).width)
+        let width = ceil((text as NSString).size(withAttributes: attributes).width)
+        Self.textWidthCache[cacheKey] = width
+        return width
     }
 
     func connectionRuleTypeText(_ raw: String?, fallback: String?) -> String {

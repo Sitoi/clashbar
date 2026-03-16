@@ -180,9 +180,8 @@ extension MenuBarRoot {
     }
 
     var proxyGroupsSection: some View {
-        let groups = hideHiddenProxyGroups
-            ? appState.proxyGroups.filter { $0.hidden != true }
-            : appState.proxyGroups
+        // Use @State filteredProxyGroups which is updated via .onChange — avoids filtering on every render
+        let groups = filteredProxyGroups
 
         return VStack(alignment: .leading, spacing: T.space6) {
             self.nodesSectionHeader(
