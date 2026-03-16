@@ -7,11 +7,8 @@ struct HeightReportingModifier: ViewModifier {
         content.background {
             GeometryReader { geometry in
                 Color.clear
-                    .onAppear {
+                    .task(id: geometry.size.height) {
                         self.onChange(geometry.size.height)
-                    }
-                    .onChange(of: geometry.size.height) { newHeight in
-                        self.onChange(newHeight)
                     }
             }
         }

@@ -150,7 +150,9 @@ final class StatusItemController: NSObject {
 
     private func ensurePopoverContent() {
         if self.popoverHostingController == nil {
-            self.popoverHostingController = NSHostingController(rootView: self.popoverRootView)
+            let hc = NSHostingController(rootView: self.popoverRootView)
+            hc.sizingOptions = [.standardBounds]
+            self.popoverHostingController = hc
         } else {
             self.popoverHostingController?.rootView = self.popoverRootView
         }
@@ -275,11 +277,23 @@ final class StatusItemController: NSObject {
         let symbolName = shouldTrackSymbol ? display.symbolName : nil
         switch display.mode {
         case .iconOnly:
-            return StatusItemRenderKey(mode: .iconOnly, symbolName: symbolName, speedLines: nil, isRunning: display.isRunning)
+            return StatusItemRenderKey(
+                mode: .iconOnly,
+                symbolName: symbolName,
+                speedLines: nil,
+                isRunning: display.isRunning)
         case .iconAndSpeed:
-            return StatusItemRenderKey(mode: .iconAndSpeed, symbolName: symbolName, speedLines: display.speedLines, isRunning: display.isRunning)
+            return StatusItemRenderKey(
+                mode: .iconAndSpeed,
+                symbolName: symbolName,
+                speedLines: display.speedLines,
+                isRunning: display.isRunning)
         case .speedOnly:
-            return StatusItemRenderKey(mode: .speedOnly, symbolName: nil, speedLines: display.speedLines, isRunning: display.isRunning)
+            return StatusItemRenderKey(
+                mode: .speedOnly,
+                symbolName: nil,
+                speedLines: display.speedLines,
+                isRunning: display.isRunning)
         }
     }
 

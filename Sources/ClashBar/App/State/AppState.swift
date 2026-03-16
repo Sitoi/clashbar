@@ -212,11 +212,23 @@ final class AppState: ObservableObject {
         let running = self.isRuntimeRunning
         switch self.statusBarDisplayMode {
         case .iconOnly:
-            return MenuBarDisplay(mode: .iconOnly, symbolName: self.menuBarSymbolName, speedLines: nil, isRunning: running)
+            return MenuBarDisplay(
+                mode: .iconOnly,
+                symbolName: self.menuBarSymbolName,
+                speedLines: nil,
+                isRunning: running)
         case .iconAndSpeed:
-            return MenuBarDisplay(mode: .iconAndSpeed, symbolName: self.menuBarSymbolName, speedLines: self.menuBarSpeedLines, isRunning: running)
+            return MenuBarDisplay(
+                mode: .iconAndSpeed,
+                symbolName: self.menuBarSymbolName,
+                speedLines: self.menuBarSpeedLines,
+                isRunning: running)
         case .speedOnly:
-            return MenuBarDisplay(mode: .speedOnly, symbolName: nil, speedLines: self.menuBarSpeedLines, isRunning: running)
+            return MenuBarDisplay(
+                mode: .speedOnly,
+                symbolName: nil,
+                speedLines: self.menuBarSpeedLines,
+                isRunning: running)
         }
     }
 
