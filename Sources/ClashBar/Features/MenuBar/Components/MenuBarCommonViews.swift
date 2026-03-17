@@ -52,7 +52,9 @@ struct MeasurementAwareVStack<Content: View>: View {
     }
 
     var body: some View {
-        LazyVStack(alignment: self.alignment, spacing: self.spacing) { self.content }
+        // Use regular VStack instead of LazyVStack to fix scroll position issues
+        // when content updates (especially for logs where new items are prepended)
+        VStack(alignment: self.alignment, spacing: self.spacing) { self.content }
     }
 }
 
