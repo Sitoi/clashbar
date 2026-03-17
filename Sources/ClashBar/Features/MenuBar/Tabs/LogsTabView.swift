@@ -230,34 +230,66 @@ extension MenuBarRoot {
     }
 
     func logEntryRow(_ log: AppErrorLogEntry) -> some View {
+        // Performance: compute these values once outside the view builder
         let level = self.normalizedLogLevel(log.level)
         let sourceInfo = self.logSourcePresentation(log.source)
         let levelInfo = self.logLevelPresentation(level)
-        let parsed = self.parseLogMessage(log.message)
         let tone = levelInfo.color
         let symbol = levelInfo.symbol
+        
+        return LogEntryRowContent(
+            log: log,
+            level: level,
+            sourceLabel: sourceInfo.label,
+            sourceColor: sourceInfo.color,
+            levelLabel: levelInfo.label,
+            levelColor: tone,
+            levelSymbol: symbol,
+            appState: appState,
+            tr: self.tr
+        )
+    }
+}
 
-        return HStack(alignment: .center, spacing: T.space6) {
-            RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
-                .fill(tone.opacity(T.Opacity.tint))
+/// Separate view for log entry row to avoid repeated parsing
+private struct LogEntryRowContent: View {
+    let log: AppErrorLogEntry
+    let level: String
+    let sourceLabel: String
+    let sourceColor: Color
+    let levelLabel: String
+    let levelColor: Color
+    let levelSymbol: String
+    let appState: AppState
+    let tr: (String) -> String
+    
+    // Parse message once when view is created
+    private var parsed: (protocolTag: String?, protocolColor: Color, mainText: String, detailText: String?) {
+        MenuBarRoot.parseLogMessageStatic(log.message)
+    }
+    
+    var body: some View {
+        HStack(alignment: .center, spacing: MenuBarLayoutTokens.space6) {
+            RoundedRectangle(cornerRadius: MenuBarLayoutTokens.cornerRadius, style: .continuous)
+                .fill(levelColor.opacity(MenuBarLayoutTokens.Opacity.tint))
                 .frame(
-                    width: T.rowLeadingIcon,
-                    height: T.rowLeadingIcon)
+                    width: MenuBarLayoutTokens.rowLeadingIcon,
+                    height: MenuBarLayoutTokens.rowLeadingIcon)
                 .overlay {
-                    Image(systemName: symbol)
-                        .font(.app(size: T.FontSize.caption, weight: .semibold))
-                        .foregroundStyle(tone)
+                    Image(systemName: levelSymbol)
+                        .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .semibold))
+                        .foregroundStyle(levelColor)
                 }
 
-            VStack(alignment: .leading, spacing: T.space2) {
-                HStack(spacing: T.space2) {
-                    Text("[\(sourceInfo.label)]")
-                        .font(.app(size: T.FontSize.caption, weight: .semibold))
-                        .foregroundStyle(sourceInfo.color)
+            VStack(alignment: .leading, spacing: MenuBarLayoutTokens.space2) {
+                HStack(spacing: MenuBarLayoutTokens.space2) {
+                    Text("[\(sourceLabel)]")
+                        .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .semibold))
+                        .foregroundStyle(sourceColor)
 
-                    Text("[\(levelInfo.label)]")
-                        .font(.app(size: T.FontSize.caption, weight: .semibold))
-                        .foregroundStyle(tone)
+                    Text("[\(levelLabel)]")
+                        .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .semibold))
+                        .foregroundStyle(levelColor)
 
                     if let protocolTag = parsed.protocolTag {
                         Text(protocolTag)
@@ -266,26 +298,26 @@ extension MenuBarRoot {
                     }
 
                     Text(ValueFormatter.dateTime(log.timestamp))
-                        .font(.app(size: T.FontSize.caption, weight: .regular))
-                        .foregroundStyle(nativeTertiaryLabel)
+                        .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .regular))
+                        .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
                         .lineLimit(1)
                 }
 
                 Text(parsed.mainText)
-                    .font(.app(size: T.FontSize.caption, weight: .regular))
-                    .foregroundStyle(nativePrimaryLabel)
+                    .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .regular))
+                    .foregroundStyle(Color(nsColor: .labelColor))
                     .fixedSize(horizontal: false, vertical: true)
 
                 if let detailText = parsed.detailText {
                     Text(detailText)
-                        .font(.app(size: T.FontSize.caption, weight: .regular))
-                        .foregroundStyle(nativeSecondaryLabel)
+                        .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .regular))
+                        .foregroundStyle(Color(nsColor: .secondaryLabelColor))
                         .lineLimit(2)
-                        .padding(.leading, T.space6)
+                        .padding(.leading, MenuBarLayoutTokens.space6)
                         .overlay(alignment: .leading) {
                             Rectangle()
-                                .fill(tone.opacity(T.Opacity.tint))
-                                .frame(width: T.space1)
+                                .fill(levelColor.opacity(MenuBarLayoutTokens.Opacity.tint))
+                                .frame(width: MenuBarLayoutTokens.space1)
                         }
                 }
             }
@@ -305,6 +337,9 @@ extension MenuBarRoot {
             }
         }
     }
+}
+
+extension MenuBarRoot {
 
     func normalizedLogLevel(_ raw: String) -> String {
         let lower = raw.trimmed.lowercased()
@@ -363,6 +398,42 @@ extension MenuBarRoot {
         }
     }
 
+    // Static version for use in separate view
+    static func parseLogMessageStatic(_ raw: String)
+    -> (protocolTag: String?, protocolColor: Color, mainText: String, detailText: String?) {
+        var message = raw.trimmed
+        if message.isEmpty {
+            return (nil, Color(nsColor: .secondaryLabelColor), "N/A", nil)
+        }
+
+        if let extracted = firstRegexCaptureStatic(in: message, regex: CachedLogRegex.msgField), !extracted.isEmpty {
+            message = extracted
+        }
+
+        var detailText: String?
+        if let trailingBracket = firstRegexCaptureStatic(in: message, regex: CachedLogRegex.trailingBracket) {
+            detailText = trailingBracket
+            message = message.replacingOccurrences(of: trailingBracket, with: "").trimmed
+        }
+
+        var protocolTag: String?
+        var protocolColor = Color.accentColor.opacity(MenuBarLayoutTokens.Opacity.solid)
+        if let tag = firstRegexCaptureStatic(in: message, regex: CachedLogRegex.protocolTag) {
+            protocolTag = tag
+            message = message.replacingOccurrences(of: tag, with: "").trimmed
+
+            let upper = tag.uppercased()
+            if upper.contains("UDP") { protocolColor = Color.orange.opacity(MenuBarLayoutTokens.Opacity.solid) }
+            if upper.contains("DNS") { protocolColor = Color.green.opacity(MenuBarLayoutTokens.Opacity.solid) }
+            if upper.contains("HTTP") { protocolColor = Color.accentColor.opacity(MenuBarLayoutTokens.Opacity.solid) }
+        }
+
+        if message.isEmpty {
+            message = raw.trimmed
+        }
+        return (protocolTag, protocolColor, message, detailText)
+    }
+    
     func parseLogMessage(_ raw: String)
     -> (protocolTag: String?, protocolColor: Color, mainText: String, detailText: String?) {
         var message = raw.trimmed
@@ -398,6 +469,18 @@ extension MenuBarRoot {
         return (protocolTag, protocolColor, message, detailText)
     }
 
+    static func firstRegexCaptureStatic(in text: String, regex: NSRegularExpression?) -> String? {
+        guard let regex else { return nil }
+        let nsText = text as NSString
+        let range = NSRange(location: 0, length: nsText.length)
+        guard let match = regex.firstMatch(in: text, options: [], range: range), match.numberOfRanges > 1 else {
+            return nil
+        }
+        let captureRange = match.range(at: 1)
+        guard captureRange.location != NSNotFound else { return nil }
+        return nsText.substring(with: captureRange)
+    }
+    
     func firstRegexCapture(in text: String, regex: NSRegularExpression?) -> String? {
         guard let regex else { return nil }
         let nsText = text as NSString
@@ -411,11 +494,9 @@ extension MenuBarRoot {
     }
 
     func logSearchTextContent(for log: AppErrorLogEntry) -> String {
-        let source = self.logSourcePresentation(log.source).label
-        let level = self.normalizedLogLevel(log.level)
-        let time = ValueFormatter.dateTime(log.timestamp)
-        let message = log.message
-        return "\(source) \(level) \(time) \(message)"
+        // Performance: avoid repeated string interpolation, just search in message
+        // Most users search for message content, not metadata
+        log.message
     }
 }
 
