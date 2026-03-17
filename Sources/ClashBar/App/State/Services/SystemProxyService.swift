@@ -66,7 +66,7 @@ private final class ContinuationBox<Value: Sendable>: @unchecked Sendable {
 
 struct SystemProxyService {
     private let helperRecoveryMaxAttempts = 3
-    private let helperRecoveryDelayNanoseconds: UInt64 = 700_000_000
+    private let helperRecoveryDelayNanoseconds: UInt64 = 1_500_000_000
     private let helperResponseTimeoutNanoseconds: UInt64 = 4_000_000_000
 
     func applySystemProxy(enabled: Bool, host: String, ports: SystemProxyPorts) async throws {
@@ -282,12 +282,18 @@ struct SystemProxyService {
         do {
             try daemonService.register()
         } catch {
-            if daemonService.status == .requiresApproval {
+            switch daemonService.status {
+            case .enabled:
+                // Helper 已注册且已批准，register() 抛出 "already registered" 属于正常情况，
+                // 此时 daemon 可能正由 launchd 启动中，等待即可
+                break
+            case .requiresApproval:
                 SMAppService.openSystemSettingsLoginItems()
                 throw SystemProxyServiceError.helperNeedsApproval
+            default:
+                throw SystemProxyServiceError.helperRecoveryFailed(
+                    "\(previousError.localizedDescription) -> \(error.localizedDescription)")
             }
-            throw SystemProxyServiceError.helperRecoveryFailed(
-                "\(previousError.localizedDescription) -> \(error.localizedDescription)")
         }
 
         if daemonService.status == .requiresApproval {
