@@ -135,6 +135,7 @@ struct MenuBarRoot: View {
     @State var hoveredConnectionID: String?
     @State var hoveredProxyGroupName: String?
     @State var hoveredMode: CoreMode?
+    @State private var hoverDebounceTask: Task<Void, Never>?
     @State var selectedLogSources: Set<AppLogSource> = Set(AppLogSource.allCases)
     @State var selectedLogLevels: Set<LogLevelFilter> = [.info, .warning, .error]
     @State var logSearchText: String = ""

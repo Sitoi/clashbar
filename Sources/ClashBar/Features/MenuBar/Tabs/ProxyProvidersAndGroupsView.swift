@@ -320,7 +320,6 @@ extension MenuBarRoot {
             .padding(.horizontal, rowHorizontalPadding)
             .padding(.vertical, rowVerticalPadding)
             .background(nativeHoverRowBackground(hovered))
-            .animation(.easeInOut(duration: 0.14), value: hovered)
         } content: { dismiss in
             self.popoverHeader(name: group.name, count: nodeCount) {
                 if let iconURL {
@@ -345,10 +344,19 @@ extension MenuBarRoot {
                 }
             }
         }
-        .onHover { hoveredProxyGroupName = self.nextHovered(
-            current: hoveredProxyGroupName,
-            target: group.name,
-            isHovering: $0) }
+        .onHover { isHovering in
+            // Performance optimization: debounce hover events to prevent excessive re-renders
+            hoverDebounceTask?.cancel()
+            hoverDebounceTask = Task {
+                try? await Task.sleep(nanoseconds: 100_000_000) // 100ms debounce
+                if !Task.isCancelled {
+                    hoveredProxyGroupName = self.nextHovered(
+                        current: hoveredProxyGroupName,
+                        target: group.name,
+                        isHovering: isHovering)
+                }
+            }
+        }
     }
 
     func proxyGroupMainColumnWidths(

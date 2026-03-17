@@ -14,6 +14,7 @@ struct AttachedPopoverMenu<Label: View, Content: View>: View {
     @State private var isAnchorHovered = false
     @State private var suppressAutoOpen = false
     @State private var shouldBuildPopoverContent = false
+    @State private var popoverOpenTask: Task<Void, Never>?
 
     init(
         width: CGFloat? = nil,
@@ -36,7 +37,18 @@ struct AttachedPopoverMenu<Label: View, Content: View>: View {
         .buttonStyle(.plain)
         .onHover { hovering in
             if hovering, !self.suppressAutoOpen {
-                self.requestOpen()
+                // Performance optimization: delay popover construction to avoid building
+                // content when user is quickly moving mouse across multiple items
+                self.popoverOpenTask?.cancel()
+                self.popoverOpenTask = Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 200_000_000) // 200ms delay
+                    if !Task.isCancelled && self.isAnchorHovered {
+                        self.requestOpen()
+                    }
+                }
+            } else {
+                self.popoverOpenTask?.cancel()
+                self.popoverOpenTask = nil
             }
             self.isAnchorHovered = hovering
             if !hovering {
