@@ -84,9 +84,12 @@ extension MenuBarRoot {
                 }
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(ModeSegmentButtonStyle())
         .onHover { hoveredMode = self.nextHovered(
             current: hoveredMode, target: mode, isHovering: $0) }
+        .animation(.easeOut(duration: 0.14), value: selected)
+        .animation(.easeOut(duration: 0.14), value: hovered)
+        .animation(.easeOut(duration: 0.12), value: switchingThisMode)
     }
 
     var topTabs: some View {
@@ -96,11 +99,20 @@ extension MenuBarRoot {
             get: { tabs.firstIndex(of: self.currentTab) ?? 0 },
             set: { index in
                 guard tabs.indices.contains(index) else { return }
-                self.setCurrentTabWithoutAnimation(tabs[index])
+                self.setCurrentTab(tabs[index], animated: true)
             })
 
         return EqualWidthSegmentedControl(labels: labels, selectedIndex: selectedIndex)
             .frame(width: contentWidth, height: 24)
+    }
+}
+
+private struct ModeSegmentButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.975 : 1)
+            .brightness(configuration.isPressed ? -0.02 : 0)
+            .animation(.spring(response: 0.16, dampingFraction: 0.74), value: configuration.isPressed)
     }
 }
 

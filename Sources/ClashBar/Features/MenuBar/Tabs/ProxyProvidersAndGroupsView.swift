@@ -84,22 +84,9 @@ extension MenuBarRoot {
                 }
                 .frame(maxWidth: .infinity)
 
-                Button {
-                    Task { await appState.updateProxyProvider(name: name) }
-                } label: {
-                    ZStack {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                            .font(.app(size: T.FontSize.caption, weight: .semibold))
-                            .symbolRenderingMode(.hierarchical)
-                            .foregroundStyle(nativeSecondaryLabel)
-                            .opacity(isUpdating ? 0 : 1)
-                        ProgressView()
-                            .scaleEffect(0.5)
-                            .opacity(isUpdating ? 1 : 0)
-                    }
-                    .frame(width: T.rowLeadingIcon, height: T.rowLeadingIcon)
+                self.providerActionButton(.refresh, isLoading: isUpdating) {
+                    await appState.updateProxyProvider(name: name)
                 }
-                .buttonStyle(.plain)
                 .accessibilityLabel(tr("ui.action.refresh"))
             }
 
@@ -262,7 +249,9 @@ extension MenuBarRoot {
         let rowVerticalPadding: CGFloat = T.space1
         let hovered = hoveredProxyGroupName == group.name
 
-        return AttachedPopoverMenu {
+        return AttachedPopoverMenu(onWillPresent: {
+            self.prepareProxyGroupPopover(for: group.name)
+        }) {
             GeometryReader { geo in
                 let columns = self.proxyGroupMainColumnWidths(
                     totalWidth: geo.size.width,
@@ -328,17 +317,21 @@ extension MenuBarRoot {
             let nodes = sortGroupNodesByLatency
                 ? sortedGroupNodes(group)
                 : defaultGroupNodes(group)
-            self.popoverNodesList(nodes) { node in
-                ProxyGroupPopoverNodeItem(
-                    title: node,
-                    delayText: appState.delayText(group: group.name, node: node),
-                    delayValue: appState.delayValue(group: group.name, node: node),
-                    delayColor: latencyColor(appState.delayValue(group: group.name, node: node)),
-                    isTesting: false,
-                    selected: node == group.now)
-                {
-                    dismiss()
-                    Task { await appState.switchProxy(group: group.name, target: node) }
+            if self.isPreparingProxyGroupPopover(group.name) {
+                self.proxyGroupPopoverPlaceholder(rowCount: min(max(nodeCount, 3), 6))
+            } else {
+                self.popoverNodesList(nodes) { node in
+                    ProxyGroupPopoverNodeItem(
+                        title: node,
+                        delayText: appState.delayText(group: group.name, node: node),
+                        delayValue: appState.delayValue(group: group.name, node: node),
+                        delayColor: latencyColor(appState.delayValue(group: group.name, node: node)),
+                        isTesting: false,
+                        selected: node == group.now)
+                    {
+                        dismiss()
+                        Task { await appState.switchProxy(group: group.name, target: node) }
+                    }
                 }
             }
         }
@@ -427,6 +420,22 @@ extension MenuBarRoot {
         isHovering ? target : (current == target ? nil : current)
     }
 
+    func prepareProxyGroupPopover(for groupName: String) {
+        self.openingProxyGroupGeneration += 1
+        let generation = self.openingProxyGroupGeneration
+        self.openingProxyGroupName = groupName
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+            guard self.openingProxyGroupGeneration == generation else { return }
+            guard self.openingProxyGroupName == groupName else { return }
+            self.openingProxyGroupName = nil
+        }
+    }
+
+    func isPreparingProxyGroupPopover(_ groupName: String) -> Bool {
+        self.openingProxyGroupName == groupName
+    }
+
     func popoverHeader(
         name: String,
         count: Int,
@@ -478,6 +487,33 @@ extension MenuBarRoot {
                 }
             }
         }
+    }
+
+    func proxyGroupPopoverPlaceholder(rowCount: Int) -> some View {
+        VStack(spacing: 0) {
+            ForEach(0..<max(1, rowCount), id: \.self) { _ in
+                HStack(spacing: T.space1) {
+                    Circle()
+                        .fill(Color(nsColor: .quaternaryLabelColor).opacity(0.5))
+                        .frame(width: 11, height: 11)
+
+                    RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
+                        .fill(Color(nsColor: .quaternaryLabelColor).opacity(0.42))
+                        .frame(height: 14)
+
+                    Spacer(minLength: 0)
+
+                    RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
+                        .fill(Color(nsColor: .quaternaryLabelColor).opacity(0.36))
+                        .frame(width: 56, height: 18)
+                }
+                .frame(height: T.compactRowHeight)
+                .padding(.horizontal, T.space4)
+                .padding(.vertical, T.space1)
+                .redacted(reason: .placeholder)
+            }
+        }
+        .transition(.opacity)
     }
 }
 

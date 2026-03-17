@@ -113,6 +113,8 @@ struct AttachedPopoverMenuItem: View {
     var selected: Bool = false
     var destructive: Bool = false
     let action: () -> Void
+
+    @Environment(\.isEnabled) private var isEnabled
     @State private var isHovered = false
 
     var body: some View {
@@ -133,12 +135,12 @@ struct AttachedPopoverMenuItem: View {
             .foregroundStyle(self.itemForeground)
             .padding(.horizontal, T.space6)
             .padding(.vertical, T.space2)
-            .background(
-                RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
-                    .fill(self.itemBackground))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.borderless)
+        .buttonStyle(AttachedPopoverMenuItemStyle(
+            isHovered: self.isHovered,
+            isEnabled: self.isEnabled,
+            backgroundColor: self.itemBackground))
         .onHover { self.isHovered = $0 }
     }
 
@@ -151,6 +153,43 @@ struct AttachedPopoverMenuItem: View {
 
     private var itemBackground: Color {
         self.isHovered ? Color(nsColor: .selectedContentBackgroundColor) : .clear
+    }
+}
+
+private struct AttachedPopoverMenuItemStyle: ButtonStyle {
+    let isHovered: Bool
+    let isEnabled: Bool
+    let backgroundColor: Color
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(
+                RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
+                    .fill(self.resolvedBackground(isPressed: configuration.isPressed)))
+            .overlay(
+                RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
+                    .stroke(self.borderColor(isPressed: configuration.isPressed), lineWidth: self.isHovered ? T.stroke : 0))
+            .scaleEffect(configuration.isPressed ? 0.975 : 1)
+            .opacity(self.isEnabled ? 1 : 0.7)
+            .animation(.spring(response: 0.16, dampingFraction: 0.74), value: configuration.isPressed)
+            .animation(.easeOut(duration: 0.14), value: self.isHovered)
+    }
+
+    private func resolvedBackground(isPressed: Bool) -> Color {
+        if isPressed {
+            return self.backgroundColor.opacity(self.isHovered ? 1 : 0.7)
+        }
+        return self.backgroundColor
+    }
+
+    private func borderColor(isPressed: Bool) -> Color {
+        if isPressed {
+            return Color.accentColor.opacity(0.3)
+        }
+        if self.isHovered {
+            return Color.primary.opacity(0.08)
+        }
+        return .clear
     }
 }
 

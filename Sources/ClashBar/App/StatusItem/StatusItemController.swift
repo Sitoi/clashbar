@@ -55,11 +55,15 @@ final class StatusItemController: NSObject {
     private var lockedPanelOriginX: CGFloat?
     private var popoverHostingController: NSHostingController<StatusItemPopoverRootView>?
     private var panelStabilizationTask: Task<Void, Never>?
+    private var isAnimatingPanelTransition = false
 
     private let iconOnlyRefreshInterval: TimeInterval = 0.12
     // Status-item snapshotting is expensive on macOS when traffic text changes frequently.
     private let speedDisplayRefreshInterval: TimeInterval = 1.0
     private static let popoverContentWidth: CGFloat = MenuBarLayoutTokens.panelWidth
+    private let panelOpenAnimationDuration: TimeInterval = 0.16
+    private let panelCloseAnimationDuration: TimeInterval = 0.12
+    private let panelOpenAnimationDelayNanoseconds: UInt64 = 18_000_000
 
     init(appState: AppState) {
         self.appState = appState
@@ -104,6 +108,7 @@ final class StatusItemController: NSObject {
     @objc
     private func togglePopover(_ sender: AnyObject?) {
         guard let button = statusItem.button else { return }
+        guard !self.isAnimatingPanelTransition else { return }
 
         if self.panel.isVisible {
             self.closePopover(nil)
@@ -115,25 +120,23 @@ final class StatusItemController: NSObject {
         self.applyPopoverSize(
             preferredHeight: self.popoverLayoutModel.resolvedPanelHeight,
             preserveHorizontalPosition: false)
-        self.placePanelRelativeToStatusButton(button, preserveHorizontalPosition: false)
-        NSApp.activate(ignoringOtherApps: true)
-        self.panel.makeKeyAndOrderFront(nil)
-        self.placePanelRelativeToStatusButton(button, preserveHorizontalPosition: true)
-        self.suppressPanelScrollIndicators()
-        self.schedulePanelStabilizationPasses(for: button)
-        self.startGlobalMonitor()
-        self.appState.setPanelVisibility(true)
+        self.animateOpenPopover(relativeTo: button)
     }
 
     @objc
     private func closePopover(_ sender: Any?) {
-        self.panel.orderOut(sender)
-        self.lockedPanelOriginX = nil
-        self.panelStabilizationTask?.cancel()
-        self.panelStabilizationTask = nil
-        self.stopGlobalMonitor()
-        self.unloadPopoverContent()
-        self.appState.setPanelVisibility(false)
+        guard !self.isAnimatingPanelTransition else { return }
+        guard self.panel.isVisible else {
+            self.lockedPanelOriginX = nil
+            self.panelStabilizationTask?.cancel()
+            self.panelStabilizationTask = nil
+            self.stopGlobalMonitor()
+            self.unloadPopoverContent()
+            self.appState.setPanelVisibility(false)
+            return
+        }
+
+        self.animateClosePopover()
     }
 
     private func configurePanel() {
@@ -400,6 +403,81 @@ final class StatusItemController: NSObject {
 
     private func suppressPanelScrollIndicators() {
         ScrollIndicatorPolicy.suppressRecursively(in: self.panel.contentView)
+    }
+
+    private func animateOpenPopover(relativeTo button: NSStatusBarButton) {
+        guard let finalOrigin = self.resolvedPanelOrigin(
+            for: button,
+            panelSize: self.panel.frame.size,
+            preserveHorizontalPosition: false)
+        else {
+            NSApp.activate(ignoringOtherApps: true)
+            self.panel.makeKeyAndOrderFront(nil)
+            self.startGlobalMonitor()
+            self.appState.setPanelVisibility(true)
+            return
+        }
+
+        self.isAnimatingPanelTransition = true
+
+        let finalFrame = NSRect(origin: finalOrigin, size: self.panel.frame.size)
+        self.panel.alphaValue = 0
+        self.panel.setFrame(finalFrame, display: false)
+        NSApp.activate(ignoringOtherApps: true)
+        self.panel.makeKeyAndOrderFront(nil)
+        self.placePanelRelativeToStatusButton(button, preserveHorizontalPosition: true)
+        self.suppressPanelScrollIndicators()
+        self.startGlobalMonitor()
+
+        Task { @MainActor [weak self, weak button] in
+            guard let self else { return }
+            try? await Task.sleep(nanoseconds: self.panelOpenAnimationDelayNanoseconds)
+            guard self.panel.isVisible else {
+                self.isAnimatingPanelTransition = false
+                return
+            }
+
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = self.panelOpenAnimationDuration
+                context.allowsImplicitAnimation = true
+                self.panel.animator().alphaValue = 1
+            } completionHandler: { [weak self, weak button] in
+                Task { @MainActor [weak self, weak button] in
+                    guard let self else { return }
+                    self.isAnimatingPanelTransition = false
+                    self.panel.alphaValue = 1
+                    self.appState.setPanelVisibility(true)
+                    if let button {
+                        self.placePanelRelativeToStatusButton(button, preserveHorizontalPosition: true)
+                        self.schedulePanelStabilizationPasses(for: button)
+                    }
+                    self.suppressPanelScrollIndicators()
+                }
+            }
+        }
+    }
+
+    private func animateClosePopover() {
+        self.isAnimatingPanelTransition = true
+        self.panelStabilizationTask?.cancel()
+        self.panelStabilizationTask = nil
+        self.stopGlobalMonitor()
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = self.panelCloseAnimationDuration
+            context.allowsImplicitAnimation = true
+            self.panel.animator().alphaValue = 0
+        } completionHandler: { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.panel.orderOut(nil)
+                self.panel.alphaValue = 1
+                self.isAnimatingPanelTransition = false
+                self.lockedPanelOriginX = nil
+                self.unloadPopoverContent()
+                self.appState.setPanelVisibility(false)
+            }
+        }
     }
 
     private func placePanelRelativeToStatusButton(_ button: NSStatusBarButton?, preserveHorizontalPosition: Bool) {

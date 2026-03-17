@@ -5,7 +5,7 @@ protocol MihomoAPITransporting: Sendable {
     func requestNoResponse(_ endpoint: Endpoint) async throws
 }
 
-enum HTTPMethod: String {
+enum HTTPMethod: String, Sendable {
     case get = "GET"
     case put = "PUT"
     case post = "POST"
@@ -42,7 +42,7 @@ enum JSONValue: Sendable {
     }
 }
 
-enum Endpoint {
+enum Endpoint: Sendable {
     private static let proxyProvidersPath = "/providers/proxies"
     private static let ruleProvidersPath = "/providers/rules"
     private static let coreUpgradeRequestBody: [String: String] = ["path": "", "payload": ""]
@@ -188,7 +188,7 @@ enum Endpoint {
     }
 }
 
-enum APIError: Error, LocalizedError {
+enum APIError: Error, LocalizedError, Sendable {
     case invalidURL
     case invalidResponse
     case statusCode(Int, String)

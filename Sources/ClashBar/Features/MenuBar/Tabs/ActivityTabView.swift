@@ -303,16 +303,17 @@ extension MenuBarRoot {
     }
 
     private func connectionRowCloseButton(id: String, hovered: Bool) -> some View {
-        Button {
-            Task { await appState.closeConnection(id: id) }
-        } label: {
-            Image(systemName: "xmark")
-                .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .semibold))
-                .frame(width: 10, height: 10)
+        self.compactAsyncIconButton(
+            symbol: "xmark",
+            label: tr("ui.action.close_connection"),
+            tint: nativeWarning.opacity(MenuBarLayoutTokens.Opacity.solid),
+            baseTint: nativeTertiaryLabel,
+            size: 14,
+            fontSize: MenuBarLayoutTokens.FontSize.caption)
+        {
+            await appState.closeConnection(id: id)
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(hovered ? nativeSecondaryLabel : nativeTertiaryLabel)
-        .frame(width: 12, height: 12)
+        .frame(width: 14, height: 14)
         .opacity(hovered ? 1 : 0)
         .animation(.easeInOut(duration: 0.14), value: hovered)
     }

@@ -566,6 +566,7 @@ private struct CompactAsyncIconButton: View {
     let hierarchicalSymbol: Bool
     let action: () async -> Void
 
+    @Environment(\.isEnabled) private var isEnabled
     @State private var hovered = false
 
     var body: some View {
@@ -586,8 +587,69 @@ private struct CompactAsyncIconButton: View {
             .frame(width: self.size, height: self.size)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.borderless)
+        .buttonStyle(CompactAsyncIconButtonStyle(isHovered: self.hovered, isEnabled: self.isEnabled))
         .disabled(self.isLoading)
         .onHover { self.hovered = $0 }
+    }
+}
+
+private struct CompactAsyncIconButtonStyle: ButtonStyle {
+    let isHovered: Bool
+    let isEnabled: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(
+                Circle()
+                    .fill(self.backgroundColor(isPressed: configuration.isPressed)))
+            .overlay(
+                Circle()
+                    .strokeBorder(self.borderColor(isPressed: configuration.isPressed), lineWidth: self.borderWidth))
+            .shadow(
+                color: self.shadowColor(isPressed: configuration.isPressed),
+                radius: configuration.isPressed ? 2 : 6,
+                x: 0,
+                y: configuration.isPressed ? 1 : 3)
+            .scaleEffect(configuration.isPressed ? 0.9 : (self.isHovered ? 1.06 : 1))
+            .opacity(self.isEnabled ? 1 : 0.72)
+            .animation(.spring(response: 0.18, dampingFraction: 0.72), value: configuration.isPressed)
+            .animation(.easeOut(duration: 0.16), value: self.isHovered)
+    }
+
+    private func backgroundColor(isPressed: Bool) -> Color {
+        if isPressed {
+            return Color.accentColor.opacity(0.2)
+        }
+        if self.isHovered {
+            return Color.primary.opacity(0.12)
+        }
+        return .clear
+    }
+
+    private var borderWidth: CGFloat {
+        self.isHovered ? 1 : 0
+    }
+
+    private func borderColor(isPressed: Bool) -> Color {
+        if isPressed {
+            return Color.accentColor.opacity(0.45)
+        }
+        if self.isHovered {
+            return Color.primary.opacity(0.12)
+        }
+        return .clear
+    }
+
+    private func shadowColor(isPressed: Bool) -> Color {
+        if !self.isEnabled {
+            return .clear
+        }
+        if isPressed {
+            return Color.black.opacity(0.08)
+        }
+        if self.isHovered {
+            return Color.black.opacity(0.12)
+        }
+        return .clear
     }
 }
