@@ -140,9 +140,9 @@ extension MenuBarRootView {
         action: @escaping () -> Void) -> some View
     {
         if selected {
-            self.logFilterButtonLabel(title, action: action).buttonStyle(.borderedProminent)
+            self.logFilterButtonLabel(title, action: action).appBorderedButtonStyle(prominent: true)
         } else {
-            self.logFilterButtonLabel(title, action: action).buttonStyle(.bordered)
+            self.logFilterButtonLabel(title, action: action).appBorderedButtonStyle()
         }
     }
 
@@ -188,39 +188,25 @@ extension MenuBarRootView {
         let symbol = levelInfo.symbol
 
         return HStack(alignment: .center, spacing: T.space6) {
-            RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
-                .fill(tone.opacity(T.Opacity.tint))
-                .frame(
-                    width: T.rowLeadingIcon,
-                    height: T.rowLeadingIcon)
-                .overlay {
-                    Image(systemName: symbol)
-                        .font(.app(size: T.FontSize.caption, weight: .semibold))
-                        .foregroundStyle(tone)
-                }
+            Image(systemName: symbol)
+                .font(.app(size: T.FontSize.caption, weight: .semibold))
+                .foregroundStyle(tone)
+                .frame(width: T.rowLeadingIcon, height: T.rowLeadingIcon)
 
             VStack(alignment: .leading, spacing: T.space2) {
                 HStack(spacing: T.space2) {
                     Text(sourceInfo.label)
                         .font(.app(size: T.FontSize.caption, weight: .semibold))
                         .foregroundStyle(sourceInfo.color)
-                        .padding(.horizontal, T.space4)
-                        .padding(.vertical, T.space1)
-                        .background(Capsule().fill(sourceInfo.color.opacity(T.Opacity.tint)))
-
-                    Text(levelInfo.label)
-                        .font(.app(size: T.FontSize.caption, weight: .semibold))
-                        .foregroundStyle(tone)
-                        .padding(.horizontal, T.space4)
-                        .padding(.vertical, T.space1)
-                        .background(Capsule().fill(tone.opacity(T.Opacity.tint)))
 
                     if let protocolTag = parsed.protocolTag {
+                        self.logMetadataSeparator
                         Text(protocolTag)
                             .font(.app(size: T.FontSize.caption, weight: .semibold))
                             .foregroundStyle(parsed.protocolColor)
                     }
 
+                    self.logMetadataSeparator
                     Text(ValueFormatter.dateTime(log.timestamp))
                         .font(.app(size: T.FontSize.caption, weight: .regular))
                         .foregroundStyle(nativeTertiaryLabel)
@@ -260,6 +246,12 @@ extension MenuBarRootView {
                 Label(tr("ui.action.copy_log_entry"), systemImage: "doc.plaintext")
             }
         }
+    }
+
+    var logMetadataSeparator: some View {
+        Text("•")
+            .font(.app(size: T.FontSize.caption, weight: .regular))
+            .foregroundStyle(nativeTertiaryLabel)
     }
 
     func normalizedLogLevel(_ raw: String) -> String {

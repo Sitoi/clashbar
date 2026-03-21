@@ -42,7 +42,6 @@ extension MenuBarRootView {
             .textCase(.uppercase)
             .padding(.horizontal, MenuBarLayoutTokens.space4)
             .padding(.vertical, MenuBarLayoutTokens.space6)
-            .background(nativeControlFill.opacity(0.55))
             .overlay(alignment: .bottom) {
                 Rectangle()
                     .fill(nativeSeparator)
@@ -139,11 +138,6 @@ extension MenuBarRootView {
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
-            .padding(.horizontal, MenuBarLayoutTokens.space6)
-            .padding(.vertical, MenuBarLayoutTokens.space2)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(badge.background))
             .frame(width: 90, alignment: .leading)
 
             VStack(alignment: .trailing, spacing: MenuBarLayoutTokens.space1) {
@@ -180,18 +174,16 @@ extension MenuBarRootView {
         return ("circle.grid.2x2.fill", nativeIndigo.opacity(MenuBarLayoutTokens.Opacity.solid))
     }
 
-    func rulePolicyBadge(for policy: String) -> (symbol: String?, color: Color, background: Color) {
+    func rulePolicyBadge(for policy: String) -> (symbol: String?, color: Color) {
         let lower = policy.lowercased()
         if lower.contains("fishy") {
             return (
                 symbol: "exclamationmark.triangle.fill",
-                color: nativeAccent.opacity(MenuBarLayoutTokens.Opacity.solid),
-                background: nativeAccent.opacity(MenuBarLayoutTokens.Opacity.tint))
+                color: nativeAccent.opacity(MenuBarLayoutTokens.Opacity.solid))
         }
         return (
             symbol: nil,
-            color: nativeSecondaryLabel,
-            background: nativeBadgeFill)
+            color: nativeSecondaryLabel)
     }
 
     func ruleStats(

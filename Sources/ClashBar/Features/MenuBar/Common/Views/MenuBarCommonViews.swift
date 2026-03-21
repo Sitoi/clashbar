@@ -100,7 +100,7 @@ extension MenuBarRootView {
                 .font(.app(size: MenuBarLayoutTokens.FontSize.caption, weight: .medium))
                 .lineLimit(1)
         }
-        .buttonStyle(.bordered)
+        .appBorderedButtonStyle()
         .controlSize(.small)
         .help(helpText)
     }
@@ -287,11 +287,6 @@ extension MenuBarRootView {
         }
         .disabled(!self.isFooterCoreUpgradeEnabled)
         .help(self.footerCoreUpgradeButtonHelp)
-        .padding(.horizontal, MenuBarLayoutTokens.space4)
-        .padding(.vertical, MenuBarLayoutTokens.space2)
-        .background(
-            Capsule(style: .continuous)
-                .fill(self.footerCoreUpgradeBackground))
     }
 
     var isFooterCoreUpgradeEnabled: Bool {
@@ -428,9 +423,6 @@ extension MenuBarRootView {
         .foregroundStyle(tint)
         .padding(.horizontal, MenuBarLayoutTokens.space6)
         .padding(.vertical, MenuBarLayoutTokens.space2)
-        .background(
-            Capsule(style: .continuous)
-                .fill(emphasized ? tint.opacity(MenuBarLayoutTokens.Opacity.tint) : self.nativeBadgeFill))
     }
 
     var statusColor: Color {

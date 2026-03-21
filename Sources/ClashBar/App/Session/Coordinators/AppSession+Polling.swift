@@ -251,6 +251,7 @@ extension AppSession {
         groupLatencyLoading.removeAll(keepingCapacity: false)
         groupLatencies.removeAll(keepingCapacity: false)
         proxyHistoryLatestDelay.removeAll(keepingCapacity: false)
+        proxyNodeTypes.removeAll(keepingCapacity: false)
 
         providerProxyCount = 0
         providerRuleCount = 0
@@ -323,6 +324,7 @@ extension AppSession {
             fallbackProxyProviders: self.proxyProvidersDetail)
         self.proxyGroups = presentation.groups
         self.proxyHistoryLatestDelay = presentation.history
+        self.proxyNodeTypes = presentation.nodeTypes
     }
 
     func normalizedHealthcheckURL(_ value: String?) -> String? {

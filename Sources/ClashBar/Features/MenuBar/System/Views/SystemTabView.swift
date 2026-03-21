@@ -80,7 +80,7 @@ extension MenuBarRootView {
                 options(dismiss)
             }
             .frame(width: resolvedControlWidth, alignment: .trailing)
-            .buttonStyle(.bordered)
+            .appBorderedButtonStyle()
             .controlSize(.small)
         }
         .menuRowPadding(vertical: T.space4)
@@ -144,7 +144,7 @@ extension MenuBarRootView {
             }
             .frame(maxWidth: .infinity, alignment: .center)
         }
-        .buttonStyle(.bordered)
+        .appBorderedButtonStyle()
         .controlSize(.small)
         .disabled(!self.maintenanceActionEnabled)
         .opacity(self.maintenanceActionEnabled ? 1 : 0.62)
@@ -367,7 +367,7 @@ extension MenuBarRootView {
                             Label(tr("ui.action.open_core_directory"), systemImage: "folder")
                                 .frame(maxWidth: .infinity, alignment: .center)
                         }
-                        .buttonStyle(.bordered)
+                        .appBorderedButtonStyle()
                         .controlSize(.small)
                     }
                 }

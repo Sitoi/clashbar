@@ -101,8 +101,7 @@ extension MenuBarRootView {
                 self.quickRowContent(
                     title: tr("ui.quick.switch_config"),
                     symbol: "doc.text",
-                    foreground: nativePurple,
-                    background: nativePurple.opacity(T.Opacity.tint))
+                    foreground: nativePurple)
                 {
                     HStack(spacing: T.space2) {
                         Text(appSession.selectedConfigName)
@@ -153,7 +152,6 @@ extension MenuBarRootView {
                 title: tr("ui.quick.system_proxy"),
                 symbol: "network",
                 foreground: nativeInfo,
-                background: nativeInfo.opacity(T.Opacity.tint),
                 isDisabled: appSession.isProxySyncing,
                 isOn: Binding(
                     get: { appSession.isSystemProxyEnabled },
@@ -165,7 +163,6 @@ extension MenuBarRootView {
                 title: tr("ui.quick.tun_mode"),
                 symbol: "shield.lefthalf.filled",
                 foreground: nativePositive,
-                background: nativePositive.opacity(T.Opacity.tint),
                 isDisabled: !appSession.isTunToggleEnabled,
                 isOn: Binding(
                     get: { appSession.isTunEnabled },
@@ -179,8 +176,7 @@ extension MenuBarRootView {
                 self.quickRowContent(
                     title: tr("ui.quick.copy_terminal"),
                     symbol: "terminal",
-                    foreground: nativeWarning,
-                    background: nativeWarning.opacity(T.Opacity.tint))
+                    foreground: nativeWarning)
                 {
                     Image(systemName: "doc.on.doc")
                         .font(.app(size: T.FontSize.body, weight: .medium))
@@ -196,11 +192,10 @@ extension MenuBarRootView {
         title: String,
         symbol: String,
         foreground: Color,
-        background: Color,
         @ViewBuilder trailing: () -> some View) -> some View
     {
         HStack(spacing: T.space6) {
-            self.quickIcon(symbol: symbol, foreground: foreground, background: background)
+            self.quickIcon(symbol: symbol, foreground: foreground)
             Text(title)
                 .font(.app(size: T.FontSize.body, weight: .medium))
                 .foregroundStyle(nativePrimaryLabel)
@@ -218,15 +213,13 @@ extension MenuBarRootView {
         title: String,
         symbol: String,
         foreground: Color,
-        background: Color,
         isDisabled: Bool,
         isOn: Binding<Bool>) -> some View
     {
         self.quickRowContent(
             title: title,
             symbol: symbol,
-            foreground: foreground,
-            background: background)
+            foreground: foreground)
         {
             Toggle("", isOn: isOn)
                 .labelsHidden()
@@ -236,14 +229,10 @@ extension MenuBarRootView {
         }
     }
 
-    func quickIcon(symbol: String, foreground: Color, background: Color) -> some View {
-        RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
-            .fill(background)
-            .frame(width: 18, height: 18)
-            .overlay {
-                Image(systemName: symbol)
-                    .font(.app(size: T.FontSize.body, weight: .semibold))
-                    .foregroundStyle(foreground)
-            }
+    func quickIcon(symbol: String, foreground: Color) -> some View {
+        Image(systemName: symbol)
+            .font(.app(size: T.FontSize.body, weight: .semibold))
+            .foregroundStyle(foreground)
+            .frame(width: 18, height: 18, alignment: .center)
     }
 }

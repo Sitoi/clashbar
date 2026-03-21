@@ -51,6 +51,7 @@ final class AppSession: ObservableObject {
     @Published var groupLatencyLoading: Set<String> = []
     @Published var groupLatencies: [String: [String: Int]] = [:]
     @Published var proxyHistoryLatestDelay: [String: Int] = [:]
+    @Published var proxyNodeTypes: [String: String] = [:]
 
     @Published var providerProxyCount: Int = 0
     @Published var providerRuleCount: Int = 0

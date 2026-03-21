@@ -3,6 +3,7 @@ import Foundation
 struct ProxyGroupsPresentation {
     let groups: [ProxyGroup]
     let history: [String: Int]
+    let nodeTypes: [String: String]
 }
 
 struct BuildProxyGroupsPresentationUseCase {
@@ -53,12 +54,16 @@ struct BuildProxyGroupsPresentationUseCase {
             .map(\.element)
 
         var history: [String: Int] = [:]
+        var nodeTypes: [String: String] = [:]
         for proxy in response.proxies.values {
+            if proxy.all.isEmpty, let type = proxy.type.trimmedNonEmpty {
+                nodeTypes[proxy.name] = type
+            }
             if let latest = proxy.latestDelay {
                 history[proxy.name] = latest
             }
         }
 
-        return ProxyGroupsPresentation(groups: groups, history: history)
+        return ProxyGroupsPresentation(groups: groups, history: history, nodeTypes: nodeTypes)
     }
 }

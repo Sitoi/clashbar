@@ -1,9 +1,8 @@
-"ui.tab.proxy" = "Nodes";
-"ui.tab.rules" = "Rules";
-"ui.tab.connections" = "Connections";
-"ui.tab.activity" = "Network";
-"ui.tab.logs" = "Logs";
-"ui.tab.system" = "Settings";
+"ui.tab.proxy" = "Node";
+"ui.tab.rules" = "Rule";
+"ui.tab.connections" = "Connection";
+"ui.tab.logs" = "Log";
+"ui.tab.system" = "Setting";
 
 "ui.log_filter.all" = "All";
 "ui.log_filter.info" = "Info";

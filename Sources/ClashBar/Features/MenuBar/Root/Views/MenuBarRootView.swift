@@ -16,6 +16,16 @@ enum RootTab: String, CaseIterable, Hashable {
         case .system: "ui.tab.system"
         }
     }
+
+    var symbolName: String {
+        switch self {
+        case .proxy: "square.grid.2x2.fill"
+        case .rules: "arrow.left.arrow.right"
+        case .connections: "link"
+        case .logs: "doc.fill"
+        case .system: "gearshape.fill"
+        }
+    }
 }
 
 enum LogLevelFilter: Hashable, CaseIterable {
@@ -61,11 +71,14 @@ struct MenuBarRootView: View {
     @StateObject var connectionsViewModel = ConnectionsTabViewModel()
     @StateObject var logsViewModel = LogsTabViewModel()
     @StateObject var rulesViewModel = RulesTabViewModel()
+    @Namespace var segmentedSelectionNamespace
 
     @State var switchingMode: CoreMode?
     @State var hoveringCopyRow = false
+    @State var hoveredProviderName: String?
     @State var hoveredRuleIndex: Int?
     @State var hoveredMode: CoreMode?
+    @State var hoveredTab: RootTab?
     @State var topHeaderHeight: CGFloat = 0
     @State var modeAndTabSectionHeight: CGFloat = 0
     @State var footerBarHeight: CGFloat = 0
@@ -118,9 +131,7 @@ struct MenuBarRootView: View {
                 .reportHeight { updateSectionHeight($0, target: .modeAndTab) }
 
             ScrollView(.vertical) {
-                self.tabContent(for: self.rootViewModel.currentTab)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .reportHeight { updateCurrentTabContentHeight($0, for: self.rootViewModel.currentTab) }
+                self.measuredTabContent(for: self.rootViewModel.currentTab)
             }
             .scrollIndicators(.hidden)
             .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -138,7 +149,7 @@ struct MenuBarRootView: View {
             .padding(.horizontal, MenuBarLayoutTokens.space8)
             .frame(width: MenuBarLayoutTokens.panelWidth, height: resolvedPanelHeight, alignment: .topLeading)
             .background(self.panelBackground)
-            .clipShape(RoundedRectangle(cornerRadius: MenuBarLayoutTokens.cornerRadius, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: MenuBarLayoutTokens.panelCornerRadius, style: .continuous))
     }
 
     var panelContent: some View {
@@ -219,19 +230,44 @@ struct MenuBarRootView: View {
         }
     }
 
+    func tabUsesDynamicHeight(_ tab: RootTab) -> Bool {
+        switch tab {
+        case .proxy, .system:
+            true
+        case .rules, .connections, .logs:
+            false
+        }
+    }
+
+    @ViewBuilder
+    func measuredTabContent(for tab: RootTab) -> some View {
+        let content = self.tabContent(for: tab)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+        if self.tabUsesDynamicHeight(tab) {
+            content.reportHeight { updateCurrentTabContentHeight($0, for: tab) }
+        } else {
+            content
+        }
+    }
+
+    @ViewBuilder
     func tabContent(for tab: RootTab) -> some View {
-        self.tabBody(for: tab)
+        let content = self.tabBody(for: tab)
             .padding(.top, MenuBarLayoutTokens.space2)
-            .fixedSize(horizontal: false, vertical: true)
+
+        if self.tabUsesDynamicHeight(tab) {
+            content.fixedSize(horizontal: false, vertical: true)
+        } else {
+            content
+        }
     }
 
     var panelBackground: some View {
-        RoundedRectangle(cornerRadius: MenuBarLayoutTokens.cornerRadius, style: .continuous)
-            .fill(.regularMaterial)
-            .overlay {
-                RoundedRectangle(cornerRadius: MenuBarLayoutTokens.cornerRadius, style: .continuous)
-                    .stroke(nativeSeparator, lineWidth: MenuBarLayoutTokens.stroke)
-            }
+        AppMaterialSurface(
+            cornerRadius: MenuBarLayoutTokens.panelCornerRadius,
+            fallbackStyle: .material(.regularMaterial),
+            stroke: nativeSeparator)
             .shadow(
                 color: Color(nsColor: .shadowColor).opacity(MenuBarLayoutTokens.Shadow.standard.opacity),
                 radius: MenuBarLayoutTokens.Shadow.standard.radius,

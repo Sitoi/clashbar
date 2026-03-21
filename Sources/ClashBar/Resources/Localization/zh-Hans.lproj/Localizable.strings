@@ -1,7 +1,6 @@
 "ui.tab.proxy" = "节点";
 "ui.tab.rules" = "分流";
 "ui.tab.connections" = "连接";
-"ui.tab.activity" = "网络";
 "ui.tab.logs" = "日志";
 "ui.tab.system" = "设置";
 

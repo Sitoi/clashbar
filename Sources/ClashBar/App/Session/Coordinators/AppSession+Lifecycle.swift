@@ -230,7 +230,7 @@ extension AppSession {
         let app = NSApplication.shared
         switch appearanceMode {
         case .system:
-            app.appearance = NSAppearance(named: .aqua)
+            app.appearance = nil
         case .light:
             app.appearance = NSAppearance(named: .aqua)
         case .dark:
@@ -316,6 +316,7 @@ extension AppSession {
         preserveLocalSettingsOnNextSync = true
         proxyGroups = []
         groupLatencies = [:]
+        proxyNodeTypes = [:]
         groupLatencyLoading = []
         appendLog(level: "info", message: tr("log.config.changed_restart"))
         cancelProviderRefresh(reason: "config switch requested")

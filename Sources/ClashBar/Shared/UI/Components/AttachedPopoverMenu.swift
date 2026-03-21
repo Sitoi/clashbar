@@ -97,12 +97,12 @@ struct AttachedPopoverMenu<Label: View, Content: View>: View {
             .frame(width: self.width, alignment: .leading)
             .frame(maxHeight: self.maxHeight)
             .padding(T.space8)
-            .background(
-                RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
-                    .fill(.regularMaterial))
-            .overlay {
-                RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
-                    .stroke(Color(nsColor: .separatorColor).opacity(0.46), lineWidth: T.stroke)
+            .background {
+                AppMaterialSurface(
+                    cornerRadius: T.panelCornerRadius,
+                    fallbackStyle: .material(.regularMaterial),
+                    stroke: Color(nsColor: .separatorColor).opacity(0.46),
+                    lineWidth: T.stroke)
             }
             .shadow(
                 color: Color(nsColor: .shadowColor).opacity(T.Shadow.standard.opacity),

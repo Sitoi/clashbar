@@ -16,8 +16,8 @@ extension MenuBarRootView {
             if providers.isEmpty {
                 emptyCard(tr("ui.empty.proxy_providers"))
             } else {
-                VStack(spacing: 0) {
-                    SeparatedForEach(data: providers, id: \.self, separator: nativeSeparator) { name in
+                VStack(spacing: T.space2) {
+                    ForEach(providers, id: \.self) { name in
                         self.proxyProviderRow(name: name, detail: appSession.proxyProvidersDetail[name])
                     }
                 }
@@ -41,6 +41,7 @@ extension MenuBarRootView {
         }()
         let rowHorizontalPadding = T.space4
         let isUpdating = appSession.providerUpdating.contains(name)
+        let hovered = hoveredProviderName == name
         // Fixed width for update time — ensures vertical alignment across rows
         let updateTimeWidth: CGFloat = 44
 
@@ -49,14 +50,10 @@ extension MenuBarRootView {
         return VStack(alignment: .leading, spacing: T.space6) {
             // Row 1: icon | name + node badge | time (fixed) | refresh btn
             HStack(alignment: .center, spacing: T.space6) {
-                RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
-                    .fill(nativeTeal.opacity(T.Opacity.tint))
+                Image(systemName: "externaldrive.fill")
+                    .font(.app(size: T.FontSize.caption, weight: .semibold))
+                    .foregroundStyle(nativeTeal.opacity(T.Opacity.solid))
                     .frame(width: T.rowLeadingIcon, height: T.rowLeadingIcon)
-                    .overlay {
-                        Image(systemName: "externaldrive.fill")
-                            .font(.app(size: T.FontSize.caption, weight: .semibold))
-                            .foregroundStyle(nativeTeal.opacity(T.Opacity.solid))
-                    }
 
                 HStack(alignment: .center, spacing: T.space4) {
                     HStack(alignment: .center, spacing: T.space4) {
@@ -68,10 +65,7 @@ extension MenuBarRootView {
 
                         Text("\(nodeCount)")
                             .font(.app(size: T.FontSize.caption, weight: .semibold))
-                            .foregroundStyle(nativeTeal.opacity(T.Opacity.solid))
-                            .padding(.horizontal, T.space4)
-                            .padding(.vertical, T.space2)
-                            .background(Capsule().fill(nativeTeal.opacity(T.Opacity.tint)))
+                            .foregroundStyle(nativeSecondaryLabel)
                             .fixedSize()
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -142,6 +136,11 @@ extension MenuBarRootView {
         }
         .padding(.horizontal, rowHorizontalPadding)
         .padding(.vertical, T.space6)
+        .background(nativeHoverRowBackground(hovered))
+        .onHover { hoveredProviderName = self.nextHovered(
+            current: hoveredProviderName,
+            target: name,
+            isHovering: $0) }
     }
 
     enum ProviderAction {
@@ -330,6 +329,7 @@ extension MenuBarRootView {
             self.popoverNodesList(nodes) { node in
                 ProxyGroupPopoverNodeItem(
                     title: node,
+                    typeText: appSession.proxyNodeTypes[node].trimmedNonEmpty,
                     delayText: appSession.delayText(group: group.name, node: node),
                     delayValue: appSession.delayValue(group: group.name, node: node),
                     delayColor: latencyColor(appSession.delayValue(group: group.name, node: node)),
@@ -479,6 +479,7 @@ extension MenuBarRootView {
 
 private struct ProxyGroupPopoverNodeItem: View {
     let title: String
+    let typeText: String?
     let delayText: String
     let delayValue: Int?
     let delayColor: Color
@@ -505,6 +506,19 @@ private struct ProxyGroupPopoverNodeItem: View {
                     .minimumScaleFactor(T.minimumScale)
 
                 Spacer(minLength: 0)
+
+                if let typeText = self.typeText {
+                    Text(typeText)
+                        .font(.app(size: T.FontSize.caption, weight: .medium))
+                        .foregroundStyle(self.selected ? Color.primary.opacity(0.72) : Color.secondary.opacity(0.82))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .padding(.horizontal, T.space4)
+                        .padding(.vertical, T.space1)
+                        .background(
+                            RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
+                                .fill(Color(nsColor: .quaternaryLabelColor).opacity(self.selected ? 0.18 : 0.1)))
+                }
 
                 Group {
                     if self.isTesting {
@@ -538,22 +552,11 @@ private struct ProxyGroupPopoverNodeItem: View {
 
     @ViewBuilder
     var delayMetricView: some View {
-        if let delayValue {
-            let isTimeout = delayValue == 0
-            let foreground: Color = isTimeout ? Color(nsColor: .secondaryLabelColor) : .white
-            let background: Color = isTimeout
-                ? Color(nsColor: .quaternaryLabelColor).opacity(0.48)
-                : self.delayColor.opacity(self.selected ? 1 : 0.94)
-
+        if self.delayValue != nil {
             Text(self.delayText)
                 .font(.app(size: T.FontSize.caption, weight: .semibold))
-                .foregroundStyle(foreground)
+                .foregroundStyle(self.delayColor.opacity(self.selected ? 1 : 0.94))
                 .lineLimit(1)
-                .padding(.horizontal, T.space6)
-                .padding(.vertical, T.space1)
-                .background(
-                    RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
-                        .fill(background))
         } else {
             Text(self.delayText)
                 .font(.app(size: T.FontSize.caption, weight: .regular))
@@ -569,8 +572,5 @@ private struct LatencyLoadingIndicator: View {
         ProgressView()
             .controlSize(.mini)
             .frame(width: 30, height: 14, alignment: .center)
-            .background(
-                RoundedRectangle(cornerRadius: T.cornerRadius, style: .continuous)
-                    .fill(Color(nsColor: .quaternaryLabelColor).opacity(T.Opacity.tint)))
     }
 }
