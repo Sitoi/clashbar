@@ -414,6 +414,10 @@ private final class SystemProxyConfigurator {
 private final class ProxyHelperService: NSObject, ProxyHelperProtocol {
     private let configurator = SystemProxyConfigurator()
 
+    func getVersion(completion: @escaping (String) -> Void) {
+        completion(ProxyHelperConstants.currentVersion)
+    }
+
     func ping(completion: @escaping (Bool, String?) -> Void) {
         completion(true, nil)
     }

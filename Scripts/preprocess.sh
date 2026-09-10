@@ -11,7 +11,6 @@ REUSE_LOCAL_MIHOMO="${REUSE_LOCAL_MIHOMO:-1}"
 PREPARE_MIHOMO_BINARY="${PREPARE_MIHOMO_BINARY:-1}"
 PREPROCESS_DIR="${PREPROCESS_DIR:-$ROOT/dist/preprocess}"
 
-MIHOMO_RESOURCE_PATH="$ROOT/Sources/ClashBar/Resources/bin/mihomo"
 PREPROCESSED_MIHOMO_PATH="$PREPROCESS_DIR/mihomo"
 ICON_SOURCE="$ROOT/Sources/ClashBar/Resources/Assets.xcassets/BrandLogo.imageset/logo.png"
 PREPROCESSED_ICON_PATH="$PREPROCESS_DIR/${APP_NAME}.icns"
@@ -118,16 +117,12 @@ download_mihomo_binary() {
 }
 
 prepare_mihomo() {
-  mkdir -p "$(dirname "$MIHOMO_RESOURCE_PATH")"
-
-  if [ "$REUSE_LOCAL_MIHOMO" = "1" ] && [ -f "$MIHOMO_RESOURCE_PATH" ] && is_mach_o_binary "$MIHOMO_RESOURCE_PATH"; then
-    install -m 755 "$MIHOMO_RESOURCE_PATH" "$PREPROCESSED_MIHOMO_PATH"
-    echo "Prepared mihomo from local resource: $MIHOMO_RESOURCE_PATH"
-    echo "Prepared mihomo path: $PREPROCESSED_MIHOMO_PATH"
+  if [ "$REUSE_LOCAL_MIHOMO" = "1" ] && [ -f "$PREPROCESSED_MIHOMO_PATH" ] && is_mach_o_binary "$PREPROCESSED_MIHOMO_PATH"; then
+    echo "Reusing preprocessed mihomo binary: $PREPROCESSED_MIHOMO_PATH"
   else
     if [ "$DOWNLOAD_MIHOMO" != "1" ]; then
       echo "Local mihomo binary is missing or invalid, and DOWNLOAD_MIHOMO=$DOWNLOAD_MIHOMO." >&2
-      echo "Provide a real Mach-O binary at $MIHOMO_RESOURCE_PATH or enable download." >&2
+      echo "Provide a real Mach-O binary at $PREPROCESSED_MIHOMO_PATH or enable download." >&2
       exit 1
     fi
 
@@ -139,9 +134,6 @@ prepare_mihomo() {
     echo "Prepared mihomo is not a valid Mach-O binary: $PREPROCESSED_MIHOMO_PATH" >&2
     exit 1
   fi
-
-  install -m 755 "$PREPROCESSED_MIHOMO_PATH" "$MIHOMO_RESOURCE_PATH"
-  echo "Updated source mihomo resource: $MIHOMO_RESOURCE_PATH"
 }
 
 prepare_icon() {

@@ -1,4 +1,5 @@
 import AppKit
+import MihomoKit
 import SwiftUI
 
 @main
@@ -31,9 +32,9 @@ private struct AppCommands: Commands {
         CommandMenu(self.tr("ui.menu.quick")) {
             Button(self.tr("ui.quick.system_proxy")) {
                 Task {
-                    let target = !self.session.isSystemProxyEnabled
-                    await self.session.toggleSystemProxy(target)
-                    guard self.session.isSystemProxyEnabled == target else { return }
+                    let target = !self.session.proxyStore.isSystemProxyEnabled
+                    await self.session.proxyStore.toggleSystemProxy(target)
+                    guard self.session.proxyStore.isSystemProxyEnabled == target else { return }
                     self.showBanner(
                         symbol: "network",
                         title: self.tr("ui.quick.system_proxy"),
@@ -42,11 +43,13 @@ private struct AppCommands: Commands {
             }
             .keyboardShortcut("s", modifiers: .command)
 
-            Button(self.session.isTunEnabled ? self.tr("ui.action.disable_tun") : self.tr("ui.action.enable_tun")) {
+            Button(self.session.settingsStore.editableSettings.tunEnabled ? self.tr("ui.action.disable_tun") : self
+                .tr("ui.action.enable_tun"))
+            {
                 Task {
-                    let target = !self.session.isTunEnabled
-                    await self.session.toggleTunMode(target)
-                    guard self.session.isTunEnabled == target else { return }
+                    let target = !self.session.settingsStore.editableSettings.tunEnabled
+                    await self.session.proxyStore.toggleTunMode(target)
+                    guard self.session.settingsStore.editableSettings.tunEnabled == target else { return }
                     self.showBanner(
                         symbol: "point.3.connected.trianglepath.dotted",
                         title: self.tr("ui.quick.tun_mode"),
@@ -62,7 +65,7 @@ private struct AppCommands: Commands {
                 Button(self.tr(entry.key)) {
                     Task {
                         await self.session.switchMode(to: entry.mode)
-                        guard self.session.currentMode == entry.mode else { return }
+                        guard self.session.settingsStore.editableSettings.mode == entry.mode else { return }
                         self.showBanner(
                             symbol: entry.symbol,
                             title: self.tr("ui.banner.mode.title"),
@@ -93,7 +96,10 @@ private struct AppCommands: Commands {
                 Task {
                     await self.session.performPrimaryCoreAction()
                     guard self.session.isRuntimeRunning else { return }
-                    self.showBanner(symbol: symbol, title: title, detail: self.session.selectedConfigName)
+                    self.showBanner(
+                        symbol: symbol,
+                        title: title,
+                        detail: self.session.configurationStore.selectedConfigName)
                 }
             }
             .keyboardShortcut("r", modifiers: [.command, .shift])
@@ -106,7 +112,7 @@ private struct AppCommands: Commands {
                     self.showBanner(
                         symbol: "stop.fill",
                         title: self.tr("ui.action.stop"),
-                        detail: self.session.selectedConfigName)
+                        detail: self.session.configurationStore.selectedConfigName)
                 }
             }
             .keyboardShortcut(".", modifiers: [.command, .shift])

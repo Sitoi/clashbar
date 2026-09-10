@@ -77,15 +77,15 @@ format_bytes() {
     BEGIN {
       split("B KiB MiB GiB TiB", units, " ")
       size = bytes + 0
-      index = 1
-      while (size >= 1024 && index < 5) {
+      unit_index = 1
+      while (size >= 1024 && unit_index < 5) {
         size /= 1024
-        index++
+        unit_index++
       }
-      if (index == 1) {
-        printf "%d %s", size, units[index]
+      if (unit_index == 1) {
+        printf "%d %s", size, units[unit_index]
       } else {
-        printf "%.1f %s", size, units[index]
+        printf "%.1f %s", size, units[unit_index]
       }
     }
   '
@@ -123,33 +123,7 @@ strip_binary_if_enabled() {
 
 resolve_mihomo_install_path() {
   local filename="${1:-mihomo}"
-  local bundle_dir="$APP/Contents/Resources/ClashBar_ClashBar.bundle"
-  local resources_dir="$APP/Contents/Resources"
-  local candidates=(
-    "$bundle_dir/$filename"
-    "$bundle_dir/bin/$filename"
-    "$bundle_dir/Resources/bin/$filename"
-    "$resources_dir/bin/$filename"
-    "$resources_dir/Resources/bin/$filename"
-    "$resources_dir/$filename"
-  )
-  local path=""
-
-  for path in "${candidates[@]}"; do
-    if [ -f "$path" ]; then
-      echo "$path"
-      return
-    fi
-  done
-
-  for path in "${candidates[@]}"; do
-    if [ -d "$(dirname "$path")" ]; then
-      echo "$path"
-      return
-    fi
-  done
-
-  echo "$bundle_dir/$filename"
+  echo "$APP/Contents/Helpers/$filename"
 }
 
 remove_bundled_mihomo_candidates() {
@@ -163,6 +137,7 @@ remove_bundled_mihomo_candidates() {
     fi
   done < <(printf '%s\n' \
     "$(resolve_mihomo_install_path "$filename")" \
+    "$APP/Contents/Helpers/$filename" \
     "$APP/Contents/Resources/ClashBar_ClashBar.bundle/bin/$filename" \
     "$APP/Contents/Resources/ClashBar_ClashBar.bundle/Resources/bin/$filename" \
     "$APP/Contents/Resources/bin/$filename" \
@@ -194,6 +169,7 @@ fi
 rm -rf "$APP"
 mkdir -p \
   "$APP/Contents/MacOS" \
+  "$APP/Contents/Helpers" \
   "$APP/Contents/Resources" \
   "$APP/Contents/Library/HelperTools" \
   "$APP/Contents/Library/LaunchDaemons"
@@ -282,6 +258,9 @@ PLIST
 CODESIGN_IDENTITY="${CODESIGN_IDENTITY:--}"
 
 if command -v codesign >/dev/null 2>&1; then
+  if [ -f "$APP/Contents/Helpers/mihomo" ]; then
+    codesign --force --sign "$CODESIGN_IDENTITY" "$APP/Contents/Helpers/mihomo"
+  fi
   codesign --force --sign "$CODESIGN_IDENTITY" "$APP/Contents/Library/HelperTools/$HELPER_LABEL"
   codesign --force --sign "$CODESIGN_IDENTITY" "$APP"
 fi

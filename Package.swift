@@ -11,14 +11,21 @@ let package = Package(
     products: [
         .executable(name: "ClashBar", targets: ["ClashBar"]),
         .executable(name: "ClashBarProxyHelper", targets: ["ClashBarProxyHelper"]),
+        .library(name: "MihomoKit", targets: ["MihomoKit"]),
     ],
     targets: [
         .target(
             name: "ProxyHelperShared",
             path: "Sources/ProxyHelperShared"),
+        .target(
+            name: "MihomoKit",
+            path: "Sources/MihomoKit"),
         .executableTarget(
             name: "ClashBar",
-            dependencies: ["ProxyHelperShared"],
+            dependencies: [
+                "ProxyHelperShared",
+                "MihomoKit",
+            ],
             path: "Sources/ClashBar",
             resources: [
                 .process("Resources"),

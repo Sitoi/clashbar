@@ -2,7 +2,7 @@ import AppKit
 
 @MainActor
 final class ClashBarAppDelegate: NSObject, NSApplicationDelegate {
-    let appViewModel = AppViewModel(dependencies: .live)
+    let appViewModel = AppViewModel()
     private var statusItemController: StatusItemController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
